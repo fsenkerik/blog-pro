@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /includes/
+Disallow: /backups/
+
+Sitemap: http://localhost/blog-pro/sitemap.xml
