@@ -11,12 +11,9 @@ $errors = [];
 $success = [];
 
 try {
-    $pdo = new PDO(
-        "mysql:host=$host;port=$port;dbname=$name;charset=utf8mb4",
-        $user, $pass,
-        [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
-    );
-    $success[] = "Pripojeni OK ($host:$port/$name)";
+    $pdo = new PDO("mysql:host=$host;port=$port;dbname=$name;charset=utf8mb4", $user, $pass,
+        [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+    $success[] = "Pripojeni OK";
 
     $tables = [
         "CREATE TABLE IF NOT EXISTS users (
@@ -65,7 +62,7 @@ try {
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
 
         "CREATE TABLE IF NOT EXISTS sessions (
-            id INT AUTO_INCREMENT PRIMARY KEY,
+            id VARCHAR(128) PRIMARY KEY,
             user_id INT NOT NULL,
             ip_address VARCHAR(45),
             user_agent VARCHAR(255),
@@ -117,13 +114,16 @@ try {
         $success[] = "Tabulka '{$m[1]}' OK";
     }
 
-    // Pokud tabulka users uz existuje, pridat 'IT' do ENUM
+    // Uprav sessions tabulku pokud uz existuje se starym schematem
+    try {
+        $pdo->exec("ALTER TABLE sessions MODIFY id VARCHAR(128) NOT NULL");
+    } catch (Exception $e) {}
+
+    // Uprav role ENUM
     try {
         $pdo->exec("ALTER TABLE users MODIFY role ENUM('admin','editor','IT') DEFAULT 'editor'");
-        $success[] = "ENUM role aktualizovan (pridano 'IT')";
-    } catch (Exception $e) {
-        $success[] = "ENUM role - zadna zmena potreba";
-    }
+        $success[] = "ENUM role aktualizovan";
+    } catch (Exception $e) {}
 
     $pdo->exec("INSERT IGNORE INTO categories (name, slug, description) VALUES
         ('Akce 2025','akce-2025','Udalosti z roku 2025'),
@@ -136,12 +136,10 @@ try {
         ['admin', 'VAXNa239', 'admin@blog.cz', 'admin'],
         ['IT',    'VAXNa239', 'it@blog.cz',    'IT'],
     ];
-
     foreach ($users as [$uname, $upass, $uemail, $urole]) {
         $hash = password_hash($upass, PASSWORD_DEFAULT);
-        $stmt = $pdo->prepare("INSERT INTO users (username, password, email, role)
-            VALUES (?, ?, ?, ?)
-            ON DUPLICATE KEY UPDATE password = VALUES(password), role = VALUES(role)");
+        $stmt = $pdo->prepare("INSERT INTO users (username, password, email, role) VALUES (?,?,?,?)
+            ON DUPLICATE KEY UPDATE password=VALUES(password), role=VALUES(role)");
         $stmt->execute([$uname, $hash, $uemail, $urole]);
         $success[] = "Uzivatel '$uname' (role: $urole) OK";
     }
@@ -150,20 +148,16 @@ try {
     $errors[] = $e->getMessage();
 }
 ?>
-<!DOCTYPE html>
-<html><head><meta charset="UTF-8"><title>Setup</title>
-<style>body{font-family:sans-serif;max-width:600px;margin:40px auto;padding:20px}
-.ok{color:green}.err{color:red}h2{margin-top:20px}</style>
+<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Setup</title>
+<style>body{font-family:sans-serif;max-width:600px;margin:40px auto;padding:20px}.ok{color:green}.err{color:red}</style>
 </head><body>
 <h1>Blog Pro - Setup</h1>
-<?php foreach ($success as $s): ?><p class="ok">✓ <?= htmlspecialchars($s) ?></p><?php endforeach; ?>
-<?php foreach ($errors as $e): ?><p class="err">✗ <?= htmlspecialchars($e) ?></p><?php endforeach; ?>
-<?php if (empty($errors)): ?>
+<?php foreach($success as $s): ?><p class="ok">✓ <?=htmlspecialchars($s)?></p><?php endforeach; ?>
+<?php foreach($errors  as $e): ?><p class="err">✗ <?=htmlspecialchars($e)?></p><?php endforeach; ?>
+<?php if(empty($errors)): ?>
 <h2>Hotovo!</h2>
-<p>Prihlasovacie udaje:<br>
-<strong>admin / VAXNa239</strong> (role: admin)<br>
-<strong>IT / VAXNa239</strong> (role: IT)</p>
+<p><strong>admin / VAXNa239</strong> (admin)<br><strong>IT / VAXNa239</strong> (IT)</p>
 <p><a href="/admin/login.php"><strong>Prejit na prihlaseni &rarr;</strong></a></p>
-<p style="color:red;margin-top:20px"><strong>SMAZ tento soubor po prihlaseni!</strong></p>
+<p style="color:red"><strong>SMAZ tento soubor po prihlaseni!</strong></p>
 <?php endif; ?>
 </body></html>
