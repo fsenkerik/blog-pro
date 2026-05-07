@@ -21,7 +21,7 @@ class Database {
             $this->connection = new PDO($dsn, DB_USER, DB_PASS, $options);
         } catch (PDOException $e) {
             $this->error = $e->getMessage();
-            $this->logError('Database Connection', $e->getMessage());
+            error_log(date('Y-m-d H:i:s') . " - Database Connection: " . $e->getMessage() . "\n", 3, ROOT_PATH . 'error.log');
             die('Chyba připojení k databázi. Zkontrolujte konfiguraci.');
         }
     }
@@ -109,6 +109,9 @@ class Database {
     
     private function logError($type, $message) {
         try {
+            if ($this->connection === null) {
+                throw new \Exception('No connection');
+            }
             $stmt = $this->connection->prepare(
                 "INSERT INTO error_logs (error_type, error_message, ip_address, user_id) 
                  VALUES (?, ?, ?, ?)"
@@ -116,7 +119,7 @@ class Database {
             $userId    = $_SESSION['user_id'] ?? null;
             $ipAddress = $_SERVER['REMOTE_ADDR'] ?? null;
             $stmt->execute([$type, $message, $ipAddress, $userId]);
-        } catch (PDOException $e) {
+        } catch (\Throwable $e) {
             error_log(date('Y-m-d H:i:s') . " - $type: $message\n", 3, ROOT_PATH . 'error.log');
         }
     }
