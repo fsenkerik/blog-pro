@@ -112,9 +112,9 @@ $db = new Database();
 // Helper functions
 require_once INCLUDES_PATH . 'helpers.php';
 
-// Monitoring classes
-require_once INCLUDES_PATH . 'SessionTracker.class.php';
-require_once INCLUDES_PATH . 'AuditLog.class.php';
+// Monitoring classes (filenames are camelCase on disk)
+require_once INCLUDES_PATH . 'sessionTracker.class.php';
+require_once INCLUDES_PATH . 'auditLog.class.php';
 
 // Inicializace
 $sessionTracker = new SessionTracker();
