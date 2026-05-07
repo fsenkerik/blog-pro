@@ -5,7 +5,7 @@ requireAuth();
 
 $auth = new Auth();
 
-if (!$auth->isIT()) {
+if (!$auth->canAccessMonitoring()) {
     setFlash('error', 'Nemáte oprávnění k této stránce');
     redirect(ADMIN_URL . 'dashboard.php');
 }
@@ -73,7 +73,6 @@ if ($selectedSessionId) {
     $selectedSession = $db3->fetch();
     
     if ($selectedSession) {
-        // Načíst všechny aktivity v rámci této session
         $db4 = new Database();
         $db4->query("
             SELECT 
@@ -123,7 +122,6 @@ function getActionLabel($action) {
             min-height: 100vh; 
         }
         
-        /* Header & Navigation */
         header { 
             background: white; 
             box-shadow: 0 2px 10px rgba(0,0,0,0.1); 
@@ -156,14 +154,8 @@ function getActionLabel($action) {
             padding: 8px 16px;
             border-radius: 8px;
         }
-        nav a:hover { 
-            color: #667eea; 
-            background: #f7fafc;
-        }
-        nav a.active {
-            color: #667eea;
-            background: #f0f4ff;
-        }
+        nav a:hover { color: #667eea; background: #f7fafc; }
+        nav a.active { color: #667eea; background: #f0f4ff; }
         
         .container { max-width: 1400px; margin: 30px auto; padding: 0 30px; }
         .card { 
@@ -175,7 +167,6 @@ function getActionLabel($action) {
         }
         .card h2 { font-size: 22px; color: #2d3748; margin-bottom: 20px; }
         
-        /* Stats Grid */
         .stats-grid { 
             display: grid; 
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); 
@@ -192,152 +183,48 @@ function getActionLabel($action) {
         .stat-value { font-size: 36px; font-weight: 700; margin: 10px 0; }
         .stat-label { font-size: 14px; opacity: 0.9; }
         
-        /* Filters */
-        .filters { 
-            display: flex; 
-            gap: 10px; 
-            margin-bottom: 20px; 
-            flex-wrap: wrap; 
-        }
-        .filters select, .filters input { 
-            padding: 10px 15px; 
-            border: 2px solid #e2e8f0; 
-            border-radius: 8px; 
-            font-size: 14px; 
-        }
+        .filters { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+        .filters select, .filters input { padding: 10px 15px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 14px; }
         
-        /* Buttons */
-        .btn { 
-            padding: 10px 20px; 
-            border: none; 
-            border-radius: 8px; 
-            font-weight: 600; 
-            cursor: pointer; 
-            transition: all 0.2s; 
-            text-decoration: none; 
-            display: inline-block; 
-        }
+        .btn { padding: 10px 20px; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; transition: all 0.2s; text-decoration: none; display: inline-block; }
         .btn-primary { background: #667eea; color: white; }
         .btn-primary:hover { background: #5568d3; transform: translateY(-1px); }
         .btn-small { padding: 6px 12px; font-size: 13px; }
         
-        /* Table */
         .table { width: 100%; border-collapse: collapse; }
         .table thead { background: #f7fafc; }
-        .table th { 
-            padding: 15px; 
-            text-align: left; 
-            font-weight: 600; 
-            color: #4a5568; 
-            border-bottom: 2px solid #e2e8f0; 
-        }
-        .table td { 
-            padding: 15px; 
-            border-bottom: 1px solid #e2e8f0; 
-        }
+        .table th { padding: 15px; text-align: left; font-weight: 600; color: #4a5568; border-bottom: 2px solid #e2e8f0; }
+        .table td { padding: 15px; border-bottom: 1px solid #e2e8f0; }
         .table tr:hover { background: #f7fafc; }
         .table tr.clickable { cursor: pointer; transition: all 0.2s; }
         .table tr.clickable:hover { background: #f0f4ff; }
-        .table tr.selected { 
-            background: #d4edda !important; 
-            border-left: 4px solid #48bb78 !important; 
-        }
+        .table tr.selected { background: #d4edda !important; border-left: 4px solid #48bb78 !important; }
         
-        /* Badges */
-        .badge { 
-            display: inline-block; 
-            padding: 4px 12px; 
-            border-radius: 12px; 
-            font-size: 12px; 
-            font-weight: 600; 
-        }
-        .badge-it { background: #9f7aea; color: white; }
+        .badge { display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600; }
+        .badge-IT { background: #9f7aea; color: white; }
         .badge-admin { background: #667eea; color: white; }
         .badge-editor { background: #48bb78; color: white; }
         
-        /* Status */
         .status-online { color: #48bb78; font-weight: 600; }
         .status-offline { color: #cbd5e0; }
         
-        /* Empty state */
-        .empty-state { 
-            text-align: center; 
-            padding: 60px 20px; 
-            color: #a0aec0; 
-        }
+        .empty-state { text-align: center; padding: 60px 20px; color: #a0aec0; }
         .empty-state-icon { font-size: 64px; margin-bottom: 20px; }
         
-        /* Activity Timeline */
         .timeline { position: relative; padding-left: 30px; }
-        .timeline-item { 
-            position: relative; 
-            padding-bottom: 20px; 
-            border-left: 2px solid #e2e8f0; 
-            padding-left: 20px; 
-            margin-left: 10px;
-        }
+        .timeline-item { position: relative; padding-bottom: 20px; border-left: 2px solid #e2e8f0; padding-left: 20px; margin-left: 10px; }
         .timeline-item:last-child { border-left: 2px solid transparent; }
-        .timeline-dot { 
-            position: absolute; 
-            left: -11px; 
-            top: 5px; 
-            width: 20px; 
-            height: 20px; 
-            border-radius: 50%; 
-            background: #667eea; 
-            border: 3px solid white;
-            box-shadow: 0 0 0 2px #667eea;
-        }
-        .timeline-time { 
-            font-size: 12px; 
-            color: #718096; 
-            margin-bottom: 5px; 
-        }
-        .timeline-content { 
-            background: #f7fafc; 
-            padding: 12px; 
-            border-radius: 8px; 
-            font-size: 14px;
-        }
-        .timeline-icon { 
-            display: inline-block; 
-            width: 24px; 
-            text-align: center; 
-        }
+        .timeline-dot { position: absolute; left: -11px; top: 5px; width: 20px; height: 20px; border-radius: 50%; background: #667eea; border: 3px solid white; box-shadow: 0 0 0 2px #667eea; }
+        .timeline-time { font-size: 12px; color: #718096; margin-bottom: 5px; }
+        .timeline-content { background: #f7fafc; padding: 12px; border-radius: 8px; font-size: 14px; }
+        .timeline-icon { display: inline-block; width: 24px; text-align: center; }
         
-        /* Session Detail Panel */
-        .session-detail { 
-            background: #f0f4ff; 
-            border-left: 4px solid #667eea; 
-            padding: 20px; 
-            border-radius: 8px; 
-            margin-top: 20px;
-        }
-        .session-detail h3 { 
-            color: #667eea; 
-            margin-bottom: 15px; 
-            font-size: 18px;
-        }
-        .session-info { 
-            display: grid; 
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); 
-            gap: 15px; 
-            margin-bottom: 20px;
-        }
-        .session-info-item { 
-            background: white; 
-            padding: 12px; 
-            border-radius: 8px;
-        }
-        .session-info-label { 
-            font-size: 12px; 
-            color: #718096; 
-            margin-bottom: 5px;
-        }
-        .session-info-value { 
-            font-weight: 600; 
-            color: #2d3748;
-        }
+        .session-detail { background: #f0f4ff; border-left: 4px solid #667eea; padding: 20px; border-radius: 8px; margin-top: 20px; }
+        .session-detail h3 { color: #667eea; margin-bottom: 15px; font-size: 18px; }
+        .session-info { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; }
+        .session-info-item { background: white; padding: 12px; border-radius: 8px; }
+        .session-info-label { font-size: 12px; color: #718096; margin-bottom: 5px; }
+        .session-info-value { font-weight: 600; color: #2d3748; }
     </style>
 </head>
 <body>
@@ -597,7 +484,6 @@ function getActionLabel($action) {
             window.location.href = url;
         }
         
-        // Scroll to session detail if in URL
         if (window.location.hash === '#session-detail') {
             setTimeout(() => {
                 document.getElementById('session-detail').scrollIntoView({ behavior: 'smooth', block: 'start' });

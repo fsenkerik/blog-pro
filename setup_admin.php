@@ -22,6 +22,7 @@ try {
             password VARCHAR(255) NOT NULL,
             email VARCHAR(100),
             role ENUM('admin','editor','IT') DEFAULT 'editor',
+            monitoring_access TINYINT(1) NOT NULL DEFAULT 0,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             last_login TIMESTAMP NULL,
             INDEX idx_username (username)
@@ -125,6 +126,14 @@ try {
         $success[] = "ENUM role aktualizovan";
     } catch (Exception $e) {}
 
+    // Přidej monitoring_access sloupec pokud neexistuje
+    try {
+        $pdo->exec("ALTER TABLE users ADD COLUMN monitoring_access TINYINT(1) NOT NULL DEFAULT 0");
+        $success[] = "Sloupec monitoring_access přidán";
+    } catch (Exception $e) {
+        $success[] = "Sloupec monitoring_access OK (již existuje)";
+    }
+
     $pdo->exec("INSERT IGNORE INTO categories (name, slug, description) VALUES
         ('Akce 2025','akce-2025','Udalosti z roku 2025'),
         ('Akce 2026','akce-2026','Udalosti z roku 2026'),
@@ -133,14 +142,14 @@ try {
     $success[] = "Kategorie OK";
 
     $users = [
-        ['admin', 'VAXNa239', 'admin@blog.cz', 'admin'],
-        ['IT',    'VAXNa239', 'it@blog.cz',    'IT'],
+        ['admin', 'VAXNa239', 'admin@blog.cz', 'admin', 0],
+        ['IT',    'VAXNa239', 'it@blog.cz',    'IT',    1],
     ];
-    foreach ($users as [$uname, $upass, $uemail, $urole]) {
+    foreach ($users as [$uname, $upass, $uemail, $urole, $umon]) {
         $hash = password_hash($upass, PASSWORD_DEFAULT);
-        $stmt = $pdo->prepare("INSERT INTO users (username, password, email, role) VALUES (?,?,?,?)
-            ON DUPLICATE KEY UPDATE password=VALUES(password), role=VALUES(role)");
-        $stmt->execute([$uname, $hash, $uemail, $urole]);
+        $stmt = $pdo->prepare("INSERT INTO users (username, password, email, role, monitoring_access) VALUES (?,?,?,?,?)
+            ON DUPLICATE KEY UPDATE password=VALUES(password), role=VALUES(role), monitoring_access=VALUES(monitoring_access)");
+        $stmt->execute([$uname, $hash, $uemail, $urole, $umon]);
         $success[] = "Uzivatel '$uname' (role: $urole) OK";
     }
 
@@ -156,7 +165,7 @@ try {
 <?php foreach($errors  as $e): ?><p class="err">✗ <?=htmlspecialchars($e)?></p><?php endforeach; ?>
 <?php if(empty($errors)): ?>
 <h2>Hotovo!</h2>
-<p><strong>admin / VAXNa239</strong> (admin)<br><strong>IT / VAXNa239</strong> (IT)</p>
+<p><strong>admin / VAXNa239</strong> (admin)<br><strong>IT / VAXNa239</strong> (IT, monitoring: zapnut)</p>
 <p><a href="/admin/login.php"><strong>Prejit na prihlaseni &rarr;</strong></a></p>
 <p style="color:red"><strong>SMAZ tento soubor po prihlaseni!</strong></p>
 <?php endif; ?>

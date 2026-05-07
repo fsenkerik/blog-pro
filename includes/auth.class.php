@@ -79,7 +79,17 @@ class Auth {
     }
 
     public function canAccessMonitoring() {
-        return in_array($this->getRole(), ['IT', 'admin']);
+        if (!$this->isLoggedIn()) return false;
+        $role = $this->getRole();
+        if ($role === 'admin') return true;
+        if ($role === 'IT') {
+            // Check per-user monitoring_access flag
+            $this->db->query("SELECT monitoring_access FROM users WHERE id = :id");
+            $this->db->bind(':id', $_SESSION['user_id']);
+            $user = $this->db->fetch();
+            return $user && !empty($user['monitoring_access']);
+        }
+        return false;
     }
 
     public function canEdit($authorId) {
@@ -166,7 +176,7 @@ class Auth {
     // ===== User management =====
 
     public function getAllUsers() {
-        $this->db->query("SELECT id, username, email, role, created_at, last_login FROM users ORDER BY created_at DESC");
+        $this->db->query("SELECT id, username, email, role, monitoring_access, created_at, last_login FROM users ORDER BY created_at DESC");
         return $this->db->fetchAll();
     }
 
@@ -174,11 +184,12 @@ class Auth {
         $this->db->query("SELECT id FROM users WHERE username = :u");
         $this->db->bind(':u', $username);
         if ($this->db->fetch()) return ['success' => false, 'message' => 'Uživatelské jméno již existuje'];
-        $this->db->query("INSERT INTO users (username, password, email, role) VALUES (:u, :p, :e, :r)");
+        $this->db->query("INSERT INTO users (username, password, email, role, monitoring_access) VALUES (:u, :p, :e, :r, :m)");
         $this->db->bind(':u', $username);
         $this->db->bind(':p', password_hash($password, PASSWORD_DEFAULT));
         $this->db->bind(':e', $email);
         $this->db->bind(':r', $role);
+        $this->db->bind(':m', ($role === 'IT') ? 1 : 0);
         return $this->db->execute()
             ? ['success' => true,  'message' => 'Uživatel vytvořen']
             : ['success' => false, 'message' => 'Nepodařilo se vytvořit uživatele'];

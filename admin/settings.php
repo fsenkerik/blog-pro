@@ -10,6 +10,13 @@ requireAuth();
 $auth = new Auth();
 $backup = new Backup();
 
+// Ensure monitoring_access column exists
+try {
+    $db_alter = new Database();
+    $db_alter->query("ALTER TABLE users ADD COLUMN monitoring_access TINYINT(1) NOT NULL DEFAULT 1");
+    $db_alter->execute();
+} catch (\Throwable $e) {} // Column already exists - ignore
+
 $success = '';
 $error = '';
 // Ochrana IT účtů - pouze IT může upravovat IT uživatele
@@ -26,7 +33,7 @@ if (isPost()) {
         $targetUser = $db_check->fetch();
         
         // Pokud je cíl IT a aktuální user není IT, zamítnout
-        if ($targetUser && $targetUser['role'] === 'it' && $_SESSION['user_role'] !== 'it') {
+        if ($targetUser && $targetUser['role'] === 'IT' && $_SESSION['user_role'] !== 'IT') {
             setFlash('error', 'Nemáte oprávnění upravovat IT uživatele');
             redirect(ADMIN_URL . 'settings.php');
             exit;
@@ -150,25 +157,31 @@ if (isPost()) {
             $password = post('password');
             $role = post('role', 'editor');
             
-            // Zkontrolovat zda username již neexistuje
-            $db = new Database();
-            $db->query("SELECT id FROM users WHERE username = :username");
-            $db->bind(':username', $username);
-            if ($db->fetch()) {
-                $error = 'Uživatelské jméno již existuje!';
+            // IT uživatel může přidávat pouze další IT uživatele
+            if ($_SESSION['user_role'] === 'IT' && $role !== 'IT') {
+                $error = 'IT role může přidávat pouze IT uživatele.';
             } else {
-                // Vytvořit uživatele
-                $hashedPassword = password_hash($password, PASSWORD_BCRYPT);
-                
-                $db->query("INSERT INTO users (username, password, role, created_at) VALUES (:username, :password, :role, NOW())");
+                // Zkontrolovat zda username již neexistuje
+                $db = new Database();
+                $db->query("SELECT id FROM users WHERE username = :username");
                 $db->bind(':username', $username);
-                $db->bind(':password', $hashedPassword);
-                $db->bind(':role', $role);
-                
-                if ($db->execute()) {
-                    $success = 'Uživatel byl vytvořen!';
+                if ($db->fetch()) {
+                    $error = 'Uživatelské jméno již existuje!';
                 } else {
-                    $error = 'Nepodařilo se vytvořit uživatele';
+                    // Vytvořit uživatele
+                    $hashedPassword = password_hash($password, PASSWORD_BCRYPT);
+                    
+                    $db->query("INSERT INTO users (username, password, role, monitoring_access, created_at) VALUES (:username, :password, :role, :mon, NOW())");
+                    $db->bind(':username', $username);
+                    $db->bind(':password', $hashedPassword);
+                    $db->bind(':role', $role);
+                    $db->bind(':mon', ($role === 'IT') ? 1 : 0);
+                    
+                    if ($db->execute()) {
+                        $success = 'Uživatel byl vytvořen!';
+                    } else {
+                        $error = 'Nepodařilo se vytvořit uživatele';
+                    }
                 }
             }
         } elseif ($action === 'delete_user') {
@@ -200,6 +213,16 @@ if (isPost()) {
             } else {
                 $error = 'Nepodařilo se změnit heslo';
             }
+        } elseif ($action === 'toggle_monitoring_access') {
+            $userId = intval(post('user_id'));
+            $db = new Database();
+            $db->query("UPDATE users SET monitoring_access = NOT monitoring_access WHERE id = :id AND role = 'IT'");
+            $db->bind(':id', $userId);
+            if ($db->execute()) {
+                $success = 'Přístup k monitoringu byl upraven!';
+            } else {
+                $error = 'Nepodařilo se změnit přístup k monitoringu';
+            }
         }
     }
 }
@@ -221,7 +244,7 @@ $backups = $db3->fetchAll();
 
 // Načíst všechny uživatele
 $db = new Database();
-$db->query("SELECT id, username, role, created_at FROM users ORDER BY created_at DESC");
+$db->query("SELECT id, username, role, monitoring_access, created_at FROM users ORDER BY created_at DESC");
 $users = $db->fetchAll();
 
 // Načíst aktuálního uživatele
@@ -276,6 +299,8 @@ $currentUser = $db->fetch();
         .btn-success:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(72,187,120,0.4); }
         .btn-danger { background: linear-gradient(135deg, #fc8181, #f56565); color: white; }
         .btn-danger:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(252,129,129,0.4); }
+        .btn-warning { background: linear-gradient(135deg, #f6ad55, #ed8936); color: white; }
+        .btn-warning:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(246,173,85,0.4); }
         .btn-small { padding: 8px 16px; font-size: 13px; }
         
         /* Table */
@@ -284,13 +309,19 @@ $currentUser = $db->fetch();
         .table th { padding: 12px; text-align: left; font-weight: 600; color: #2d3748; border-bottom: 2px solid #e2e8f0; }
         .table td { padding: 12px; border-bottom: 1px solid #e2e8f0; }
         .table tr:hover { background: #f7fafc; }
-        .table-actions { display: flex; gap: 8px; }
+        .table-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
         
         /* Badge */
         .badge { display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 12px; font-weight: 600; }
         .badge-admin { background: #667eea; color: white; }
         .badge-editor { background: #48bb78; color: white; }
-        .badge-it { background: #9f7aea; color: white; }
+        .badge-IT { background: #9f7aea; color: white; }
+
+        /* Toggle switch */
+        .toggle-btn { padding: 6px 14px; font-size: 12px; border: none; border-radius: 20px; cursor: pointer; font-weight: 600; transition: all 0.2s; }
+        .toggle-btn.on { background: #48bb78; color: white; }
+        .toggle-btn.off { background: #e2e8f0; color: #4a5568; }
+        .toggle-btn:hover { transform: scale(1.05); }
         
         /* Modal */
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 9999; align-items: center; justify-content: center; backdrop-filter: blur(4px); }
@@ -362,10 +393,6 @@ $currentUser = $db->fetch();
             </form>
         </div>
 
-<!-- KOMPLETNÍ SEKCE ZÁLOH PRO SETTINGS.PHP -->
-<!-- Nahraď celou sekci "Zálohy" (řádek ~312-400) -->
-
-<!-- ===== KOMPLETNÍ SEKCE ZÁLOH - NAHRAĎ V SETTINGS.PHP ===== -->
 <!-- Zálohy -->
 <div class="card" id="backups">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
@@ -562,7 +589,6 @@ $currentUser = $db->fetch();
     </div>
 </div>
 
-<!-- CSS PRO KOMPAKTNÍ KALENDÁŘ -->
 <style>
 .calendar-grid-compact {
     display: grid;
@@ -642,10 +668,8 @@ $currentUser = $db->fetch();
 }
 </style>
 
-<!-- JAVASCRIPT -->
 <script>
 function showBackupView(view) {
-    // Ulož do localStorage
     localStorage.setItem('backupView', view);
     
     if (view === 'calendar') {
@@ -707,11 +731,8 @@ function closeDeleteBackupModal() {
     document.getElementById('deleteBackupModal').classList.remove('active');
 }
 
-// Obnovit aktivní zobrazení při načtení stránky
 document.addEventListener('DOMContentLoaded', function() {
     const savedView = localStorage.getItem('backupView') || 'list';
-    
-    // Pokud je v URL parametr month, udrž kalendář
     const urlParams = new URLSearchParams(window.location.search);
     if (urlParams.has('month')) {
         showBackupView('calendar');
@@ -722,20 +743,20 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
     
         <!-- Správa uživatelů -->
-        <?php if ($currentUser['role'] === 'admin' || $currentUser['role'] === 'it'): ?>
+        <?php if ($currentUser['role'] === 'admin' || $currentUser['role'] === 'IT'): ?>
         <div class="card">
             <h2>👥 Správa uživatelů</h2>
             <p class="card-description">
-             <strong>Role IT:</strong> Nejvyšší práva + přístup k monitoringu.<br>
-             <strong>Role Admin:</strong> Může spravovat vše včetně uživatelů a nastavení.<br>
-            <strong>Role Editor:</strong> Může vytvářet a upravovat pouze vlastní příspěvky.
+                <strong>Role IT:</strong> Přístup k monitoringu a správě IT uživatelů. Monitoring lze zapnout/vypnout tlačítkem u každého IT uživatele.<br>
+                <strong>Role Admin:</strong> Plný přístup – správa obsahu, uživatelů a nastavení.<br>
+                <strong>Role Editor:</strong> Může vytvářet a upravovat pouze vlastní příspěvky.
             </p>
             
-            <div style="display: flex; gap: 10px; margin-bottom: 20px; align-items: center;">
+            <div style="display: flex; gap: 10px; margin-bottom: 20px; align-items: center; flex-wrap: wrap;">
                 <button onclick="openAddUserModal()" class="btn btn-success">➕ Přidat uživatele</button>
-                <?php if ($currentUser['role'] === 'it'): ?>
+                <?php if ($currentUser['role'] === 'IT'): ?>
                     <a href="monitoring.php" class="btn" style="background: linear-gradient(135deg, #667eea, #764ba2); color: white;">
-                        🔍 Monitoring & Historie
+                        🔍 Přejít na Monitoring
                     </a>
                 <?php endif; ?>
             </div>
@@ -756,7 +777,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             <td>
                                 <span class="badge badge-<?= $user['role'] ?>">
                                     <?php 
-                                    if ($user['role'] === 'it') {
+                                    if ($user['role'] === 'IT') {
                                         echo '🔧 IT';
                                     } elseif ($user['role'] === 'admin') {
                                         echo '👑 Admin';
@@ -770,11 +791,24 @@ document.addEventListener('DOMContentLoaded', function() {
                             <td>
                                 <div class="table-actions">
                                     <?php if ($user['id'] !== $_SESSION['user_id']): ?>
-                                        <?php if ($user['role'] === 'it' && $currentUser['role'] !== 'it'): ?>
-                                            <span style="color: #9f7aea; font-size: 13px;">🔒 IT účet - pouze IT může upravovat</span>
+                                        <?php if ($user['role'] === 'IT' && $currentUser['role'] !== 'IT'): ?>
+                                            <span style="color: #9f7aea; font-size: 13px;">🔒 IT účet – pouze IT může upravovat</span>
                                         <?php else: ?>
-                                            <button onclick="openChangePasswordModal(<?= $user['id'] ?>, '<?= e($user['username']) ?>')" class="btn btn-primary btn-small">🔑 Změnit heslo</button>
-                                            <button onclick="confirmDeleteUser(<?= $user['id'] ?>, '<?= e($user['username']) ?>')" class="btn btn-danger btn-small">🗑️ Smazat</button>
+                                            <?php if ($user['role'] === 'IT'): ?>
+                                                <!-- Monitoring toggle pro IT uživatele -->
+                                                <form method="POST" style="margin:0; display:inline;" id="monForm<?= $user['id'] ?>">
+                                                    <?= Security::tokenInput() ?>
+                                                    <input type="hidden" name="action" value="toggle_monitoring_access">
+                                                    <input type="hidden" name="user_id" value="<?= $user['id'] ?>">
+                                                    <button type="submit"
+                                                        class="toggle-btn <?= $user['monitoring_access'] ? 'on' : 'off' ?>"
+                                                        title="Přepnout přístup k monitoringu">
+                                                        🔍 Monitoring <?= $user['monitoring_access'] ? 'ON' : 'OFF' ?>
+                                                    </button>
+                                                </form>
+                                            <?php endif; ?>
+                                            <button onclick="openChangePasswordModal(<?= $user['id'] ?>, '<?= e($user['username']) ?>')" class="btn btn-primary btn-small">🔑 Heslo</button>
+                                            <button onclick="confirmDeleteUser(<?= $user['id'] ?>, '<?= e($user['username']) ?>')" class="btn btn-danger btn-small">🗑️</button>
                                         <?php endif; ?>
                                     <?php else: ?>
                                         <span style="color: #a0aec0; font-size: 13px;">Jste přihlášeni jako tento uživatel</span>
@@ -803,7 +837,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div class="form-group">
                     <label>Uživatelské jméno *</label>
                     <input type="text" name="username" required placeholder="např. jan.novak">
-                    <small style="color: #718096; margin-top: 5px; display: block;">Pouze malá písmena, čísla, tečka a podtržítko</small>
                 </div>
                 
                 <div class="form-group">
@@ -814,10 +847,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div class="form-group">
                     <label>Role *</label>
                     <select name="role" required>
-                        <option value="editor">✏️ Editor - Může upravovat vlastní příspěvky</option>
-                        <option value="admin">👑 Admin - Plný přístup ke všemu</option>
-                        <?php if ($currentUser['role'] === 'it'): ?>
-                            <option value="it">🔧 IT - Nejvyšší práva + monitoring</option>
+                        <?php if ($currentUser['role'] === 'IT'): ?>
+                            <!-- IT role může přidávat pouze další IT uživatele -->
+                            <option value="IT">🔧 IT – Přístup k monitoringu</option>
+                        <?php else: ?>
+                            <option value="editor">✏️ Editor – Může upravovat vlastní příspěvky</option>
+                            <option value="admin">👑 Admin – Plný přístup ke všemu</option>
                         <?php endif; ?>
                     </select>
                 </div>
@@ -858,161 +893,7 @@ document.addEventListener('DOMContentLoaded', function() {
             </form>
         </div>
     </div>
-    <div class="modal" id="restoreModal">
-    <div class="modal-content">
-        <h2>⚠️ Obnovit zálohu?</h2>
-        <p style="color: #e53e3e; font-weight: 600; margin: 15px 0;">
-            VAROVÁNÍ: Tato akce je nevratná!
-        </p>
-        <p style="margin-bottom: 20px;">
-            Obnovením zálohy <strong id="restoreBackupName"></strong> přepíšete:
-        </p>
-        <ul style="margin: 15px 0; padding-left: 20px; line-height: 1.8;">
-            <li>✏️ Všechny příspěvky</li>
-            <li>📁 Všechny kategorie</li>
-            <li>👥 Všechny uživatele</li>
-            <li id="restoreIncludesFiles" style="display: none;">🖼️ Všechny nahrané obrázky</li>
-        </ul>
-        <p style="color: #718096; font-size: 14px; margin-top: 15px;">
-            Současná data budou ztracena a nahrazena stavem ze zálohy.
-        </p>
-        
-        <form method="POST" id="restoreForm">
-            <?= Security::tokenInput() ?>
-            <input type="hidden" name="action" value="restore_backup">
-            <input type="hidden" name="backup_id" id="restoreBackupId">
-            
-            <div class="modal-actions">
-                <button type="submit" class="btn btn-danger">✓ Ano, obnovit zálohu</button>
-                <button type="button" class="btn btn-secondary" onclick="closeRestoreModal()">Zrušit</button>
-            </div>
-        </form>
-    </div>
-</div>
 
-    <script>
-    // Otevřít restore modal
-    function confirmRestore(backupId, backupName, backupType) {
-        document.getElementById('restoreBackupId').value = backupId;
-        document.getElementById('restoreBackupName').textContent = backupName;
-        
-        // Zobraz "včetně obrázků" pokud je to full backup
-        if (backupType === 'full') {
-            document.getElementById('restoreIncludesFiles').style.display = 'list-item';
-        } else {
-            document.getElementById('restoreIncludesFiles').style.display = 'none';
-        }
-        
-        document.getElementById('restoreModal').classList.add('active');
-    }
-
-    // Zavřít restore modal
-    function closeRestoreModal() {
-        document.getElementById('restoreModal').classList.remove('active');
-    }
-
-    // Zavřít na ESC
-    document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') {
-            closeRestoreModal();
-        }
-    });
-
-    // Zavřít kliknutím mimo
-    document.getElementById('restoreModal').addEventListener('click', function(e) {
-        if (e.target === this) {
-            closeRestoreModal();
-        }
-    });
-    </script>
-
-    <script>
-        // Add User Modal
-        function openAddUserModal() {
-            document.getElementById('addUserModal').classList.add('active');
-        }
-        
-        function closeAddUserModal() {
-            document.getElementById('addUserModal').classList.remove('active');
-            document.getElementById('addUserForm').reset();
-        }
-        
-        // Change Password Modal
-        function openChangePasswordModal(userId, username) {
-            document.getElementById('changePasswordUserId').value = userId;
-            document.getElementById('changePasswordUsername').textContent = username;
-            document.getElementById('changePasswordModal').classList.add('active');
-        }
-        
-        function closeChangePasswordModal() {
-            document.getElementById('changePasswordModal').classList.remove('active');
-            document.getElementById('changePasswordForm').reset();
-        }
-        
-        // Confirm Delete Backup
-        function confirmDelete(backupId) {
-            if (confirm('Opravdu chcete smazat tuto zálohu? Tuto akci nelze vrátit zpět.')) {
-                const form = document.createElement('form');
-                form.method = 'POST';
-                form.innerHTML = `
-                    <?= Security::tokenInput() ?>
-                    <input type="hidden" name="action" value="delete_backup">
-                    <input type="hidden" name="backup_id" value="${backupId}">
-                `;
-                document.body.appendChild(form);
-                form.submit();
-            }
-        }
-        
-        // Confirm Restore Backup
-        function confirmRestore(backupId) {
-            if (confirm('VAROVÁNÍ: Obnovením této zálohy přepíšete všechna současná data!\n\nOpravdu chcete pokračovat?')) {
-                const form = document.createElement('form');
-                form.method = 'POST';
-                form.innerHTML = `
-                    <?= Security::tokenInput() ?>
-                    <input type="hidden" name="action" value="restore_backup">
-                    <input type="hidden" name="backup_id" value="${backupId}">
-                `;
-                document.body.appendChild(form);
-                form.submit();
-            }
-        }
-        
-        // Confirm Delete User
-        function confirmDeleteUser(userId, username) {
-            document.getElementById('deleteUserId').value = userId;
-            document.getElementById('deleteUserName').textContent = username;
-            document.getElementById('deleteUserModal').classList.add('active');
-        }
-
-        function closeDeleteUserModal() {
-            document.getElementById('deleteUserModal').classList.remove('active');
-            document.getElementById('deleteUserForm').reset();
-        }
-        
-        // Close modals on ESC
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape') {
-                closeAddUserModal();
-                closeChangePasswordModal();
-                closeDeleteUserModal();
-            }
-        });
-        
-        // Close modals on click outside
-        document.querySelectorAll('.modal').forEach(modal => {
-            modal.addEventListener('click', function(e) {
-                if (e.target === this) {
-                    closeAddUserModal();
-                    closeChangePasswordModal();
-                    closeDeleteUserModal();
-                }
-            });
-        });
-
-          
-    </script>
     <!-- Modal: Smazat uživatele -->
     <div class="modal" id="deleteUserModal">
         <div class="modal-content">
@@ -1042,222 +923,221 @@ document.addEventListener('DOMContentLoaded', function() {
             </div>
         </div>
     </div>
-    <!-- MODAL PRO NASTAVENÍ AUTOMATICKÝCH ZÁLOH -->
-<!-- Přidej před </body> v settings.php -->
 
-<!-- Modal: Nastavení automatických záloh -->
-<div class="modal" id="backupScheduleModal">
-    <div class="modal-content" style="max-width: 600px;">
-        <div class="modal-header">
-            <h3>⚙️ Nastavení automatických záloh</h3>
-            <button class="modal-close" onclick="closeBackupScheduleModal()">×</button>
+    <!-- Modal: Restore zálohy -->
+    <div class="modal" id="restoreModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>↻ Obnovit zálohu</h3>
+                <button class="modal-close" onclick="closeRestoreModal()">×</button>
+            </div>
+            <div style="padding: 20px;">
+                <div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin-bottom: 20px; border-radius: 8px;">
+                    <strong>⚠️ VAROVÁNÍ:</strong> Obnovením zálohy přepíšete všechna současná data!
+                </div>
+                <p style="font-size: 16px; margin-bottom: 10px;">Opravdu chcete obnovit zálohu:</p>
+                <p style="background: #f7fafc; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+                    <strong id="restoreFilename" style="color: #667eea;"></strong><br>
+                    <span id="restoreDate" style="font-size: 14px; color: #718096;"></span>
+                </p>
+                <form method="POST" id="restoreForm">
+                    <?= Security::tokenInput() ?>
+                    <input type="hidden" name="action" value="restore_backup">
+                    <input type="hidden" name="backup_id" id="restoreBackupId">
+                    <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                        <button type="button" onclick="closeRestoreModal()" class="btn" style="background: #e2e8f0; color: #4a5568;">Zrušit</button>
+                        <button type="submit" class="btn btn-success">↻ Ano, obnovit</button>
+                    </div>
+                </form>
+            </div>
         </div>
-        <form method="POST" style="padding: 20px;">
-            <?= Security::tokenInput() ?>
-            <input type="hidden" name="action" value="update_backup_schedule">
-            
-            <!-- Databázové zálohy -->
-            <div style="background: #f7fafc; padding: 20px; border-radius: 12px; margin-bottom: 20px;">
-                <h4 style="margin: 0 0 15px 0; display: flex; align-items: center; gap: 10px;">
-                    <span>📄 Zálohy databáze</span>
-                    <label style="display: flex; align-items: center; cursor: pointer; margin-left: auto;">
-                        <input type="checkbox" name="db_enabled" value="1" <?= $dbSchedule['enabled'] ? 'checked' : '' ?> style="margin-right: 8px;">
-                        <span>Zapnuto</span>
-                    </label>
-                </h4>
-                
-                <div class="form-group">
-                    <label>Frekvence</label>
-                    <select name="db_frequency" class="form-control">
-                        <option value="daily" <?= $dbSchedule['frequency'] === 'daily' ? 'selected' : '' ?>>Každý den</option>
-                        <option value="weekly" <?= $dbSchedule['frequency'] === 'weekly' ? 'selected' : '' ?>>Každý týden</option>
-                        <option value="monthly" <?= $dbSchedule['frequency'] === 'monthly' ? 'selected' : '' ?>>Každý měsíc</option>
-                    </select>
-                </div>
-                
-                <div class="form-group">
-                    <label>Čas spuštění</label>
-                    <input type="time" name="db_time" value="<?= substr($dbSchedule['time'], 0, 5) ?>" class="form-control" required>
-                </div>
-                
-                <?php if ($dbSchedule['last_run']): ?>
-                    <div style="font-size: 13px; color: #718096;">
-                        ✅ Poslední spuštění: <?= formatDate($dbSchedule['last_run']) ?><br>
-                        <?php if ($dbSchedule['next_run']): ?>
-                            🕐 Další spuštění: <?= formatDate($dbSchedule['next_run']) ?>
-                        <?php endif; ?>
-                    </div>
-                <?php endif; ?>
-            </div>
-            
-            <!-- Kompletní zálohy -->
-            <div style="background: #f0fff4; padding: 20px; border-radius: 12px; margin-bottom: 20px;">
-                <h4 style="margin: 0 0 15px 0; display: flex; align-items: center; gap: 10px;">
-                    <span>📦 Kompletní zálohy</span>
-                    <label style="display: flex; align-items: center; cursor: pointer; margin-left: auto;">
-                        <input type="checkbox" name="full_enabled" value="1" <?= $fullSchedule['enabled'] ? 'checked' : '' ?> style="margin-right: 8px;">
-                        <span>Zapnuto</span>
-                    </label>
-                </h4>
-                
-                <div class="form-group">
-                    <label>Frekvence</label>
-                    <select name="full_frequency" class="form-control">
-                        <option value="daily" <?= $fullSchedule['frequency'] === 'daily' ? 'selected' : '' ?>>Každý den</option>
-                        <option value="weekly" <?= $fullSchedule['frequency'] === 'weekly' ? 'selected' : '' ?>>Každý týden</option>
-                        <option value="monthly" <?= $fullSchedule['frequency'] === 'monthly' ? 'selected' : '' ?>>Každý měsíc</option>
-                    </select>
-                </div>
-                
-                <div class="form-group">
-                    <label>Čas spuštění</label>
-                    <input type="time" name="full_time" value="<?= substr($fullSchedule['time'], 0, 5) ?>" class="form-control" required>
-                </div>
-                
-                <?php if ($fullSchedule['last_run']): ?>
-                    <div style="font-size: 13px; color: #718096;">
-                        ✅ Poslední spuštění: <?= formatDate($fullSchedule['last_run']) ?><br>
-                        <?php if ($fullSchedule['next_run']): ?>
-                            🕐 Další spuštění: <?= formatDate($fullSchedule['next_run']) ?>
-                        <?php endif; ?>
-                    </div>
-                <?php endif; ?>
-            </div>
-            
-            <div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin-bottom: 20px; border-radius: 8px;">
-                <strong>⚠️ Důležité:</strong> Pro automatické zálohy musíte nastavit cron job na serveru. 
-                <a href="#" onclick="alert('Podrobný návod najdete v souboru 23_BACKUP_SCHEDULER_PHP.txt'); return false;" style="color: #667eea;">Zobrazit návod</a>
-            </div>
-            
-            <div style="display: flex; gap: 10px; justify-content: flex-end;">
-                <button type="button" onclick="closeBackupScheduleModal()" class="btn" style="background: #e2e8f0; color: #4a5568;">Zrušit</button>
-                <button type="submit" class="btn btn-success">💾 Uložit nastavení</button>
-            </div>
-        </form>
     </div>
-</div>
-<!-- ===== MODÁLY PRO ZÁLOHY - PŘIDEJ PŘED </body> V SETTINGS.PHP ===== -->
 
-<!-- Modal: Smazat zálohu -->
-<div class="modal" id="deleteBackupModal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h3>🗑️ Smazat zálohu</h3>
-            <button class="modal-close" onclick="closeDeleteBackupModal()">×</button>
-        </div>
-        <div style="padding: 20px;">
-            <div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin-bottom: 20px; border-radius: 8px;">
-                <strong>⚠️ Varování:</strong> Tuto akci nelze vrátit zpět!
+    <!-- Modal: Smazat zálohu -->
+    <div class="modal" id="deleteBackupModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>🗑️ Smazat zálohu</h3>
+                <button class="modal-close" onclick="closeDeleteBackupModal()">×</button>
             </div>
-            <p style="font-size: 16px; margin-bottom: 20px;">
-                Opravdu chcete smazat zálohu <strong id="deleteBackupFilename" style="color: #667eea;"></strong>?
-            </p>
-            <form method="POST" id="deleteBackupForm">
+            <div style="padding: 20px;">
+                <div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin-bottom: 20px; border-radius: 8px;">
+                    <strong>⚠️ Varování:</strong> Tuto akci nelze vrátit zpět!
+                </div>
+                <p style="font-size: 16px; margin-bottom: 20px;">
+                    Opravdu chcete smazat zálohu <strong id="deleteBackupFilename" style="color: #667eea;"></strong>?
+                </p>
+                <form method="POST" id="deleteBackupForm">
+                    <?= Security::tokenInput() ?>
+                    <input type="hidden" name="action" value="delete_backup">
+                    <input type="hidden" name="backup_id" id="deleteBackupId">
+                    <div style="display: flex; gap: 10px; justify-content: flex-end;">
+                        <button type="button" onclick="closeDeleteBackupModal()" class="btn" style="background: #e2e8f0; color: #4a5568;">Zrušit</button>
+                        <button type="submit" class="btn btn-danger">🗑️ Ano, smazat</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Nastavení automatických záloh -->
+    <div class="modal" id="backupScheduleModal">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <h3>⚙️ Nastavení automatických záloh</h3>
+                <button class="modal-close" onclick="closeBackupScheduleModal()">×</button>
+            </div>
+            <form method="POST" style="padding: 20px;">
                 <?= Security::tokenInput() ?>
-                <input type="hidden" name="action" value="delete_backup">
-                <input type="hidden" name="backup_id" id="deleteBackupId">
+                <input type="hidden" name="action" value="update_backup_schedule">
+                
+                <!-- Databázové zálohy -->
+                <div style="background: #f7fafc; padding: 20px; border-radius: 12px; margin-bottom: 20px;">
+                    <h4 style="margin: 0 0 15px 0; display: flex; align-items: center; gap: 10px;">
+                        <span>📄 Zálohy databáze</span>
+                        <label style="display: flex; align-items: center; cursor: pointer; margin-left: auto;">
+                            <input type="checkbox" name="db_enabled" value="1" <?= ($dbSchedule && $dbSchedule['enabled']) ? 'checked' : '' ?> style="margin-right: 8px;">
+                            <span>Zapnuto</span>
+                        </label>
+                    </h4>
+                    <div class="form-group">
+                        <label>Frekvence</label>
+                        <select name="db_frequency" class="form-control">
+                            <option value="daily" <?= ($dbSchedule && $dbSchedule['frequency'] === 'daily') ? 'selected' : '' ?>>Každý den</option>
+                            <option value="weekly" <?= ($dbSchedule && $dbSchedule['frequency'] === 'weekly') ? 'selected' : '' ?>>Každý týden</option>
+                            <option value="monthly" <?= ($dbSchedule && $dbSchedule['frequency'] === 'monthly') ? 'selected' : '' ?>>Každý měsíc</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Čas spuštění</label>
+                        <input type="time" name="db_time" value="<?= $dbSchedule ? substr($dbSchedule['time'], 0, 5) : '02:00' ?>" class="form-control" required>
+                    </div>
+                </div>
+                
+                <!-- Kompletní zálohy -->
+                <div style="background: #f0fff4; padding: 20px; border-radius: 12px; margin-bottom: 20px;">
+                    <h4 style="margin: 0 0 15px 0; display: flex; align-items: center; gap: 10px;">
+                        <span>📦 Kompletní zálohy</span>
+                        <label style="display: flex; align-items: center; cursor: pointer; margin-left: auto;">
+                            <input type="checkbox" name="full_enabled" value="1" <?= ($fullSchedule && $fullSchedule['enabled']) ? 'checked' : '' ?> style="margin-right: 8px;">
+                            <span>Zapnuto</span>
+                        </label>
+                    </h4>
+                    <div class="form-group">
+                        <label>Frekvence</label>
+                        <select name="full_frequency" class="form-control">
+                            <option value="daily" <?= ($fullSchedule && $fullSchedule['frequency'] === 'daily') ? 'selected' : '' ?>>Každý den</option>
+                            <option value="weekly" <?= ($fullSchedule && $fullSchedule['frequency'] === 'weekly') ? 'selected' : '' ?>>Každý týden</option>
+                            <option value="monthly" <?= ($fullSchedule && $fullSchedule['frequency'] === 'monthly') ? 'selected' : '' ?>>Každý měsíc</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Čas spuštění</label>
+                        <input type="time" name="full_time" value="<?= $fullSchedule ? substr($fullSchedule['time'], 0, 5) : '03:00' ?>" class="form-control" required>
+                    </div>
+                </div>
+                
                 <div style="display: flex; gap: 10px; justify-content: flex-end;">
-                    <button type="button" onclick="closeDeleteBackupModal()" class="btn" style="background: #e2e8f0; color: #4a5568;">Zrušit</button>
-                    <button type="submit" class="btn btn-danger">🗑️ Ano, smazat</button>
+                    <button type="button" onclick="closeBackupScheduleModal()" class="btn" style="background: #e2e8f0; color: #4a5568;">Zrušit</button>
+                    <button type="submit" class="btn btn-success">💾 Uložit nastavení</button>
                 </div>
             </form>
         </div>
     </div>
-</div>
 
-<!-- Modal: Obnovit zálohu (už existuje v souboru, ale pro jistotu) -->
-<div class="modal" id="restoreModal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h3>↻ Obnovit zálohu</h3>
-            <button class="modal-close" onclick="closeRestoreModal()">×</button>
-        </div>
-        <div style="padding: 20px;">
-            <div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin-bottom: 20px; border-radius: 8px;">
-                <strong>⚠️ VAROVÁNÍ:</strong> Obnovením této zálohy přepíšete všechna současná data!
-            </div>
-            <p style="font-size: 16px; margin-bottom: 10px;">
-                Opravdu chcete obnovit zálohu:
-            </p>
-            <p style="background: #f7fafc; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
-                <strong id="restoreFilename" style="color: #667eea;"></strong><br>
-                <span id="restoreDate" style="font-size: 14px; color: #718096;"></span>
-            </p>
-            <form method="POST" id="restoreForm">
-                <?= Security::tokenInput() ?>
-                <input type="hidden" name="action" value="restore_backup">
-                <input type="hidden" name="backup_id" id="restoreBackupId">
-                <div style="display: flex; gap: 10px; justify-content: flex-end;">
-                    <button type="button" onclick="closeRestoreModal()" class="btn" style="background: #e2e8f0; color: #4a5568;">Zrušit</button>
-                    <button type="submit" class="btn btn-success">↻ Ano, obnovit</button>
-                </div>
-            </form>
-        </div>
-    </div>
-</div>
-
-<!-- JAVASCRIPT PRO MODÁLY -->
-<script>
-// Delete backup modal
-function openDeleteBackupModal(backupId, filename) {
-    document.getElementById('deleteBackupId').value = backupId;
-    document.getElementById('deleteBackupFilename').textContent = filename;
-    document.getElementById('deleteBackupModal').classList.add('active');
-}
-
-function closeDeleteBackupModal() {
-    document.getElementById('deleteBackupModal').classList.remove('active');
-}
-
-// Restore modal (pokud ještě neexistuje)
-function openRestoreModal(backupId, filename, date) {
-    document.getElementById('restoreBackupId').value = backupId;
-    document.getElementById('restoreFilename').textContent = filename;
-    document.getElementById('restoreDate').textContent = date;
-    document.getElementById('restoreModal').classList.add('active');
-}
-
-function closeRestoreModal() {
-    document.getElementById('restoreModal').classList.remove('active');
-}
-
-// ESC key handler
-document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') {
-        closeDeleteBackupModal();
-        closeRestoreModal();
-        closeBackupScheduleModal();
-    }
-});
-
-// Click outside handler
-document.querySelectorAll('.modal').forEach(modal => {
-    modal.addEventListener('click', function(e) {
-        if (e.target === this) {
-            closeDeleteBackupModal();
-            closeRestoreModal();
-            closeBackupScheduleModal();
+    <script>
+        // Add User Modal
+        function openAddUserModal() {
+            document.getElementById('addUserModal').classList.add('active');
         }
-    });
-});
-</script>
-<style>
-.form-control {
-    width: 100%;
-    padding: 10px;
-    border: 2px solid #e2e8f0;
-    border-radius: 8px;
-    font-size: 14px;
-}
-.form-group {
-    margin-bottom: 15px;
-}
-.form-group label {
-    display: block;
-    margin-bottom: 5px;
-    font-weight: 600;
-    color: #4a5568;
-}
-</style>
+        function closeAddUserModal() {
+            document.getElementById('addUserModal').classList.remove('active');
+            document.getElementById('addUserForm').reset();
+        }
+        
+        // Change Password Modal
+        function openChangePasswordModal(userId, username) {
+            document.getElementById('changePasswordUserId').value = userId;
+            document.getElementById('changePasswordUsername').textContent = username;
+            document.getElementById('changePasswordModal').classList.add('active');
+        }
+        function closeChangePasswordModal() {
+            document.getElementById('changePasswordModal').classList.remove('active');
+            document.getElementById('changePasswordForm').reset();
+        }
+        
+        // Delete User Modal
+        function confirmDeleteUser(userId, username) {
+            document.getElementById('deleteUserId').value = userId;
+            document.getElementById('deleteUserName').textContent = username;
+            document.getElementById('deleteUserModal').classList.add('active');
+        }
+        function closeDeleteUserModal() {
+            document.getElementById('deleteUserModal').classList.remove('active');
+        }
+
+        // Restore Modal
+        function openRestoreModal(backupId, filename, date) {
+            document.getElementById('restoreBackupId').value = backupId;
+            document.getElementById('restoreFilename').textContent = filename;
+            document.getElementById('restoreDate').textContent = date;
+            document.getElementById('restoreModal').classList.add('active');
+        }
+        function closeRestoreModal() {
+            document.getElementById('restoreModal').classList.remove('active');
+        }
+
+        // Delete Backup Modal
+        function openDeleteBackupModal(backupId, filename) {
+            document.getElementById('deleteBackupId').value = backupId;
+            document.getElementById('deleteBackupFilename').textContent = filename;
+            document.getElementById('deleteBackupModal').classList.add('active');
+        }
+        
+        // Close modals on ESC
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeAddUserModal();
+                closeChangePasswordModal();
+                closeDeleteUserModal();
+                closeRestoreModal();
+                closeDeleteBackupModal();
+                closeBackupScheduleModal();
+            }
+        });
+        
+        // Close modals on click outside
+        document.querySelectorAll('.modal').forEach(modal => {
+            modal.addEventListener('click', function(e) {
+                if (e.target === this) {
+                    closeAddUserModal();
+                    closeChangePasswordModal();
+                    closeDeleteUserModal();
+                    closeRestoreModal();
+                    closeDeleteBackupModal();
+                    closeBackupScheduleModal();
+                }
+            });
+        });
+    </script>
+
+    <style>
+    .form-control {
+        width: 100%;
+        padding: 10px;
+        border: 2px solid #e2e8f0;
+        border-radius: 8px;
+        font-size: 14px;
+    }
+    .form-group {
+        margin-bottom: 15px;
+    }
+    .form-group label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: 600;
+        color: #4a5568;
+    }
+    </style>
 </body>
 </html>
