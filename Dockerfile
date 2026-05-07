@@ -13,9 +13,11 @@ RUN apt-get update && apt-get install -y \
     && docker-php-ext-install pdo pdo_mysql mysqli gd mbstring zip \
     && rm -rf /var/lib/apt/lists/*
 
-# Disable mpm_event/mpm_worker, enable mpm_prefork (required for mod_php)
-RUN a2dismod mpm_event mpm_worker || true \
-    && a2enmod mpm_prefork
+# Remove ALL MPM symlinks, then enable only mpm_prefork (required for mod_php)
+RUN rm -f /etc/apache2/mods-enabled/mpm_*.conf \
+          /etc/apache2/mods-enabled/mpm_*.load \
+    && ln -s /etc/apache2/mods-available/mpm_prefork.conf /etc/apache2/mods-enabled/mpm_prefork.conf \
+    && ln -s /etc/apache2/mods-available/mpm_prefork.load /etc/apache2/mods-enabled/mpm_prefork.load
 
 COPY . /var/www/html/
 
