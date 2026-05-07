@@ -22,6 +22,7 @@ RUN mkdir -p /var/www/html/uploads /var/www/html/backups \
 COPY init-db.sh /usr/local/bin/init-db.sh
 RUN chmod +x /usr/local/bin/init-db.sh
 
-CMD ["/bin/bash", "-c", "/usr/local/bin/init-db.sh && apache2-foreground"]
+# Run DB init in background so Apache starts immediately
+CMD ["/bin/bash", "-c", "/usr/local/bin/init-db.sh & apache2-foreground"]
 
 EXPOSE 80
