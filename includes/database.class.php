@@ -1,17 +1,15 @@
 <?php
 /**
  * Database Class
- * Bezpečná práce s MySQL databází pomocí PDO
  */
 
 class Database {
     private $connection;
     private $stmt;
-    private $error;
     private $lastExecuteOk = false;
 
     public function __construct() {
-        $dsn = 'mysql:host=' . DB_HOST . ';dbname=' . DB_NAME . ';charset=' . DB_CHARSET;
+        $dsn = 'mysql:host=' . DB_HOST . ';port=' . DB_PORT . ';dbname=' . DB_NAME . ';charset=' . DB_CHARSET;
         $options = [
             PDO::ATTR_ERRMODE            => PDO::ERRMODE_EXCEPTION,
             PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
@@ -21,9 +19,8 @@ class Database {
         try {
             $this->connection = new PDO($dsn, DB_USER, DB_PASS, $options);
         } catch (PDOException $e) {
-            $this->error = $e->getMessage();
-            error_log(date('Y-m-d H:i:s') . " - Database Connection: " . $e->getMessage() . "\n", 3, ROOT_PATH . 'error.log');
-            die('Chyba připojení k databázi. Zkontrolujte konfiguraci.');
+            error_log(date('Y-m-d H:i:s') . " - DB Connection: " . $e->getMessage() . "\n", 3, ROOT_PATH . 'error.log');
+            die('Chyba připojení k databázi.');
         }
     }
 
@@ -33,22 +30,20 @@ class Database {
             $this->stmt = $this->connection->prepare($sql);
             return $this;
         } catch (PDOException $e) {
-            $this->logError('Query Prepare', $e->getMessage());
+            $this->logError('Prepare', $e->getMessage());
             $this->stmt = null;
             return $this;
         }
     }
 
     public function bind($param, $value, $type = null) {
-        if ($this->stmt === null) {
-            return $this;
-        }
+        if ($this->stmt === null) return $this;
         if (is_null($type)) {
             switch (true) {
-                case is_int($value):   $type = PDO::PARAM_INT;  break;
-                case is_bool($value):  $type = PDO::PARAM_BOOL; break;
-                case is_null($value):  $type = PDO::PARAM_NULL; break;
-                default:               $type = PDO::PARAM_STR;
+                case is_int($value):  $type = PDO::PARAM_INT;  break;
+                case is_bool($value): $type = PDO::PARAM_BOOL; break;
+                case is_null($value): $type = PDO::PARAM_NULL; break;
+                default:              $type = PDO::PARAM_STR;
             }
         }
         $this->stmt->bindValue($param, $value, $type);
@@ -56,27 +51,21 @@ class Database {
     }
 
     public function execute() {
-        if ($this->stmt === null) {
-            return false;
-        }
+        if ($this->stmt === null) return false;
         try {
             $this->lastExecuteOk = $this->stmt->execute();
             return $this->lastExecuteOk;
         } catch (\Throwable $e) {
             $this->lastExecuteOk = false;
-            $this->logError('Query Execute', $e->getMessage());
+            $this->logError('Execute', $e->getMessage());
             return false;
         }
     }
 
     public function fetchAll() {
-        if ($this->stmt === null) {
-            return [];
-        }
+        if ($this->stmt === null) return [];
         $this->execute();
-        if (!$this->lastExecuteOk) {
-            return [];
-        }
+        if (!$this->lastExecuteOk) return [];
         try {
             return $this->stmt->fetchAll() ?: [];
         } catch (\Throwable $e) {
@@ -86,13 +75,9 @@ class Database {
     }
 
     public function fetch() {
-        if ($this->stmt === null) {
-            return null;
-        }
+        if ($this->stmt === null) return null;
         $this->execute();
-        if (!$this->lastExecuteOk) {
-            return null;
-        }
+        if (!$this->lastExecuteOk) return null;
         try {
             return $this->stmt->fetch() ?: null;
         } catch (\Throwable $e) {
@@ -102,27 +87,16 @@ class Database {
     }
 
     public function rowCount() {
-        if ($this->stmt === null) {
-            return 0;
-        }
-        return $this->stmt->rowCount();
+        return $this->stmt ? $this->stmt->rowCount() : 0;
     }
 
     public function lastInsertId() {
         return $this->connection->lastInsertId();
     }
 
-    public function beginTransaction() {
-        return $this->connection->beginTransaction();
-    }
-
-    public function commit() {
-        return $this->connection->commit();
-    }
-
-    public function rollBack() {
-        return $this->connection->rollBack();
-    }
+    public function beginTransaction() { return $this->connection->beginTransaction(); }
+    public function commit()           { return $this->connection->commit(); }
+    public function rollBack()         { return $this->connection->rollBack(); }
 
     public function escape($value) {
         return htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
@@ -130,27 +104,11 @@ class Database {
 
     private function logError($type, $message) {
         try {
-            error_log(date('Y-m-d H:i:s') . " - $type: $message\n", 3, ROOT_PATH . 'error.log');
-            if ($this->connection !== null) {
-                $stmt = $this->connection->prepare(
-                    "INSERT INTO error_logs (error_type, error_message, ip_address, user_id)
-                     VALUES (?, ?, ?, ?)"
-                );
-                $userId    = $_SESSION['user_id'] ?? null;
-                $ipAddress = $_SERVER['REMOTE_ADDR'] ?? null;
-                $stmt->execute([$type, $message, $ipAddress, $userId]);
-            }
-        } catch (\Throwable $e) {
-            // silently ignore logging errors
-        }
+            error_log(date('Y-m-d H:i:s') . " - DB $type: $message\n", 3, ROOT_PATH . 'error.log');
+        } catch (\Throwable $e) {}
     }
 
-    public function close() {
-        $this->connection = null;
-    }
-
-    public function __destruct() {
-        $this->close();
-    }
+    public function close() { $this->connection = null; }
+    public function __destruct() { $this->close(); }
 }
 ?>
