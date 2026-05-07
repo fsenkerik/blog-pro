@@ -13,12 +13,9 @@ RUN apt-get update && apt-get install -y \
     && docker-php-ext-install pdo pdo_mysql mysqli gd mbstring zip \
     && rm -rf /var/lib/apt/lists/*
 
-# Remove conflicting MPM modules, keep only prefork (required by mod_php)
-RUN find /etc/apache2/mods-enabled -name 'mpm_event*' -delete \
-    && find /etc/apache2/mods-enabled -name 'mpm_worker*' -delete \
-    && find /etc/apache2/mods-available -name 'mpm_event*' -delete \
-    && find /etc/apache2/mods-available -name 'mpm_worker*' -delete \
-    && ls /etc/apache2/mods-enabled/ | grep mpm
+# Disable mpm_event/mpm_worker, enable mpm_prefork (required for mod_php)
+RUN a2dismod mpm_event mpm_worker || true \
+    && a2enmod mpm_prefork
 
 COPY . /var/www/html/
 
@@ -29,6 +26,11 @@ RUN mkdir -p /var/www/html/uploads /var/www/html/backups \
 COPY init-db.sh /usr/local/bin/init-db.sh
 RUN chmod +x /usr/local/bin/init-db.sh
 
-CMD ["/bin/bash", "-c", "/usr/local/bin/init-db.sh & apache2-foreground"]
+CMD ["/bin/bash", "-c", \
+    "PORT=${PORT:-80} && \
+    sed -i \"s/Listen 80/Listen $PORT/\" /etc/apache2/ports.conf && \
+    sed -i \"s/*:80>/*:$PORT>/\" /etc/apache2/sites-enabled/000-default.conf && \
+    /usr/local/bin/init-db.sh & \
+    apache2-foreground"]
 
 EXPOSE 80
