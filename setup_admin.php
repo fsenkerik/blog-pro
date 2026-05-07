@@ -16,7 +16,7 @@ try {
         $user, $pass,
         [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
     );
-    $success[] = "Prip ojeni k databazi OK ($host:$port/$name)";
+    $success[] = "Pripojeni k databazi OK ($host:$port/$name)";
 
     $tables = [
         "CREATE TABLE IF NOT EXISTS users (
@@ -117,7 +117,6 @@ try {
         $success[] = "Tabulka '{$m[1]}' OK";
     }
 
-    // Vychozi kategorie
     $pdo->exec("INSERT IGNORE INTO categories (name, slug, description) VALUES
         ('Akce 2025','akce-2025','Udalosti z roku 2025'),
         ('Akce 2026','akce-2026','Udalosti z roku 2026'),
@@ -125,15 +124,20 @@ try {
         ('Ostatni','ostatni','Ostatni prispevky')");
     $success[] = "Kategorie OK";
 
-    // Admin ucet
-    $username = 'admin';
-    $password = 'VAXNa239';
-    $hash = password_hash($password, PASSWORD_DEFAULT);
-    $stmt = $pdo->prepare("INSERT INTO users (username, password, email, role)
-        VALUES (?, ?, 'admin@blog.cz', 'admin')
-        ON DUPLICATE KEY UPDATE password = VALUES(password)");
-    $stmt->execute([$username, $hash]);
-    $success[] = "Admin ucet OK: $username / $password";
+    // Uzivatele
+    $users = [
+        ['admin', 'VAXNa239', 'admin@blog.cz', 'admin'],
+        ['IT',    'VAXNa239', 'it@blog.cz',    'admin'],
+    ];
+
+    foreach ($users as [$uname, $upass, $uemail, $urole]) {
+        $hash = password_hash($upass, PASSWORD_DEFAULT);
+        $stmt = $pdo->prepare("INSERT INTO users (username, password, email, role)
+            VALUES (?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE password = VALUES(password), role = VALUES(role)");
+        $stmt->execute([$uname, $hash, $uemail, $urole]);
+        $success[] = "Uzivatel '$uname' ($urole) OK";
+    }
 
 } catch (Exception $e) {
     $errors[] = $e->getMessage();
@@ -149,7 +153,10 @@ try {
 <?php foreach ($errors as $e): ?><p class="err">✗ <?= htmlspecialchars($e) ?></p><?php endforeach; ?>
 <?php if (empty($errors)): ?>
 <h2>Hotovo!</h2>
-<p><a href="/admin/login.php"><strong>Prehrat na prihlaseni &rarr;</strong></a></p>
+<p>Prihlasovacie udaje:<br>
+<strong>admin / VAXNa239</strong><br>
+<strong>IT / VAXNa239</strong></p>
+<p><a href="/admin/login.php"><strong>Prejit na prihlaseni &rarr;</strong></a></p>
 <p style="color:red;margin-top:20px"><strong>SMAZ tento soubor po prihlaseni!</strong></p>
 <?php endif; ?>
 </body></html>
