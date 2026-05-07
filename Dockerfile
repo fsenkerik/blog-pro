@@ -13,6 +13,10 @@ RUN apt-get update && apt-get install -y \
     && docker-php-ext-install pdo pdo_mysql mysqli gd mbstring zip \
     && rm -rf /var/lib/apt/lists/*
 
+# Fix Apache MPM conflict
+RUN a2dismod mpm_event mpm_worker 2>/dev/null || true \
+    && a2enmod mpm_prefork
+
 COPY . /var/www/html/
 
 RUN mkdir -p /var/www/html/uploads /var/www/html/backups \
@@ -22,7 +26,6 @@ RUN mkdir -p /var/www/html/uploads /var/www/html/backups \
 COPY init-db.sh /usr/local/bin/init-db.sh
 RUN chmod +x /usr/local/bin/init-db.sh
 
-# Run DB init in background so Apache starts immediately
 CMD ["/bin/bash", "-c", "/usr/local/bin/init-db.sh & apache2-foreground"]
 
 EXPOSE 80
