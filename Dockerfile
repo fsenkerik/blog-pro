@@ -13,9 +13,12 @@ RUN apt-get update && apt-get install -y \
     && docker-php-ext-install pdo pdo_mysql mysqli gd mbstring zip \
     && rm -rf /var/lib/apt/lists/*
 
-# Fix Apache MPM conflict
-RUN a2dismod mpm_event mpm_worker 2>/dev/null || true \
-    && a2enmod mpm_prefork
+# Remove conflicting MPM modules, keep only prefork (required by mod_php)
+RUN find /etc/apache2/mods-enabled -name 'mpm_event*' -delete \
+    && find /etc/apache2/mods-enabled -name 'mpm_worker*' -delete \
+    && find /etc/apache2/mods-available -name 'mpm_event*' -delete \
+    && find /etc/apache2/mods-available -name 'mpm_worker*' -delete \
+    && ls /etc/apache2/mods-enabled/ | grep mpm
 
 COPY . /var/www/html/
 
