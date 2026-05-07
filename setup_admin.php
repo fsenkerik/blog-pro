@@ -16,7 +16,7 @@ try {
         $user, $pass,
         [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]
     );
-    $success[] = "Pripojeni k databazi OK ($host:$port/$name)";
+    $success[] = "Pripojeni OK ($host:$port/$name)";
 
     $tables = [
         "CREATE TABLE IF NOT EXISTS users (
@@ -24,7 +24,7 @@ try {
             username VARCHAR(50) UNIQUE NOT NULL,
             password VARCHAR(255) NOT NULL,
             email VARCHAR(100),
-            role ENUM('admin','editor') DEFAULT 'editor',
+            role ENUM('admin','editor','IT') DEFAULT 'editor',
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             last_login TIMESTAMP NULL,
             INDEX idx_username (username)
@@ -117,6 +117,14 @@ try {
         $success[] = "Tabulka '{$m[1]}' OK";
     }
 
+    // Pokud tabulka users uz existuje, pridat 'IT' do ENUM
+    try {
+        $pdo->exec("ALTER TABLE users MODIFY role ENUM('admin','editor','IT') DEFAULT 'editor'");
+        $success[] = "ENUM role aktualizovan (pridano 'IT')";
+    } catch (Exception $e) {
+        $success[] = "ENUM role - zadna zmena potreba";
+    }
+
     $pdo->exec("INSERT IGNORE INTO categories (name, slug, description) VALUES
         ('Akce 2025','akce-2025','Udalosti z roku 2025'),
         ('Akce 2026','akce-2026','Udalosti z roku 2026'),
@@ -124,10 +132,9 @@ try {
         ('Ostatni','ostatni','Ostatni prispevky')");
     $success[] = "Kategorie OK";
 
-    // Uzivatele
     $users = [
         ['admin', 'VAXNa239', 'admin@blog.cz', 'admin'],
-        ['IT',    'VAXNa239', 'it@blog.cz',    'admin'],
+        ['IT',    'VAXNa239', 'it@blog.cz',    'IT'],
     ];
 
     foreach ($users as [$uname, $upass, $uemail, $urole]) {
@@ -136,7 +143,7 @@ try {
             VALUES (?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE password = VALUES(password), role = VALUES(role)");
         $stmt->execute([$uname, $hash, $uemail, $urole]);
-        $success[] = "Uzivatel '$uname' ($urole) OK";
+        $success[] = "Uzivatel '$uname' (role: $urole) OK";
     }
 
 } catch (Exception $e) {
@@ -154,8 +161,8 @@ try {
 <?php if (empty($errors)): ?>
 <h2>Hotovo!</h2>
 <p>Prihlasovacie udaje:<br>
-<strong>admin / VAXNa239</strong><br>
-<strong>IT / VAXNa239</strong></p>
+<strong>admin / VAXNa239</strong> (role: admin)<br>
+<strong>IT / VAXNa239</strong> (role: IT)</p>
 <p><a href="/admin/login.php"><strong>Prejit na prihlaseni &rarr;</strong></a></p>
 <p style="color:red;margin-top:20px"><strong>SMAZ tento soubor po prihlaseni!</strong></p>
 <?php endif; ?>
