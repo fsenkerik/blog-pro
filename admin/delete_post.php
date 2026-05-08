@@ -6,34 +6,28 @@ requireAuth();
 $auth = new Auth();
 $post = new Post();
 
-// Get post ID
-$postId = isset($_GET['id']) ? intval($_GET['id']) : 0;
-
-// Get return parameters
-$returnFilter = $_GET['return_filter'] ?? 'all';
+$postId        = isset($_GET['id']) ? intval($_GET['id']) : 0;
+$returnFilter  = $_GET['return_filter'] ?? 'all';
 $returnCategory = isset($_GET['return_category']) ? intval($_GET['return_category']) : null;
-$returnPage = isset($_GET['return_page']) ? intval($_GET['return_page']) : 1;
+$returnPage    = isset($_GET['return_page']) ? intval($_GET['return_page']) : 1;
 
 if (!$postId) {
     setFlash('error', 'Neplatné ID příspěvku');
-    redirect(ADMIN_URL . 'dashboard.php');
+    redirect(ADMIN_URL . 'posts.php');
 }
 
-// Get post to check permissions
 $postData = $post->getById($postId);
 
 if (!$postData) {
     setFlash('error', 'Příspěvek nenalezen');
-    redirect(ADMIN_URL . 'dashboard.php');
+    redirect(ADMIN_URL . 'posts.php');
 }
 
-// Check permissions
 if (!$auth->canEdit($postData['author_id'])) {
     setFlash('error', 'Nemáte oprávnění smazat tento příspěvek');
-    redirect(ADMIN_URL . 'dashboard.php');
+    redirect(ADMIN_URL . 'posts.php');
 }
 
-// Delete post
 $result = $post->delete($postId);
 
 if ($result['success']) {
@@ -42,8 +36,7 @@ if ($result['success']) {
     setFlash('error', $result['message'] ?? 'Nepodařilo se smazat příspěvek');
 }
 
-// Redirect back with filters
-$redirectUrl = ADMIN_URL . 'dashboard.php?filter=' . $returnFilter;
+$redirectUrl = ADMIN_URL . 'posts.php?status=' . $returnFilter;
 if ($returnCategory) {
     $redirectUrl .= '&category=' . $returnCategory;
 }
