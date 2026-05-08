@@ -2,11 +2,10 @@
 define('BLOG_PRO', true);
 require_once '../config.php';
 
-// Pro AJAX požadavky vypnout HTML output a chyby
 if (isset($_POST['ajax_action'])) {
     error_reporting(0);
     ini_set('display_errors', 0);
-    ob_start(); // Zachytit jakýkoliv output
+    ob_start();
 }
 
 requireAuth();
@@ -15,27 +14,16 @@ $post = new Post();
 $category = new Category();
 $upload = new Upload();
 $categories = $category->getAll();
-
 $error = '';
-$success = '';
 
-// Zpracování AJAX požadavků
 if (isset($_POST['ajax_action'])) {
-    ob_clean(); // Vyčistit buffer
+    ob_clean();
     header('Content-Type: application/json');
-    
     try {
-        // AUTO-SAVE
         if ($_POST['ajax_action'] === 'autosave_draft') {
             $title = trim($_POST['title'] ?? '');
             $content = $_POST['content'] ?? '';
-            
-            // Pokud je úplně prázdné, neukládat
-            if (empty($title) && empty($content)) {
-                echo json_encode(['success' => false, 'message' => 'Prázdný obsah']);
-                exit;
-            }
-            
+            if (empty($title) && empty($content)) { echo json_encode(['success'=>false,'message'=>'Prázdný obsah']); exit; }
             $data = [
                 'title' => $title ?: 'Bez názvu',
                 'content' => $content,
@@ -46,124 +34,56 @@ if (isset($_POST['ajax_action'])) {
                 'meta_description' => $_POST['meta_description'] ?? '',
                 'meta_keywords' => $_POST['meta_keywords'] ?? ''
             ];
-            
             $draftId = !empty($_POST['draft_id']) ? intval($_POST['draft_id']) : null;
-            
             if ($draftId) {
-                // Aktualizovat existující koncept
                 $result = $post->update($draftId, $data);
-                if ($result['success']) {
-                    echo json_encode([
-                        'success' => true,
-                        'draft_id' => $draftId,
-                        'time' => date('H:i'),
-                        'message' => 'Koncept aktualizován'
-                    ]);
-                } else {
-                    echo json_encode(['success' => false, 'message' => 'Chyba při ukládání']);
-                }
+                if ($result['success']) echo json_encode(['success'=>true,'draft_id'=>$draftId,'time'=>date('H:i'),'message'=>'Koncept aktualizován']);
+                else echo json_encode(['success'=>false,'message'=>'Chyba při ukládání']);
             } else {
-                // Vytvořit nový koncept
                 $result = $post->create($data);
-                if ($result['success']) {
-                    echo json_encode([
-                        'success' => true,
-                        'draft_id' => $result['id'],
-                        'time' => date('H:i'),
-                        'message' => 'Koncept vytvořen'
-                    ]);
-                } else {
-                    echo json_encode(['success' => false, 'message' => 'Chyba při vytváření']);
-                }
+                if ($result['success']) echo json_encode(['success'=>true,'draft_id'=>$result['id'],'time'=>date('H:i'),'message'=>'Koncept vytvořen']);
+                else echo json_encode(['success'=>false,'message'=>'Chyba při vytváření']);
             }
             exit;
         }
-        
         if ($_POST['ajax_action'] === 'add_category') {
             $name = trim($_POST['category_name'] ?? '');
-            if (empty($name)) {
-                echo json_encode(['success' => false, 'message' => 'Název kategorie nesmí být prázdný']);
-                exit;
-            }
-            
+            if (empty($name)) { echo json_encode(['success'=>false,'message'=>'Název kategorie nesmí být prázdný']); exit; }
             $db = new Database();
-            
-            // Vytvořit slug
-            $slug = mb_strtolower($name, 'UTF-8');
-            $slug = strtr($slug, [
-                'á' => 'a', 'č' => 'c', 'ď' => 'd',
-                'é' => 'e', 'ě' => 'e', 'í' => 'i',
-                'ň' => 'n', 'ó' => 'o', 'ř' => 'r',
-                'š' => 's', 'ť' => 't', 'ú' => 'u',
-                'ů' => 'u', 'ý' => 'y', 'ž' => 'z'
-            ]);
-            $slug = preg_replace('/[^a-z0-9\s-]/', '', $slug);
-            $slug = preg_replace('/[\s-]+/', '-', $slug);
-            $slug = trim($slug, '-');
-            
-            // Zkontrolovat duplicitu
-            $db->query("SELECT id FROM categories WHERE slug = :slug");
-            $db->bind(':slug', $slug);
-            if ($db->fetch()) {
-                echo json_encode(['success' => false, 'message' => 'Kategorie s tímto názvem již existuje']);
-                exit;
-            }
-            
-            $db->query("INSERT INTO categories (name, slug) VALUES (:name, :slug)");
-            $db->bind(':name', $name);
-            $db->bind(':slug', $slug);
-            
-            if ($db->execute()) {
-                $id = $db->lastInsertId();
-                echo json_encode(['success' => true, 'id' => $id, 'name' => $name, 'slug' => $slug]);
-            } else {
-                echo json_encode(['success' => false, 'message' => 'Nepodařilo se vytvořit kategorii']);
-            }
+            $slug = mb_strtolower($name,'UTF-8');
+            $slug = strtr($slug,['á'=>'a','č'=>'c','ď'=>'d','é'=>'e','ě'=>'e','í'=>'i','ň'=>'n','ó'=>'o','ř'=>'r','š'=>'s','ť'=>'t','ú'=>'u','ů'=>'u','ý'=>'y','ž'=>'z']);
+            $slug = preg_replace('/[^a-z0-9\s-]/','', $slug);
+            $slug = preg_replace('/[\s-]+/','-',$slug);
+            $slug = trim($slug,'-');
+            $db->query('SELECT id FROM categories WHERE slug = :slug');
+            $db->bind(':slug',$slug);
+            if ($db->fetch()) { echo json_encode(['success'=>false,'message'=>'Kategorie již existuje']); exit; }
+            $db->query('INSERT INTO categories (name,slug) VALUES (:name,:slug)');
+            $db->bind(':name',$name); $db->bind(':slug',$slug);
+            if ($db->execute()) { $newId=$db->lastInsertId(); echo json_encode(['success'=>true,'id'=>$newId,'name'=>$name,'slug'=>$slug]); }
+            else echo json_encode(['success'=>false,'message'=>'Chyba']);
             exit;
         }
-        
         if ($_POST['ajax_action'] === 'delete_category') {
-            $id = intval($_POST['category_id'] ?? 0);
-            if ($id <= 0) {
-                echo json_encode(['success' => false, 'message' => 'Neplatné ID kategorie']);
-                exit;
-            }
-            
+            $catId = intval($_POST['category_id'] ?? 0);
             $db = new Database();
-            
-            // Zkontrolovat jestli nemá příspěvky
-            $db->query("SELECT COUNT(*) as count FROM posts WHERE category_id = :id");
-            $db->bind(':id', $id);
-            $result = $db->fetch();
-            
-            if ($result && $result['count'] > 0) {
-                echo json_encode(['success' => false, 'message' => 'Nelze smazat kategorii - obsahuje ' . $result['count'] . ' příspěvků']);
-                exit;
-            }
-            
-            $db->query("DELETE FROM categories WHERE id = :id");
-            $db->bind(':id', $id);
-            
-            if ($db->execute()) {
-                echo json_encode(['success' => true]);
-            } else {
-                echo json_encode(['success' => false, 'message' => 'Nepodařilo se smazat kategorii']);
-            }
+            $db->query('SELECT COUNT(*) as count FROM posts WHERE category_id = :id');
+            $db->bind(':id',$catId);
+            $res = $db->fetch();
+            if ($res && $res['count'] > 0) { echo json_encode(['success'=>false,'message'=>'Nelze smazat — obsahuje '.$res['count'].' příspěvků']); exit; }
+            $db->query('DELETE FROM categories WHERE id = :id');
+            $db->bind(':id',$catId);
+            echo json_encode(['success'=>$db->execute()]);
             exit;
         }
-        
-        // Neznámá akce
-        echo json_encode(['success' => false, 'message' => 'Neznámá akce']);
+        echo json_encode(['success'=>false,'message'=>'Neznámá akce']);
         exit;
-        
     } catch (Exception $e) {
-        echo json_encode(['success' => false, 'message' => 'Chyba: ' . $e->getMessage()]);
+        echo json_encode(['success'=>false,'message'=>'Chyba: '.$e->getMessage()]);
         exit;
     }
 }
 
-// Zpracování formuláře příspěvku
-// Zpracování formuláře příspěvku
 if (isPost() && !isset($_POST['ajax_action'])) {
     if (!verifyCsrf()) {
         $error = 'Neplatný CSRF token';
@@ -174,2217 +94,510 @@ if (isPost() && !isset($_POST['ajax_action'])) {
             'excerpt' => post('excerpt'),
             'category_id' => post('category_id') ?: null,
             'author_id' => $_SESSION['user_id'],
-            'status' => post('status', 'published'),
+            'status' => post('status','published'),
             'meta_title' => post('meta_title'),
             'meta_description' => post('meta_description'),
             'meta_keywords' => post('meta_keywords')
         ];
-        
-        // Zpracování plánovaného publikování
-        if (post('publish_type') === 'scheduled' && post('scheduled_date') && post('scheduled_time')) {
-            $scheduledDate = post('scheduled_date');
-            $scheduledTime = post('scheduled_time');
-            $data['scheduled_at'] = $scheduledDate . ' ' . $scheduledTime . ':00';
+        if (post('publish_type')==='scheduled' && post('scheduled_date') && post('scheduled_time')) {
+            $data['scheduled_at'] = post('scheduled_date').' '.post('scheduled_time').':00';
             $data['status'] = 'scheduled';
-        } else {
-            $data['scheduled_at'] = null;
-        }
-        
-        // Featured image - z uploadu NEBO z galerie
-        if (isset($_FILES['featured_image']) && $_FILES['featured_image']['error'] === UPLOAD_ERR_OK) {
-            $uploadResult = $upload->uploadImage($_FILES['featured_image'], true, true);
-            if ($uploadResult['success']) {
-                $data['featured_image'] = $uploadResult['path'];
-            }
+        } else { $data['scheduled_at'] = null; }
+        if (isset($_FILES['featured_image']) && $_FILES['featured_image']['error']===UPLOAD_ERR_OK) {
+            $uploadResult = $upload->uploadImage($_FILES['featured_image'],true,true);
+            if ($uploadResult['success']) $data['featured_image'] = $uploadResult['path'];
         } elseif (!empty($_POST['featured_image_from_gallery'])) {
             $data['featured_image'] = $_POST['featured_image_from_gallery'];
         }
-        
-        // KONTROLA: Existuje draft_id? Pokud ano, UPDATE místo CREATE!
         $draftId = !empty($_POST['draft_id']) ? intval($_POST['draft_id']) : null;
-        
-        if ($draftId) {
-            // Aktualizovat existující koncept (změní status na published)
-            $result = $post->update($draftId, $data);
-            $successMessage = 'Příspěvek byl publikován!';
-        } else {
-            // Vytvořit nový příspěvek
-            $result = $post->create($data);
-            $successMessage = 'Příspěvek byl vytvořen!';
-        }
-        
-        if ($result['success']) {
-            setFlash('success', $successMessage);
-            redirect(ADMIN_URL . 'dashboard.php');
-        } else {
-            $error = $result['message'] ?? 'Nepodařilo se vytvořit příspěvek';
-        }
+        if ($draftId) { $result = $post->update($draftId,$data); $msg = 'Příspěvek byl publikován!'; }
+        else { $result = $post->create($data); $msg = 'Příspěvek byl vytvořen!'; }
+        if ($result['success']) { setFlash('success',$msg); redirect(ADMIN_URL.'posts.php'); }
+        else $error = $result['message'] ?? 'Nepodařilo se vytvořit příspěvek';
     }
 }
+
+$userInitials = strtoupper(substr($_SESSION['username'] ?? 'U',0,2));
+$catColors = ['#667eea','#764ba2','#5b21b6','#10b981','#f59e0b','#ef4444','#3b82f6','#6366f1'];
+$baseUrl = rtrim(BASE_URL,'/').'/';
 ?>
 <!DOCTYPE html>
 <html lang="cs">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nový příspěvek</title>
-    <link rel="stylesheet" href="<?= ASSETS_URL ?>css/admin.css">
-    <link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
-    <style>
-        * { box-sizing: border-box; }
-        
-        body {
-            margin: 0;
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
-            overflow: hidden;
-        }
-        
-        .main-wrapper {
-            display: flex;
-            flex: 1;
-            overflow: hidden;
-        }
-        
-        /* Levý panel kategorií */
-        .categories-sidebar {
-            width: 280px;
-            background: linear-gradient(180deg, #f7fafc 0%, #edf2f7 100%);
-            border-right: 2px solid #e2e8f0;
-            display: flex;
-            flex-direction: column;
-            overflow: hidden;
-        }
-        
-        .categories-header {
-            padding: 20px;
-            background: white;
-            border-bottom: 2px solid #e2e8f0;
-        }
-        
-        .categories-header h3 {
-            margin: 0 0 15px 0;
-            font-size: 16px;
-            color: #2d3748;
-            font-weight: 600;
-        }
-        
-        .category-actions {
-            display: flex;
-            gap: 8px;
-        }
-        
-        .category-btn {
-            flex: 1;
-            padding: 8px;
-            border: none;
-            border-radius: 6px;
-            font-size: 13px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 5px;
-        }
-        
-        .category-btn-add {
-            background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
-            color: white;
-        }
-        
-        .category-btn-add:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(72, 187, 120, 0.4);
-        }
-        
-        .category-btn-delete {
-            background: linear-gradient(135deg, #f56565 0%, #e53e3e 100%);
-            color: white;
-        }
-        
-        .category-btn-delete:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(245, 101, 101, 0.4);
-        }
-        
-        .category-btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            transform: none !important;
-        }
-        
-        .categories-list {
-            flex: 1;
-            overflow-y: auto;
-            padding: 15px;
-        }
-        
-        .category-item {
-            padding: 12px 15px;
-            margin-bottom: 8px;
-            background: white;
-            border: 2px solid #e2e8f0;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            position: relative;
-        }
-        
-        .category-item:hover {
-            border-color: #cbd5e0;
-            transform: translateX(4px);
-        }
-        
-        .category-item.selected {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-color: #667eea;
-            color: white;
-            transform: translateX(8px) scale(1.02);
-            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-        }
-        
-        .category-item.selected::before {
-            content: "✓";
-            position: absolute;
-            right: 12px;
-            top: 50%;
-            transform: translateY(-50%);
-            font-weight: bold;
-            font-size: 18px;
-        }
-        
-        .category-name {
-            font-size: 14px;
-            font-weight: 500;
-        }
-        
-        .category-none {
-            font-style: italic;
-            opacity: 0.7;
-        }
-        
-        /* Hlavní obsah */
-        .main-content {
-            flex: 1;
-            overflow-y: auto;
-            background: #f7fafc;
-        }
-        
-        .content-inner {
-            max-width: 900px;
-            margin: 0 auto;
-            padding: 30px;
-        }
-        
-        /* Fullscreen modal */
-        .fullscreen-modal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.7);
-            display: none;
-            align-items: center;
-            justify-content: center;
-            z-index: 10000;
-            backdrop-filter: blur(5px);
-            animation: modalFadeIn 0.3s ease;
-        }
-        
-        @keyframes modalFadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
-        }
-        
-        .fullscreen-modal.active {
-            display: flex;
-        }
-        
-        .modal-content {
-            background: white;
-            padding: 40px;
-            border-radius: 20px;
-            max-width: 500px;
-            width: 90%;
-            text-align: center;
-            animation: modalSlideIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-            position: relative;
-            overflow: hidden;
-        }
-        
-        @keyframes modalSlideIn {
-            from {
-                transform: translateY(-50px) scale(0.9);
-                opacity: 0;
-            }
-            to {
-                transform: translateY(0) scale(1);
-                opacity: 1;
-            }
-        }
-        
-        .modal-content::before {
-            content: "";
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 5px;
-            background: linear-gradient(90deg, #48bb78, #38a169);
-        }
-        
-        .modal-content.delete::before {
-            background: linear-gradient(90deg, #f56565, #e53e3e);
-        }
-        
-        .modal-icon {
-            width: 80px;
-            height: 80px;
-            margin: 0 auto 20px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 40px;
-            background: linear-gradient(135deg, #c6f6d5 0%, #9ae6b4 100%);
-            animation: iconPulse 1.5s infinite;
-        }
-        
-        @keyframes iconPulse {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-        }
-        
-        .modal-content.delete .modal-icon {
-            background: linear-gradient(135deg, #fed7d7 0%, #fc8181 100%);
-        }
-        
-        .modal-title {
-            font-size: 24px;
-            font-weight: 700;
-            margin-bottom: 15px;
-            color: #2d3748;
-        }
-        
-        .modal-description {
-            font-size: 15px;
-            color: #718096;
-            margin-bottom: 25px;
-            line-height: 1.6;
-        }
-        
-        .modal-input {
-            width: 100%;
-            padding: 12px 15px;
-            border: 2px solid #e2e8f0;
-            border-radius: 8px;
-            font-size: 15px;
-            margin-bottom: 25px;
-            transition: border-color 0.2s;
-        }
-        
-        .modal-input:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-        
-        .modal-actions {
-            display: flex;
-            gap: 12px;
-        }
-        
-        .modal-btn {
-            flex: 1;
-            padding: 12px;
-            border: none;
-            border-radius: 8px;
-            font-size: 15px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-        
-        .modal-btn-primary {
-            background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
-            color: white;
-        }
-        
-        .modal-btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(72, 187, 120, 0.4);
-        }
-        
-        .modal-btn-danger {
-            background: linear-gradient(135deg, #f56565 0%, #e53e3e 100%);
-            color: white;
-        }
-        
-        .modal-btn-danger:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(245, 101, 101, 0.4);
-        }
-        
-        .modal-btn-secondary {
-            background: #e2e8f0;
-            color: #4a5568;
-        }
-        
-        .modal-btn-secondary:hover {
-            background: #cbd5e0;
-        }
-        
-        /* Tooltips */
-        .tooltip-container {
-            position: relative;
-            display: inline-block;
-            margin-left: 5px;
-        }
-        
-        .tooltip-icon {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 20px;
-            height: 20px;
-            background: #667eea;
-            color: white;
-            border-radius: 50%;
-            font-size: 13px;
-            font-weight: bold;
-            cursor: help;
-            transition: transform 0.2s;
-        }
-        
-        .tooltip-icon:hover {
-            transform: scale(1.1);
-            background: #5568d3;
-        }
-        
-        .tooltip-text {
-            visibility: hidden;
-            width: 280px;
-            max-width: calc(100vw - 40px);
-            background-color: #2d3748;
-            color: #fff;
-            text-align: left;
-            border-radius: 8px;
-            padding: 14px;
-            position: absolute;
-            z-index: 10000;
-            left: 30px;
-            top: -10px;
-            opacity: 0;
-            transition: opacity 0.3s, visibility 0.3s;
-            font-size: 13px;
-            line-height: 1.6;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
-        }
-        
-        .tooltip-text::before {
-            content: "";
-            position: absolute;
-            left: -8px;
-            top: 15px;
-            border-width: 8px;
-            border-style: solid;
-            border-color: transparent #2d3748 transparent transparent;
-        }
-        
-        .tooltip-container:hover .tooltip-text {
-            visibility: visible;
-            opacity: 1;
-        }
-        
-        /* Povinná pole */
-        .required-field label {
-            font-weight: 600;
-            color: #2d3748;
-        }
-        
-        .required-field label::after {
-            content: " *";
-            color: #e53e3e;
-            font-weight: bold;
-            font-size: 16px;
-        }
-        
-        .required-field input,
-        .required-field #editor {
-            border: 2px solid #e2e8f0;
-            transition: border-color 0.2s;
-        }
-        
-        .required-field input:focus,
-        .required-field #editor:focus-within {
-            border-color: #667eea !important;
-            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-        }
-        
-        .required-field input:invalid {
-            border-color: #fc8181;
-        }
-        
-        /* Rozšířený Quill toolbar */
-        .ql-toolbar {
-            background: #f7fafc;
-            border: 2px solid #e2e8f0 !important;
-            border-bottom: none !important;
-            border-radius: 8px 8px 0 0;
-            padding: 12px !important;
-        }
-        
-        .ql-container {
-            border: 2px solid #e2e8f0 !important;
-            border-radius: 0 0 8px 8px;
-            font-size: 15px;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
-        }
-        
-        .ql-editor {
-            min-height: 400px;
-            padding: 20px;
-        }
-        
-        /* Quill toolbar tlačítka */
-        .ql-toolbar button:hover,
-        .ql-toolbar .ql-picker-label:hover {
-            color: #667eea !important;
-        }
-        
-        .ql-toolbar button.ql-active,
-        .ql-toolbar .ql-picker-label.ql-active {
-            color: #667eea !important;
-        }
-        
-        .ql-toolbar .ql-stroke {
-            stroke: #4a5568;
-        }
-        
-        .ql-toolbar button:hover .ql-stroke,
-        .ql-toolbar button.ql-active .ql-stroke {
-            stroke: #667eea;
-        }
-        
-        .ql-toolbar .ql-fill {
-            fill: #4a5568;
-        }
-        
-        .ql-toolbar button:hover .ql-fill,
-        .ql-toolbar button.ql-active .ql-fill {
-            fill: #667eea;
-        }
-        
-        /* Vlastní fonty v editoru */
-        .ql-font-arial { font-family: Arial, sans-serif; }
-        .ql-font-georgia { font-family: Georgia, serif; }
-        .ql-font-impact { font-family: Impact, sans-serif; }
-        .ql-font-courier { font-family: 'Courier New', monospace; }
-        .ql-font-verdana { font-family: Verdana, sans-serif; }
-        .ql-font-times-new-roman { font-family: 'Times New Roman', serif; }
-        .ql-font-comic-sans { font-family: 'Comic Sans MS', cursive; }
-        .ql-font-trebuchet { font-family: 'Trebuchet MS', sans-serif; }
-        .ql-font-palatino { font-family: 'Palatino Linotype', serif; }
-        .ql-font-garamond { font-family: Garamond, serif; }
-        
-        /* Font picker labels */
-        .ql-picker.ql-font .ql-picker-label[data-value="arial"]::before,
-        .ql-picker.ql-font .ql-picker-item[data-value="arial"]::before {
-            content: 'Arial';
-            font-family: Arial, sans-serif;
-        }
-        .ql-picker.ql-font .ql-picker-label[data-value="georgia"]::before,
-        .ql-picker.ql-font .ql-picker-item[data-value="georgia"]::before {
-            content: 'Georgia';
-            font-family: Georgia, serif;
-        }
-        .ql-picker.ql-font .ql-picker-label[data-value="impact"]::before,
-        .ql-picker.ql-font .ql-picker-item[data-value="impact"]::before {
-            content: 'Impact';
-            font-family: Impact, sans-serif;
-        }
-        .ql-picker.ql-font .ql-picker-label[data-value="courier"]::before,
-        .ql-picker.ql-font .ql-picker-item[data-value="courier"]::before {
-            content: 'Courier';
-            font-family: 'Courier New', monospace;
-        }
-        .ql-picker.ql-font .ql-picker-label[data-value="verdana"]::before,
-        .ql-picker.ql-font .ql-picker-item[data-value="verdana"]::before {
-            content: 'Verdana';
-            font-family: Verdana, sans-serif;
-        }
-        .ql-picker.ql-font .ql-picker-label[data-value="times-new-roman"]::before,
-        .ql-picker.ql-font .ql-picker-item[data-value="times-new-roman"]::before {
-            content: 'Times New Roman';
-            font-family: 'Times New Roman', serif;
-        }
-        .ql-picker.ql-font .ql-picker-label[data-value="comic-sans"]::before,
-        .ql-picker.ql-font .ql-picker-item[data-value="comic-sans"]::before {
-            content: 'Comic Sans';
-            font-family: 'Comic Sans MS', cursive;
-        }
-        .ql-picker.ql-font .ql-picker-label[data-value="trebuchet"]::before,
-        .ql-picker.ql-font .ql-picker-item[data-value="trebuchet"]::before {
-            content: 'Trebuchet';
-            font-family: 'Trebuchet MS', sans-serif;
-        }
-        .ql-picker.ql-font .ql-picker-label[data-value="palatino"]::before,
-        .ql-picker.ql-font .ql-picker-item[data-value="palatino"]::before {
-            content: 'Palatino';
-            font-family: 'Palatino Linotype', serif;
-        }
-        .ql-picker.ql-font .ql-picker-label[data-value="garamond"]::before,
-        .ql-picker.ql-font .ql-picker-item[data-value="garamond"]::before {
-            content: 'Garamond';
-            font-family: Garamond, serif;
-        }
-        
-        /* Velikosti textu */
-        .ql-size-10px { font-size: 10px; }
-        .ql-size-12px { font-size: 12px; }
-        .ql-size-14px { font-size: 14px; }
-        .ql-size-16px { font-size: 16px; }
-        .ql-size-18px { font-size: 18px; }
-        .ql-size-20px { font-size: 20px; }
-        .ql-size-24px { font-size: 24px; }
-        .ql-size-32px { font-size: 32px; }
-        .ql-size-48px { font-size: 48px; }
-        .ql-size-64px { font-size: 64px; }
-        
-        /* Náhled modal */
-        .preview-modal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.9);
-            z-index: 10000;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            animation: fadeIn 0.3s ease;
-        }
-        
-        .preview-modal.active {
-            display: flex;
-        }
-        
-        .preview-container {
-            width: 90%;
-            max-width: 1200px;
-            height: 90%;
-            background: white;
-            border-radius: 12px;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-            animation: slideUp 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-        
-        @keyframes slideUp {
-            from {
-                opacity: 0;
-                transform: translateY(50px) scale(0.95);
-            }
-            to {
-                opacity: 1;
-                transform: translateY(0) scale(1);
-            }
-        }
-        
-        .preview-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 20px 30px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-        }
-        
-        .preview-title {
-            font-size: 20px;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-        
-        .preview-close {
-            width: 40px;
-            height: 40px;
-            border: none;
-            background: rgba(255, 255, 255, 0.2);
-            color: white;
-            border-radius: 50%;
-            cursor: pointer;
-            font-size: 24px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s;
-        }
-        
-        .preview-close:hover {
-            background: rgba(255, 255, 255, 0.3);
-            transform: rotate(90deg);
-        }
-        
-        .preview-content {
-            flex: 1;
-            overflow-y: auto;
-            padding: 40px 60px;
-            background: #f7fafc;
-        }
-        
-        .preview-article {
-            max-width: 800px;
-            margin: 0 auto;
-            background: white;
-            padding: 60px;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-        }
-        
-        .preview-article h1 {
-            font-size: 42px;
-            font-weight: 700;
-            color: #1a202c;
-            margin: 0 0 20px 0;
-            line-height: 1.2;
-        }
-        
-        .preview-article-meta {
-            display: flex;
-            align-items: center;
-            gap: 20px;
-            color: #718096;
-            font-size: 14px;
-            margin-bottom: 30px;
-            padding-bottom: 20px;
-            border-bottom: 2px solid #e2e8f0;
-        }
-        
-        .preview-article-meta span {
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-        
-        .preview-featured-image {
-            width: 100%;
-            height: auto;
-            border-radius: 8px;
-            margin-bottom: 40px;
-        }
-        
-        .preview-article-content {
-            font-size: 18px;
-            line-height: 1.8;
-            color: #2d3748;
-        }
-        
-        .preview-article-content p {
-            margin-bottom: 20px;
-        }
-        
-        .preview-article-content h2 {
-            font-size: 32px;
-            font-weight: 600;
-            margin: 40px 0 20px 0;
-            color: #1a202c;
-        }
-        
-        .preview-article-content h3 {
-            font-size: 24px;
-            font-weight: 600;
-            margin: 30px 0 15px 0;
-            color: #2d3748;
-        }
-        
-        .preview-article-content ul,
-        .preview-article-content ol {
-            margin: 20px 0;
-            padding-left: 30px;
-        }
-        
-        .preview-article-content li {
-            margin-bottom: 10px;
-        }
-        
-        .preview-article-content img {
-            max-width: 100%;
-            height: auto;
-            border-radius: 6px;
-            margin: 20px 0;
-        }
-        
-        .preview-article-content blockquote {
-            border-left: 4px solid #667eea;
-            padding-left: 20px;
-            margin: 30px 0;
-            font-style: italic;
-            color: #4a5568;
-        }
-        
-        /* Auto-save status */
-        .autosave-status {
-            position: fixed;
-            top: 80px;
-            right: 30px;
-            background: white;
-            padding: 14px 22px;
-            border-radius: 12px;
-            box-shadow: 0 8px 24px rgba(66, 153, 225, 0.25);
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            z-index: 1000;
-            opacity: 0;
-            transform: translateY(-20px);
-            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-            border: 2px solid #4299e1;
-        }
-        
-        .autosave-status.show {
-            opacity: 1;
-            transform: translateY(0);
-        }
-        
-        .autosave-status.saving {
-            background: #ebf4ff;
-            border-color: #4299e1;
-        }
-        
-        .autosave-status.saving .autosave-text {
-            color: #2b6cb0;
-        }
-        
-        .autosave-status.saved {
-            background: #ebf4ff;
-            border-color: #4299e1;
-        }
-        
-        .autosave-status.saved .autosave-text {
-            color: #2b6cb0;
-        }
-        
-        .autosave-icon {
-            font-size: 20px;
-            color: #4299e1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        .autosave-status.saving .sync-icon {
-            animation: smoothRotate 1.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
-        }
-        
-        .autosave-text {
-            font-weight: 500;
-            font-size: 14px;
-        }
-        
-        /* Trvalý auto-save indikátor v headeru */
-        .autosave-permanent {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            padding: 8px 16px;
-            background: #ebf4ff;
-            border-radius: 20px;
-            border: 2px solid #4299e1;
-            font-size: 14px;
-            transition: all 0.3s;
-        }
-        
-        .autosave-permanent .save-icon {
-            font-size: 16px;
-            transition: transform 0.3s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: auto;
-            height: 20px;
-            color: #4299e1;
-        }
-        
-        /* SVG ikona pro šipky v kruhu */
-        .sync-icon {
-            width: 16px;
-            height: 16px;
-            transition: opacity 0.3s;
-        }
-        
-        .sync-icon path {
-            stroke: currentColor;
-            fill: none;
-        }
-        
-        .autosave-permanent .save-text {
-            font-weight: 500;
-            color: #2b6cb0;
-        }
-        
-        /* Animace pro ukládání - točí se jen SVG! */
-        .autosave-permanent.saving .sync-icon {
-            animation: smoothRotate 1.5s cubic-bezier(0.4, 0, 0.2, 1) infinite;
-        }
-        
-        @keyframes smoothRotate {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
-        /* Počítadlo slov */
-        .word-counter {
-            background: #f7fafc;
-            padding: 15px;
-            border-radius: 8px;
-            margin-top: 10px;
-            display: flex;
-            gap: 20px;
-            flex-wrap: wrap;
-            border: 2px solid #e2e8f0;
-        }
-        
-        .counter-item {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        
-        .counter-icon {
-            font-size: 18px;
-        }
-        
-        .counter-label {
-            font-size: 13px;
-            color: #718096;
-        }
-        
-        .counter-value {
-            font-size: 16px;
-            font-weight: 600;
-            color: #2d3748;
-        }
-        
-        /* Upload zóny */
-        .upload-zone {
-            border: 3px dashed #cbd5e0;
-            border-radius: 12px;
-            padding: 40px 20px;
-            text-align: center;
-            transition: all 0.3s;
-            background: #f7fafc;
-        }
-        .upload-zone:hover {
-            border-color: #4299e1;
-            background: #ebf4ff;
-        }
-        .upload-zone.drag-over {
-            border-color: #4299e1;
-            background: linear-gradient(135deg, #ebf4ff 0%, #e0e7ff 100%);
-            transform: scale(1.02);
-            box-shadow: 0 8px 24px rgba(66, 153, 225, 0.3);
-        }
-        .upload-zone-icon { font-size: 48px; margin-bottom: 15px; }
-        .upload-zone-title { font-size: 18px; font-weight: 600; color: #2d3748; margin-bottom: 10px; }
-        .upload-zone-text { color: #718096; margin-bottom: 20px; }
-        .upload-zone-buttons { display: flex; gap: 12px; justify-content: center; }
-        .upload-btn { padding: 12px 24px; border: none; border-radius: 8px; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
-        .upload-btn-primary { background: linear-gradient(135deg, #4299e1 0%, #3182ce 100%); color: white; }
-        .upload-btn-primary:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(66, 153, 225, 0.4); }
-        .upload-btn-gallery { background: linear-gradient(135deg, #48bb78 0%, #38a169 100%); color: white; }
-        .upload-btn-gallery:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(72, 187, 120, 0.4); }
-        
-        #dragOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); backdrop-filter: blur(8px); z-index: 9998; display: none; }
-        #dragOverlay.active { display: block; }
-        .upload-zone.drag-active, .ql-container.drag-active { position: relative; z-index: 9999; }
-        .upload-zone.has-image .upload-zone-content { display: none; }
-        .upload-zone.has-image { padding: 0; border: none; background: transparent; }
-        
-        .ql-container.drag-over-editor { position: relative; z-index: 10000; }
-        .ql-container.drag-over-editor::after {
-            content: "📸 Pusťte pro vložení do článku";
-            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-            background: rgba(66, 153, 225, 0.95); color: white;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 24px; font-weight: 600; border-radius: 8px;
-            animation: pulse 2s infinite;
-        }
-        @keyframes pulse { 0%, 100% { opacity: 0.95; } 50% { opacity: 1; } }
-        
-        /* Plánované publikování */
-        .publish-schedule {
-            background: #f7fafc;
-            padding: 20px;
-            border-radius: 8px;
-            border: 2px solid #e2e8f0;
-        }
-        
-        .schedule-options {
-            display: flex;
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-        
-        .schedule-option {
-            flex: 1;
-            cursor: pointer;
-        }
-        
-        .schedule-option input[type="radio"] {
-            display: none;
-        }
-        
-        .schedule-option .option-label {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            padding: 15px 20px;
-            background: white;
-            border: 2px solid #e2e8f0;
-            border-radius: 8px;
-            transition: all 0.2s;
-        }
-        
-        .schedule-option input[type="radio"]:checked + .option-label {
-            border-color: #667eea;
-            background: linear-gradient(135deg, #ebf4ff 0%, #e0e7ff 100%);
-            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
-        }
-        
-        .schedule-option .option-icon {
-            font-size: 24px;
-        }
-        
-        .schedule-option .option-text {
-            font-weight: 500;
-            color: #2d3748;
-        }
-        
-        .schedule-datetime {
-            padding-top: 15px;
-            border-top: 2px solid #e2e8f0;
-        }
-        
-        /* AI Generování tlačítko */
-        .ai-generate-btn {
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            padding: 12px 24px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border: none;
-            border-radius: 8px;
-            font-size: 15px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s;
-            margin-bottom: 20px;
-        }
-        
-        .ai-generate-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
-        }
-        
-        .ai-generate-btn:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-            transform: none;
-        }
-        
-        .ai-generate-btn .ai-icon {
-            font-size: 18px;
-            animation: sparkle 2s infinite;
-        }
-        
-        @keyframes sparkle {
-            0%, 100% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.7; transform: scale(1.1); }
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Nový příspěvek · <?= e(SITE_NAME) ?></title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="<?= ASSETS_URL ?>css/admin.css">
+<style>
+.ed-grid{display:grid;grid-template-columns:1fr 360px;gap:22px;align-items:flex-start}
+.ed-side{position:sticky;top:80px;display:flex;flex-direction:column;gap:16px}
+.ph-meta{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:12px}
+.save-pill{display:inline-flex;align-items:center;gap:8px;padding:4px 10px 4px 8px;border-radius:999px;background:var(--warn-soft);color:var(--warn);font-size:11.5px;font-weight:500}
+.save-pill .dot{width:7px;height:7px;border-radius:50%;background:currentColor;animation:blink 1.4s infinite}
+@keyframes blink{0%,100%{opacity:.4}50%{opacity:1}}
+.save-pill.saved{background:var(--ok-soft);color:var(--ok)}
+.save-pill.saved .dot{animation:none;opacity:.85}
+.ph-actions{display:flex;gap:8px;align-items:center}
+.title-field{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:24px 28px 22px;box-shadow:0 1px 2px rgba(31,41,55,.03)}
+.title-label{font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;display:flex;align-items:center;gap:8px}
+.title-label .req{color:var(--accent)}
+.title-input{width:100%;border:none;background:transparent;outline:none;font-family:var(--serif);font-weight:400;font-size:38px;line-height:1.15;color:var(--ink);letter-spacing:-0.02em}
+.title-input::placeholder{color:var(--faint);font-style:italic}
+.title-foot{display:flex;align-items:center;gap:14px;margin-top:14px;padding-top:14px;border-top:1px solid var(--line)}
+.slug-field{flex:1;display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:12px;color:var(--muted)}
+.slug-field .pfx{color:var(--faint)}
+.slug-field .slug-val{flex:1;border:none;background:transparent;outline:none;font-family:var(--mono);font-size:12px;color:var(--ink-2)}
+.slug-regen{padding:3px 8px;border-radius:5px;font-size:10.5px;color:var(--muted);border:1px solid var(--border);background:var(--paper)}
+.slug-regen:hover{color:var(--accent-2);border-color:var(--accent)}
+.editor{background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden;box-shadow:0 1px 2px rgba(31,41,55,.03)}
+.ed-toolbar{display:flex;align-items:center;gap:4px;padding:8px 12px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,var(--card-2),var(--card));flex-wrap:wrap;position:sticky;top:65px;z-index:5}
+.ed-btn{width:28px;height:28px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;color:var(--body);border:1px solid transparent;font-size:13px;transition:background .15s,color .15s,border-color .15s}
+.ed-btn:hover{background:var(--paper-2);color:var(--ink);border-color:var(--border)}
+.ed-btn.active{background:var(--accent-soft);color:var(--accent-2)}
+.ed-divider{width:1px;height:18px;background:var(--border);margin:0 4px}
+.ed-content{min-height:480px;padding:28px 32px;font-size:16px;line-height:1.7;color:var(--ink);outline:none}
+.ed-content:empty::before{content:attr(data-placeholder);color:var(--faint);font-style:italic}
+.ed-content p{margin-bottom:1em}
+.ed-content h2{font-family:var(--serif);font-size:28px;font-weight:400;line-height:1.2;margin:1.4em 0 .5em;letter-spacing:-0.01em}
+.ed-content h3{font-family:var(--serif);font-size:22px;font-weight:400;margin:1.2em 0 .4em}
+.ed-content blockquote{border-left:3px solid var(--accent);padding:4px 0 4px 18px;margin:18px 0;font-family:var(--serif);font-size:19px;font-style:italic;color:var(--ink-2)}
+.ed-content code{font-family:var(--mono);font-size:.9em;background:var(--paper-2);padding:1px 5px;border-radius:4px;color:var(--accent-2)}
+.ed-content ul,.ed-content ol{padding-left:22px;margin-bottom:1em}
+.ed-stats{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--line);background:var(--card-2)}
+.ed-stat{padding:12px 18px;display:flex;align-items:center;gap:10px;border-right:1px solid var(--line)}
+.ed-stat:last-child{border-right:none}
+.ed-stat-ico{width:28px;height:28px;border-radius:7px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:var(--card);border:1px solid var(--border);color:var(--muted)}
+.ed-stat-label{font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.ed-stat-val{font-family:var(--serif);font-size:22px;line-height:1;color:var(--ink);margin-top:2px;letter-spacing:-0.01em}
+.ed-stat-val .unit{font-family:var(--mono);font-size:11px;color:var(--muted);margin-left:3px}
+.sp{background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden;box-shadow:0 1px 2px rgba(31,41,55,.03)}
+.sp-head{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--line)}
+.sp-title{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:600;color:var(--ink)}
+.sp-title .ico{width:14px;height:14px;color:var(--accent-2)}
+.sp-meta{font-family:var(--mono);font-size:10.5px;color:var(--muted)}
+.sp-body{padding:14px 16px}
+.status-switch{display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;padding:4px;background:var(--paper-2);border:1px solid var(--border);border-radius:8px}
+.status-switch button{padding:7px 4px;font-size:11.5px;border-radius:5px;color:var(--muted);font-weight:500;transition:background .15s,color .15s;display:flex;align-items:center;justify-content:center;gap:5px}
+.status-switch button.on{background:var(--card);color:var(--accent-2);box-shadow:0 1px 2px rgba(102,126,234,.12)}
+.status-switch button.on.draft{color:var(--warn)}
+.status-switch button.on.scheduled{color:var(--violet)}
+.status-switch button .dot{width:6px;height:6px;border-radius:50%;background:currentColor;opacity:.75}
+.sp-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;font-size:12.5px;border-bottom:1px solid var(--line)}
+.sp-row:last-child{border-bottom:none}
+.sp-row-label{color:var(--muted);display:flex;align-items:center;gap:8px}
+.sp-row-val{color:var(--ink);font-family:var(--mono);font-size:12px}
+.cat-list{display:flex;flex-direction:column;gap:2px;max-height:220px;overflow-y:auto}
+.cat-item{display:flex;align-items:center;gap:10px;padding:7px 10px;border-radius:7px;cursor:pointer;transition:background .15s;user-select:none}
+.cat-item:hover{background:var(--paper-2)}
+.cat-item.on{background:var(--accent-soft)}
+.cat-item.on .cat-name{color:var(--accent-2);font-weight:500}
+.cat-check{width:16px;height:16px;border-radius:4px;border:1.5px solid var(--border);background:var(--card);display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .15s}
+.cat-item.on .cat-check{background:var(--accent);border-color:var(--accent)}
+.cat-item.on .cat-check svg{display:block}
+.cat-check svg{display:none;color:#fff}
+.cat-swatch{width:10px;height:10px;border-radius:3px;flex-shrink:0}
+.cat-name{flex:1;font-size:13px;color:var(--ink-2)}
+.cat-count{font-family:var(--mono);font-size:10.5px;color:var(--muted)}
+.dropzone{border:1.5px dashed var(--border);border-radius:12px;padding:24px 16px;text-align:center;background:var(--card-2);transition:border-color .15s,background .15s;cursor:pointer}
+.dropzone:hover{border-color:var(--accent);background:var(--accent-soft)}
+.dz-ico{width:44px;height:44px;border-radius:10px;margin:0 auto 10px;background:var(--accent-soft);color:var(--accent-2);display:flex;align-items:center;justify-content:center}
+.dz-text{font-size:12.5px;color:var(--ink-2);margin-bottom:4px;font-weight:500}
+.dz-sub{font-size:11px;color:var(--muted);margin-bottom:12px}
+.dz-btn{padding:6px 11px;font-size:11.5px;border-radius:6px;display:inline-flex;align-items:center;gap:5px;background:var(--card);border:1px solid var(--border);color:var(--body);transition:all .15s}
+.dz-btn:hover{border-color:var(--accent);color:var(--accent-2)}
+.dz-btn.primary{background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;border-color:transparent}
+.seo-head{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;background:linear-gradient(135deg,rgba(102,126,234,.06),rgba(118,75,162,.06));border-bottom:1px solid var(--line)}
+.field{margin-bottom:12px}
+.field:last-child{margin-bottom:0}
+.field-label{display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.field-input,.field-textarea{width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:7px;font-size:12.5px;font-family:inherit;color:var(--ink);background:var(--card);transition:border-color .15s,box-shadow .15s}
+.field-input:focus,.field-textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(102,126,234,.15)}
+.field-textarea{resize:vertical;min-height:64px;line-height:1.5}
+.field-foot{display:flex;justify-content:space-between;font-family:var(--mono);font-size:10px;color:var(--muted);margin-top:4px}
+.field-foot .ok{color:var(--ok)}
+.field-foot .warn{color:var(--warn)}
+.serp{background:var(--paper);border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-top:12px}
+.serp-url{font-family:var(--mono);font-size:11px;color:var(--ok);margin-bottom:4px}
+.serp-title{font-size:14px;color:#1a0dab;line-height:1.3;margin-bottom:3px}
+.serp-desc{font-size:11.5px;color:var(--body);line-height:1.4}
+.tag-input-wrap{display:flex;flex-wrap:wrap;gap:5px;padding:6px;border:1px solid var(--border);border-radius:8px;background:var(--card);min-height:38px;transition:border-color .15s}
+.tag-input-wrap:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px rgba(102,126,234,.15)}
+.tagchip{display:inline-flex;align-items:center;gap:5px;padding:3px 4px 3px 10px;border-radius:999px;background:var(--accent-soft);color:var(--accent-2);font-size:11.5px;font-weight:500}
+.tagchip button{width:16px;height:16px;border-radius:50%;color:var(--accent-2);opacity:.6;display:inline-flex;align-items:center;justify-content:center;transition:all .15s}
+.tagchip button:hover{background:rgba(102,126,234,.2);opacity:1}
+.tag-input-wrap input{flex:1;min-width:80px;border:none;outline:none;background:transparent;font-family:inherit;font-size:12.5px;padding:4px 6px}
+.savebar{position:sticky;bottom:0;z-index:30;margin:28px -32px -64px;padding:14px 32px;background:rgba(255,255,255,.92);backdrop-filter:blur(10px);border-top:1px solid var(--border);display:flex;align-items:center;gap:12px}
+.savebar-info{display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--muted)}
+.savebar-actions{margin-left:auto;display:flex;gap:8px}
+.btn-cancel{background:transparent;color:var(--muted);border:1px solid transparent}
+.btn-cancel:hover{color:var(--danger);border-color:var(--danger-soft);background:var(--danger-soft)}
+@media(max-width:1100px){.ed-grid{grid-template-columns:1fr}.ed-side{position:static}.savebar{margin:28px -16px -64px;padding:14px 16px}}
+</style>
 </head>
 <body>
-    <!-- Auto-save status -->
-    <div class="autosave-status" id="autosaveStatus">
-        <span class="autosave-icon">💾</span>
-        <span class="autosave-text">Ukládání...</span>
+<div class="app">
+  <aside class="side">
+    <div class="brand">
+      <div class="brand-mark">BP</div>
+      <div>
+        <div class="brand-name"><?= e(SITE_NAME) ?></div>
+        <div class="brand-sub">CMS · Admin</div>
+      </div>
     </div>
-    
-    <header class="admin-header">
-        <div class="header-content">
-            <h1>➕ Nový příspěvek</h1>
-            <nav class="header-nav">
-                <!-- Trvalý auto-save status -->
-                <div class="autosave-permanent" id="autosavePermanent">
-                    <span class="save-icon">⚪</span>
-                    <span class="save-text">Neuloženo</span>
-                </div>
-                <a href="dashboard.php" class="header-link">← Dashboard</a>
-            </nav>
-        </div>
-    </header>
-
-    <div class="main-wrapper">
-        <!-- Levý panel kategorií -->
-        <div class="categories-sidebar">
-            <div class="categories-header">
-                <h3>📁 Kategorie</h3>
-                <div class="category-actions">
-                    <button class="category-btn category-btn-add" onclick="openAddCategoryModal()">
-                        <span>➕</span> Přidat
-                    </button>
-                    <button class="category-btn category-btn-delete" id="deleteCategoryBtn" onclick="openDeleteCategoryModal()" disabled>
-                        <span>➖</span> Smazat
-                    </button>
-                </div>
-            </div>
-            
-            <div class="categories-list">
-                <div class="category-item" data-id="" onclick="selectCategory('')">
-                    <div class="category-name category-none">Bez kategorie</div>
-                </div>
-                <?php foreach ($categories as $cat): ?>
-                <div class="category-item" data-id="<?= $cat['id'] ?>" onclick="selectCategory(<?= $cat['id'] ?>)">
-                    <div class="category-name"><?= e($cat['name']) ?></div>
-                </div>
-                <?php endforeach; ?>
-            </div>
-        </div>
-
-        <!-- Hlavní obsah -->
-        <div class="main-content">
-            <div class="content-inner">
-                <?php if ($error): ?>
-                    <div class="alert alert-error"><?= e($error) ?></div>
-                <?php endif; ?>
-
-                <div class="card">
-                    <form method="POST" enctype="multipart/form-data" id="postForm">
-                        <?= Security::tokenInput() ?>
-                        <input type="hidden" name="category_id" id="categoryInput" value="">
-                        <input type="hidden" name="draft_id" id="draftIdInput" value="">
-
-                        <div class="form-group required-field">
-                            <label>Titulek</label>
-                            <input type="text" name="title" required value="<?= e(post('title')) ?>" style="font-size: 18px; padding: 12px;">
-                        </div>
-
-                        <div class="form-group required-field">
-                            <label>Obsah</label>
-                            <div id="editor" style="height: 400px; border-radius: 8px;"></div>
-                            <input type="hidden" name="content" id="content">
-                            
-                            <!-- Počítadlo slov -->
-                            <div class="word-counter">
-                                <div class="counter-item">
-                                    <span class="counter-icon">📝</span>
-                                    <div>
-                                        <div class="counter-label">Slov</div>
-                                        <div class="counter-value" id="wordCount">0</div>
-                                    </div>
-                                </div>
-                                
-                                <div class="counter-item">
-                                    <span class="counter-icon">🔤</span>
-                                    <div>
-                                        <div class="counter-label">Znaků</div>
-                                        <div class="counter-value" id="charCount">0</div>
-                                    </div>
-                                </div>
-                                
-                                <div class="counter-item">
-                                    <span class="counter-icon">📖</span>
-                                    <div>
-                                        <div class="counter-label">Čtení</div>
-                                        <div class="counter-value" id="readTime">0 min</div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label>Hlavní obrázek</label>
-                                
-                                <div class="upload-zone" id="featuredDropZone">
-                                    <div class="upload-zone-content" id="uploadZoneContent">
-                                        <div class="upload-zone-icon">🖼️</div>
-                                        <div class="upload-zone-title">Hlavní obrázek příspěvku</div>
-                                        <div class="upload-zone-text">Přetáhněte obrázek sem nebo</div>
-                                        <div class="upload-zone-buttons">
-                                            <button type="button" class="upload-btn upload-btn-primary" onclick="document.getElementById('featuredImageInput').click()">
-                                                📁 Vybrat soubor
-                                            </button>
-                                            <button type="button" class="upload-btn upload-btn-gallery" onclick="openMediaGallery()">
-                                                🖼️ Z galerie
-                                            </button>
-                                        </div>
-                                    </div>
-                                    <div id="selectedImagePreview" style="display: none; position: relative;">
-                                        <img src="" id="selectedImagePreviewImg" style="width: 100%; border-radius: 8px;">
-                                        <button type="button" onclick="clearSelectedImage()" style="position: absolute; top: 10px; right: 10px; padding: 8px 16px; background: rgba(252,129,129,0.95); color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">
-                                            ✕ Odebrat
-                                        </button>
-                                    </div>
-                                    <input type="file" name="featured_image" id="featuredImageInput" accept="image/*" style="display: none;">
-                                    <input type="hidden" name="featured_image_from_gallery" id="featuredImageFromGallery">
-                                </div>
-                                
-                                <small style="color: #718096; display: block; margin-top: 10px;">Doporučená velikost: 1920x1080px</small>
-                            </div>
-                        </div>
-
-                        <h3 style="margin: 40px 0 20px; font-size: 20px;">🔍 SEO Nastavení</h3>
-                        
-                        <button type="button" class="ai-generate-btn" onclick="generateSEO()" id="aiGenerateBtn">
-                            <span class="ai-icon">🤖</span>
-                            <span>Generovat SEO automaticky</span>
-                        </button>
-                        
-                        <div class="form-group">
-                            <label>
-                                SEO Title
-                                <span class="tooltip-container">
-                                    <span class="tooltip-icon">?</span>
-                                    <span class="tooltip-text">
-                                        <strong>Co to je:</strong> Titulek který se zobrazí ve výsledcích Google.<br><br>
-                                        <strong>Tip:</strong> Měl by mít 50-60 znaků a obsahovat klíčové slovo.<br><br>
-                                        <strong>Příklad:</strong> "Jak pěstovat rajčata na balkóně - 5 tipů pro začátečníky"
-                                    </span>
-                                </span>
-                            </label>
-                            <input type="text" name="meta_title" value="<?= e(post('meta_title')) ?>" 
-                                   placeholder="Ponechte prázdné pro použití titulku příspěvku">
-                        </div>
-                        
-                        <div class="form-group">
-                            <label>
-                                Meta Description
-                                <span class="tooltip-container">
-                                    <span class="tooltip-icon">?</span>
-                                    <span class="tooltip-text">
-                                        <strong>Co to je:</strong> Krátký popis který se zobrazí pod titulkem v Google.<br><br>
-                                        <strong>Tip:</strong> 150-160 znaků, popisuje o čem článek je a láká ke kliknutí.<br><br>
-                                        <strong>Příklad:</strong> "Naučte se pěstovat rajčata na balkóně bez zahrady. Praktické tipy pro výběr odrůdy, zalévání a péči."
-                                    </span>
-                                </span>
-                            </label>
-                            <textarea name="meta_description" rows="3" placeholder="Krátký popis článku pro vyhledávače..."><?= e(post('meta_description')) ?></textarea>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label>
-                                Klíčová slova
-                                <span class="tooltip-container">
-                                    <span class="tooltip-icon">?</span>
-                                    <span class="tooltip-text">
-                                        <strong>Co to je:</strong> Slova která lidé píšou do Googlu když hledají váš obsah.<br><br>
-                                        <strong>Tip:</strong> 3-5 slov oddělených čárkou.<br><br>
-                                        <strong>Příklad:</strong> "pěstování rajčat, balkón, tipy, péče"
-                                    </span>
-                                </span>
-                            </label>
-                            <input type="text" name="meta_keywords" id="metaKeywords" value="<?= e(post('meta_keywords')) ?>" 
-                                   placeholder="klíčové slovo 1, klíčové slovo 2, ...">
-                        </div>
-
-                        <!-- Excerpt - automaticky generován -->
-                        <input type="hidden" name="excerpt" value="">
-
-                        <div style="display: flex; gap: 15px; margin-top: 40px; align-items: center;">
-                            <button type="button" class="btn" onclick="openPreview()" style="padding: 14px 28px; font-size: 16px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; transition: all 0.2s;">
-                                👁️ Náhled
-                            </button>
-                            
-                            <div style="flex: 1; display: flex; gap: 15px;">
-                                <button type="submit" name="status" value="published" class="btn btn-primary" style="flex: 1; padding: 16px 32px; font-size: 17px; background: linear-gradient(135deg, #48bb78 0%, #38a169 100%); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; transition: all 0.2s; box-shadow: 0 4px 12px rgba(72, 187, 120, 0.3);">
-                                    ✅ Publikovat příspěvek
-                                </button>
-                                <button type="submit" name="status" value="draft" class="btn" style="padding: 16px 32px; font-size: 17px; background: linear-gradient(135deg, #a0aec0 0%, #718096 100%); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; transition: all 0.2s;">
-                                    📝 Uložit jako koncept
-                                </button>
-                            </div>
-                            
-                            <a href="dashboard.php" class="btn btn-secondary" style="padding: 14px 28px; font-size: 16px; background: #e2e8f0; color: #4a5568; border: none; border-radius: 8px; text-decoration: none; font-weight: 600; transition: all 0.2s;">
-                                ✖ Zrušit
-                            </a>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
+    <div>
+      <div class="nav-label">Workspace</div>
+      <nav class="nav">
+        <a href="<?= ADMIN_URL ?>dashboard.php"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>Přehled</a>
+        <a href="<?= ADMIN_URL ?>posts.php" class="active"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 4h12l4 4v12H4z"/><path d="M16 4v4h4"/><path d="M8 13h8M8 17h5"/></svg>Příspěvky</a>
+        <a href="<?= ADMIN_URL ?>media.php"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 16V6a2 2 0 0 1 2-2h8l6 6v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/><circle cx="9" cy="11" r="1.5"/><path d="m4 18 5-5 5 5 3-3 3 3"/></svg>Média</a>
+      </nav>
     </div>
-
-    <!-- Modal pro přidání kategorie -->
-    <div class="fullscreen-modal" id="addCategoryModal">
-        <div class="modal-content">
-            <div class="modal-icon">➕</div>
-            <h2 class="modal-title">Přidat novou kategorii</h2>
-            <p class="modal-description">Zadejte název nové kategorie pro váš blog</p>
-            <input type="text" class="modal-input" id="newCategoryName" placeholder="Název kategorie...">
-            <div class="modal-actions">
-                <button class="modal-btn modal-btn-primary" onclick="addCategory()">
-                    ✓ Přidat
-                </button>
-                <button class="modal-btn modal-btn-secondary" onclick="closeModal()">
-                    Zrušit
-                </button>
-            </div>
-        </div>
+    <div>
+      <div class="nav-label">Nastavení</div>
+      <nav class="nav">
+        <a href="<?= ADMIN_URL ?>settings.php"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M12 2v2M12 20v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M2 12h2M20 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/></svg>Nastavení</a>
+      </nav>
     </div>
-
-    <!-- Modal pro smazání kategorie -->
-    <div class="fullscreen-modal" id="deleteCategoryModal">
-        <div class="modal-content delete">
-            <div class="modal-icon">⚠️</div>
-            <h2 class="modal-title">Smazat kategorii?</h2>
-            <p class="modal-description" id="deleteCategoryText"></p>
-            <div class="modal-actions">
-                <button class="modal-btn modal-btn-danger" onclick="deleteCategory()">
-                    ✓ Smazat
-                </button>
-                <button class="modal-btn modal-btn-secondary" onclick="closeModal()">
-                    Zrušit
-                </button>
-            </div>
-        </div>
+    <div class="side-user">
+      <div class="avatar"><?= $userInitials ?></div>
+      <div class="side-user-info">
+        <div class="side-user-name"><?= e($_SESSION['username'] ?? '') ?></div>
+        <div class="side-user-role"><?= e($_SESSION['role'] ?? 'Editor') ?></div>
+      </div>
     </div>
+  </aside>
 
-    <!-- Media Galerie Modal -->
-    <div class="fullscreen-modal" id="mediaGalleryModal">
-        <div class="modal-content" style="max-width: 1000px; max-height: 90vh; display: flex; flex-direction: column;">
-            <div class="modal-icon">🖼️</div>
-            <h2 class="modal-title">Media Knihovna</h2>
-            <input type="text" id="gallerySearch" placeholder="🔍 Hledat..." style="width: 100%; padding: 12px; border: 2px solid #e2e8f0; border-radius: 8px; margin-bottom: 15px;">
-            <div id="galleryGrid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; overflow-y: auto; flex: 1; max-height: 500px;">
-                <div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #718096;">Načítám...</div>
-            </div>
-            <div id="galleryPagination" style="display: flex; justify-content: center; gap: 10px; margin-top: 15px; padding-top: 15px; border-top: 2px solid #e2e8f0;"></div>
-            <div class="modal-actions" style="margin-top: 15px;">
-                <button class="modal-btn modal-btn-secondary" onclick="closeMediaGallery()">Zavřít</button>
-            </div>
+  <main class="main">
+    <?php if ($error): ?>
+    <div style="background:var(--danger-soft);color:var(--danger);padding:12px 32px;font-size:13px;border-bottom:1px solid rgba(153,27,27,.15)"><?= e($error) ?></div>
+    <?php endif; ?>
+
+    <form id="postForm" method="POST" enctype="multipart/form-data" action="">
+      <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?? '' ?>">
+      <input type="hidden" name="status" id="statusInput" value="draft">
+      <input type="hidden" name="category_id" id="catInput" value="">
+      <input type="hidden" name="draft_id" id="draftId" value="">
+      <textarea name="content" id="contentInput" style="display:none"></textarea>
+      <input type="hidden" name="meta_title" id="metaTitleInput" value="">
+      <input type="hidden" name="meta_description" id="metaDescInput" value="">
+      <input type="hidden" name="meta_keywords" id="metaKwInput" value="">
+      <input type="hidden" name="excerpt" id="excerptInput" value="">
+
+      <div class="topbar">
+        <div class="crumb">
+          <a href="<?= ADMIN_URL ?>dashboard.php" style="color:var(--muted)">Blog Pro</a>
+          <span class="sep">/</span>
+          <a href="<?= ADMIN_URL ?>posts.php" style="color:var(--muted)">Příspěvky</a>
+          <span class="sep">/</span>
+          <span class="here">Nový příspěvek</span>
         </div>
-    </div>
+        <div class="top-actions">
+          <a href="<?= ADMIN_URL ?>posts.php" class="btn btn-ghost btn-sm">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+            Zpět
+          </a>
+        </div>
+      </div>
 
-    <!-- Náhled příspěvku -->
-    <div class="preview-modal" id="previewModal">
-        <div class="preview-container">
-            <div class="preview-header">
-                <div class="preview-title">
-                    👁️ Náhled příspěvku
+      <div class="content">
+        <div class="page-head">
+          <div>
+            <div class="ph-meta">
+              <div class="eyebrow"><span class="pulse" style="background:var(--warn);box-shadow:0 0 0 3px rgba(146,64,14,.15)"></span>Koncept</div>
+              <span class="save-pill" id="savePill"><span class="dot"></span><span id="saveText">Neuloženo</span></span>
+            </div>
+            <h1 class="page-title">Nový <em>příspěvek.</em></h1>
+          </div>
+          <div class="ph-actions">
+            <button type="button" class="btn btn-primary btn-sm" id="topPublish">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2 11 13"/><path d="m22 2-7 20-4-9-9-4z"/></svg>
+              Publikovat
+            </button>
+          </div>
+        </div>
+
+        <div class="ed-grid">
+          <div style="display:flex;flex-direction:column;gap:18px">
+            <div class="title-field">
+              <div class="title-label"><span>Titulek</span><span class="req">●</span><span class="form-label-sub">povinné · max. 90 znaků</span></div>
+              <input type="text" name="title" class="title-input" id="titleInput" placeholder="Začněte údernm titulkem…" autocomplete="off">
+              <div class="title-foot">
+                <div class="slug-field">
+                  <span class="pfx"><?= parse_url(BASE_URL, PHP_URL_HOST) ?>/</span>
+                  <input type="text" class="slug-val" id="slugDisplay" placeholder="automaticky-z-titulku" readonly>
                 </div>
-                <button class="preview-close" onclick="closePreview()">✕</button>
+                <button type="button" class="slug-regen" id="slugRegen">Auto</button>
+              </div>
             </div>
-            <div class="preview-content">
-                <article class="preview-article" id="previewArticle">
-                    <!-- Obsah bude vložen JavaScriptem -->
-                </article>
+
+            <div class="editor">
+              <div class="ed-toolbar">
+                <button type="button" class="ed-btn active" title="Zarovnat vlevo"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="17" y1="10" x2="3" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="14" x2="3" y2="14"/><line x1="17" y1="18" x2="3" y2="18"/></svg></button>
+                <div class="ed-divider"></div>
+                <button type="button" class="ed-btn" title="Tučně" onclick="document.execCommand('bold')"><b>B</b></button>
+                <button type="button" class="ed-btn" title="Kurzíva" onclick="document.execCommand('italic')"><i style="font-family:var(--serif)">I</i></button>
+                <button type="button" class="ed-btn" title="Odkaz"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></button>
+                <div class="ed-divider"></div>
+                <button type="button" class="ed-btn" title="Odrážky" onclick="document.execCommand('insertUnorderedList')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="9" y1="6" x2="20" y2="6"/><line x1="9" y1="12" x2="20" y2="12"/><line x1="9" y1="18" x2="20" y2="18"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/></svg></button>
+                <button type="button" class="ed-btn" title="Číslovaný seznam" onclick="document.execCommand('insertOrderedList')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="10" y1="6" x2="21" y2="6"/><line x1="10" y1="12" x2="21" y2="12"/><line x1="10" y1="18" x2="21" y2="18"/><path d="M4 6h1v4M4 10h2M6 18H4c0-1 2-2 2-3s-1-1.5-2-1"/></svg></button>
+              </div>
+              <div class="ed-content" id="edContent" contenteditable="true" data-placeholder="Začněte psát váš úažný obsah…"></div>
+              <div class="ed-stats">
+                <div class="ed-stat"><div class="ed-stat-ico"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="14 3 14 9 20 9"/></svg></div><div><div class="ed-stat-label">Slov</div><div class="ed-stat-val" id="statWords">0</div></div></div>
+                <div class="ed-stat"><div class="ed-stat-ico"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg></div><div><div class="ed-stat-label">Znaků</div><div class="ed-stat-val" id="statChars">0</div></div></div>
+                <div class="ed-stat"><div class="ed-stat-ico"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></div><div><div class="ed-stat-label">Doba čtení</div><div class="ed-stat-val" id="statRead">0<span class="unit">min</span></div></div></div>
+                <div class="ed-stat"><div class="ed-stat-ico"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg></div><div><div class="ed-stat-label">Čitelnost</div><div class="ed-stat-val" id="statReadability">—</div></div></div>
+              </div>
             </div>
+
+            <div class="sp">
+              <div class="sp-head">
+                <div class="sp-title"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="17" y1="10" x2="3" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="14" x2="3" y2="14"/><line x1="17" y1="18" x2="3" y2="18"/></svg>Perex</div>
+                <span class="sp-meta" id="excerptCount">0 / 280</span>
+              </div>
+              <div class="sp-body">
+                <textarea class="field-textarea" id="excerptText" placeholder="Krátké uvedení článku… Pokud nechat prázdné, vygeneruje se automaticky."></textarea>
+              </div>
+            </div>
+          </div>
+
+          <div class="ed-side">
+            <div class="sp">
+              <div class="sp-head"><div class="sp-title"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2 11 13"/><path d="m22 2-7 20-4-9-9-4z"/></svg>Publikace</div></div>
+              <div class="sp-body">
+                <div class="status-switch" id="statusSwitch">
+                  <button type="button" class="on draft" data-val="draft"><span class="dot"></span>Koncept</button>
+                  <button type="button" data-val="published"><span class="dot"></span>Publikovat</button>
+                  <button type="button" class="scheduled" data-val="scheduled"><span class="dot"></span>Plán</button>
+                </div>
+                <div style="margin-top:14px">
+                  <div class="sp-row"><div class="sp-row-label">Autor</div><span class="sp-row-val"><?= e($_SESSION['username'] ?? '') ?></span></div>
+                  <div class="sp-row"><div class="sp-row-label">Datum</div><a href="#" class="sp-row-val" style="color:var(--accent-2)">Ihned</a></div>
+                </div>
+              </div>
+            </div>
+
+            <div class="sp">
+              <div class="sp-head">
+                <div class="sp-title"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>Kategorie</div>
+                <span class="sp-meta"><span id="catCount">0</span> / <?= count($categories) ?></span>
+              </div>
+              <div class="sp-body">
+                <div class="cat-list" id="catList">
+                  <?php foreach ($categories as $i => $cat): ?>
+                  <div class="cat-item" data-id="<?= $cat['id'] ?>" onclick="selectCat(this)">
+                    <div class="cat-check"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div>
+                    <div class="cat-swatch" style="background:<?= $catColors[$i % count($catColors)] ?>"></div>
+                    <span class="cat-name"><?= e($cat['name']) ?></span>
+                    <span class="cat-count"><?= $cat['post_count'] ?? 0 ?></span>
+                  </div>
+                  <?php endforeach; ?>
+                </div>
+              </div>
+            </div>
+
+            <div class="sp">
+              <div class="sp-head"><div class="sp-title"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>Hlavní obrázek</div></div>
+              <div class="sp-body">
+                <div class="dropzone" id="dropzone" onclick="document.getElementById('featuredInput').click()">
+                  <div class="dz-ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>
+                  <div class="dz-text">Přetáhněte obrázek příspěvku</div>
+                  <div class="dz-sub">JPG, PNG nebo WebP · max. 8 MB</div>
+                  <button type="button" class="dz-btn primary">Vybrat obrázek</button>
+                </div>
+                <input type="file" name="featured_image" id="featuredInput" accept="image/*" style="display:none">
+                <input type="hidden" name="featured_image_from_gallery" id="galleryImage" value="">
+              </div>
+            </div>
+
+            <div class="sp">
+              <div class="seo-head">
+                <div class="sp-title"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>SEO &amp; sdílení</div>
+              </div>
+              <div class="sp-body">
+                <div class="field">
+                  <div class="field-label">SEO Title</div>
+                  <input type="text" class="field-input" id="seoTitle" placeholder="Ponechte prázdné pro titulek…" maxlength="80">
+                  <div class="field-foot"><span>Optimum 50–60 znaků</span><span id="seoTitleCount" class="ok">0 / 60</span></div>
+                </div>
+                <div class="field">
+                  <div class="field-label">Meta Description</div>
+                  <textarea class="field-textarea" id="seoDesc" placeholder="Krátký popis pro vyhledávače…" maxlength="200"></textarea>
+                  <div class="field-foot"><span>Optimum 150–160 znaků</span><span id="seoDescCount" class="ok">0 / 160</span></div>
+                </div>
+                <div class="field">
+                  <div class="field-label">Klíčová slova</div>
+                  <input type="text" class="field-input" id="seoKeywords" placeholder="klíčové slovo 1, klíčové slovo 2…">
+                </div>
+                <div class="field-label" style="margin-top:6px">Náhled v Google</div>
+                <div class="serp">
+                  <div class="serp-url"><?= parse_url(BASE_URL, PHP_URL_HOST) ?> › <span id="serpSlug">novy-prispevek</span></div>
+                  <div class="serp-title" id="serpTitle">Nový příspěvek — <?= e(SITE_NAME) ?></div>
+                  <div class="serp-desc" id="serpDesc">Krátký popis příspěvku se zobrazí ve výsledcích vyhledávání.</div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
-    </div>
-    
-    <div id="dragOverlay"></div>
 
-    <script src="https://cdn.quilljs.com/1.3.6/quill.js"></script>
-    <script>
-        let selectedCategoryId = '';
-        
-        // Registrace vlastních fontů
-        var Font = Quill.import('formats/font');
-        Font.whitelist = [
-            'arial', 'georgia', 'impact', 'courier', 'verdana', 
-            'times-new-roman', 'comic-sans', 'trebuchet', 'palatino', 'garamond'
-        ];
-        Quill.register(Font, true);
-        
-        // Registrace velikostí
-        var Size = Quill.import('attributors/style/size');
-        Size.whitelist = ['10px', '12px', '14px', '16px', '18px', '20px', '24px', '32px', '48px', '64px'];
-        Quill.register(Size, true);
-        
-        // Inicializace Quill editoru s rozšířenými funkcemi
-        var quill = new Quill('#editor', {
-            theme: 'snow',
-            placeholder: 'Začněte psát váš úžasný obsah...',
-            modules: {
-                toolbar: {
-                    container: [
-                        [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
-                        [{ 'font': Font.whitelist }],
-                        ['bold', 'italic', 'underline', 'strike'],
-                        [{ 'color': [] }, { 'background': [] }],
-                        [{ 'script': 'sub'}, { 'script': 'super' }],
-                        [{ 'align': [] }, { 'align': 'center' }, { 'align': 'right' }, { 'align': 'justify' }],
-                        [{ 'list': 'ordered'}, { 'list': 'bullet' }],
-                        [{ 'indent': '-1'}, { 'indent': '+1' }],
-                        ['blockquote', 'code-block'],
-                        ['link', 'image', 'video'],
-                        ['clean']
-                    ],
-                    handlers: {
-                        image: function() {
-                            const input = document.createElement('input');
-                            input.type = 'file';
-                            input.accept = 'image/*';
-                            input.onchange = async () => {
-                                const file = input.files[0];
-                                const formData = new FormData();
-                                formData.append('ajax_action', 'upload_media');
-                                formData.append('file', file);
-                                const res = await fetch('media.php', {method: 'POST', body: formData});
-                                const data = await res.json();
-                                if(data.success) {
-                                    const range = this.quill.getSelection();
-                                    this.quill.insertEmbed(range.index, 'image', '<?= BASE_URL ?>uploads/' + data.filename);
-                                }
-                            };
-                            input.click();
-                        }
-                    }
-                }
-            }
-        });
-        
-        // Při odeslání formuláře
-        document.getElementById('postForm').onsubmit = function() {
-            document.getElementById('content').value = quill.root.innerHTML;
-            return true;
-        };
-        
-        // ============================================
-        // AUTO-SAVE & POČÍTADLO SLOV
-        // ============================================
-        
-        let autoSaveInterval;
-        let typingTimer;
-        let lastSavedContent = '';
-        let isDraft = false;
-        let draftId = null;
-        let isSubmitting = false;  // ← NOVÝ FLAG pro blokování auto-save
-        
-        const AUTOSAVE_INTERVAL = 30000; // 30 sekund (běžný interval)
-        const TYPING_DELAY = 1000; // 1 sekunda po zastavení psaní
-        
-        // Počítadlo slov - update při psaní
-        quill.on('text-change', function() {
-            updateWordCount();
-            
-            // Označit jako neuloženo při změně
-            const currentContent = document.querySelector('input[name="title"]').value + quill.root.innerHTML;
-            if (currentContent !== lastSavedContent) {
-                updatePermanentStatus('unsaved');
-            }
-            
-            // SMART SAVE: Resetovat timer při psaní
-            clearTimeout(typingTimer);
-            
-            // Po 1 sekundě nečinnosti - uložit (BEZ POPUP)
-            typingTimer = setTimeout(() => {
-                console.log('Uživatel přestal psát - ukládám (tichý save)...');
-                autoSave(false); // false = bez popup
-            }, TYPING_DELAY);
-        });
-        
-        // Sledovat změny v titulku
-        document.querySelector('input[name="title"]').addEventListener('input', function() {
-            const currentContent = this.value + quill.root.innerHTML;
-            if (currentContent !== lastSavedContent) {
-                updatePermanentStatus('unsaved');
-            }
-            
-            // SMART SAVE: Také pro titulek
-            clearTimeout(typingTimer);
-            typingTimer = setTimeout(() => {
-                console.log('Uživatel přestal psát titulek - ukládám (tichý save)...');
-                autoSave(false); // false = bez popup
-            }, TYPING_DELAY);
-        });
-        
-        function updateWordCount() {
-            const text = quill.getText().trim();
-            
-            // Počet slov
-            const words = text.length > 0 ? text.split(/\s+/).length : 0;
-            document.getElementById('wordCount').textContent = words;
-            
-            // Počet znaků (bez mezer)
-            const chars = text.replace(/\s/g, '').length;
-            document.getElementById('charCount').textContent = chars.toLocaleString();
-            
-            // Čas čtení (průměrně 200 slov/min)
-            const readTime = Math.ceil(words / 200) || 0;
-            const readTimeText = readTime === 1 ? '1 min' : readTime + ' min';
-            document.getElementById('readTime').textContent = readTimeText;
-        }
-        
-        // Spustit auto-save každých 30 sekund
-        function startAutoSave() {
-            autoSaveInterval = setInterval(() => {
-                console.log('Pravidelný auto-save (30s interval) - s popup...');
-                autoSave(true); // true = s popup
-            }, AUTOSAVE_INTERVAL);
-            console.log('Auto-save spuštěno: 30s interval (s popup) + 1s po zastavení (bez popup)');
-        }
-        
-        // Auto-save funkce
-        async function autoSave(showPopup = true) {
-            // KONTROLA: Pokud probíhá submit, NEUKLÁDAT!
-            if (isSubmitting) {
-                console.log('⛔ Auto-save BLOKOVÁN - probíhá submit!');
-                return;
-            }
-            
-            const title = document.querySelector('input[name="title"]').value;
-            const content = quill.root.innerHTML;
-            
-            // Neprázdný obsah nebo titulek
-            if (!title && !content) {
-                return;
-            }
-            
-            // Pokud se nezměnilo, neukládat
-            const currentContent = title + content;
-            if (currentContent === lastSavedContent) {
-                return;
-            }
-            
-            // Zobrazit "Ukládání..." (popup jen pokud showPopup = true)
-            if (showPopup) {
-                showAutoSaveStatus('saving');
-            }
-            updatePermanentStatus('saving');
-            
-            try {
-                // Připravit data
-                const formData = new FormData();
-                formData.append('ajax_action', 'autosave_draft');
-                formData.append('title', title);
-                formData.append('content', content);
-                formData.append('category_id', document.getElementById('categoryInput').value);
-                formData.append('meta_title', document.querySelector('input[name="meta_title"]').value);
-                formData.append('meta_description', document.querySelector('textarea[name="meta_description"]').value);
-                formData.append('meta_keywords', document.querySelector('input[name="meta_keywords"]').value);
-                
-                if (draftId) {
-                    formData.append('draft_id', draftId);
-                }
-                
-                // Odeslat AJAX
-                const response = await fetch(window.location.href, {
-                    method: 'POST',
-                    body: formData
-                });
-                
-                const result = await response.json();
-                
-                if (result.success) {
-                    lastSavedContent = currentContent;
-                    if (result.draft_id) {
-                        draftId = result.draft_id;
-                        isDraft = true;
-                        // Uložit draft_id do formuláře!
-                        document.getElementById('draftIdInput').value = result.draft_id;
-                        console.log('✅ Draft ID uloženo:', result.draft_id);
-                    }
-                    
-                    // Zobrazit "Uloženo" (popup jen pokud showPopup = true)
-                    if (showPopup) {
-                        showAutoSaveStatus('saved', result.time);
-                    }
-                    updatePermanentStatus('saved', result.time);
-                    
-                    console.log('Auto-save úspěšný:', result);
-                } else {
-                    updatePermanentStatus('unsaved');
-                    console.error('Auto-save chyba:', result.message);
-                }
-            } catch (error) {
-                updatePermanentStatus('unsaved');
-                console.error('Auto-save error:', error);
-            }
-        }
-        
-        // Aktualizovat trvalý status indikátor
-        function updatePermanentStatus(state, time) {
-            const permanent = document.getElementById('autosavePermanent');
-            const icon = permanent.querySelector('.save-icon');
-            const text = permanent.querySelector('.save-text');
-            
-            // Odstranit všechny třídy
-            permanent.classList.remove('unsaved', 'saving', 'saved');
-            
-            // Tenké šipky v kruhu (stroke-width: 1.5)
-            const arrowSVG = `<svg class="sync-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M21.5 2v6m0 0h-6m6 0l-3.5-3.5a9 9 0 1 0 2.5 6.5"/>
-                <path d="M2.5 22v-6m0 0h6m-6 0l3.5 3.5a9 9 0 1 1-2.5-6.5"/>
-            </svg>`;
-            
-            if (state === 'unsaved') {
-                permanent.classList.add('unsaved');
-                icon.innerHTML = `<span style="display: flex; align-items: center; gap: 2px;">☁️</span>`;
-                text.textContent = 'Neuloženo';
-            } else if (state === 'saving') {
-                permanent.classList.add('saving');
-                icon.innerHTML = `<span style="display: flex; align-items: center; gap: 3px;">${arrowSVG}<span style="font-size: 16px;">☁️</span></span>`;
-                text.textContent = 'Ukládání...';
-            } else if (state === 'saved') {
-                permanent.classList.add('saved');
-                icon.innerHTML = `<span style="display: flex; align-items: center; gap: 2px;">☁️</span>`;
-                text.textContent = 'Uloženo';
-            }
-        }
-        
-        // Zobrazit auto-save status
-        function showAutoSaveStatus(type, time) {
-            const status = document.getElementById('autosaveStatus');
-            const icon = status.querySelector('.autosave-icon');
-            const text = status.querySelector('.autosave-text');
-            
-            status.classList.remove('saving', 'saved');
-            
-            const arrowSVG = `<svg class="sync-icon" style="width: 20px; height: 20px;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M21.5 2v6m0 0h-6m6 0l-3.5-3.5a9 9 0 1 0 2.5 6.5"/>
-                <path d="M2.5 22v-6m0 0h6m-6 0l3.5 3.5a9 9 0 1 1-2.5-6.5"/>
-            </svg>`;
-            
-            if (type === 'saving') {
-                status.classList.add('saving');
-                icon.innerHTML = `<span style="display: flex; align-items: center; gap: 4px;">${arrowSVG}<span style="font-size: 18px;">☁️</span></span>`;
-                text.textContent = 'Ukládání do cloudu...';
-            } else if (type === 'saved') {
-                status.classList.add('saved');
-                icon.innerHTML = `<span style="display: flex; align-items: center; gap: 4px;"><span style="font-size: 18px;">☁️</span></span>`;
-                text.textContent = 'Uloženo v cloudu';
-            }
-            
-            // Zobrazit
-            status.classList.add('show');
-            
-            // Skrýt po 3 sekundách
-            setTimeout(() => {
-                status.classList.remove('show');
-            }, 3000);
-        }
-        
-        // Spustit auto-save po načtení stránky
-        setTimeout(() => {
-            startAutoSave();
-            updateWordCount(); // Iniciální počítadlo
-        }, 1000);
-        
-        // Před zavřením stránky - varování pokud není uloženo
-        window.addEventListener('beforeunload', function(e) {
-            const title = document.querySelector('input[name="title"]').value;
-            const content = quill.getText().trim();
-            
-            if ((title || content) && !isDraft) {
-                e.preventDefault();
-                e.returnValue = 'Máte neuložené změny. Opravdu chcete opustit stránku?';
-                return e.returnValue;
-            }
-        });
-        
-        // ============================================
-        // KATEGORIE (původní kód)
-        // ============================================
-        
-        // Výběr kategorie
-        function selectCategory(id) {
-            selectedCategoryId = id;
-            document.getElementById('categoryInput').value = id;
-            
-            // Vizuální označení
-            document.querySelectorAll('.category-item').forEach(item => {
-                item.classList.remove('selected');
-            });
-            
-            const selectedItem = document.querySelector(`.category-item[data-id="${id}"]`);
-            if (selectedItem) {
-                selectedItem.classList.add('selected');
-            }
-            
-            // Povolit/zakázat tlačítko smazat
-            document.getElementById('deleteCategoryBtn').disabled = !id;
-        }
-        
-        // Otevřít modal přidání
-        function openAddCategoryModal() {
-            document.getElementById('addCategoryModal').classList.add('active');
-            document.getElementById('newCategoryName').value = '';
-            setTimeout(() => document.getElementById('newCategoryName').focus(), 100);
-        }
-        
-        // Otevřít modal smazání
-        function openDeleteCategoryModal() {
-            if (!selectedCategoryId) return;
-            
-            const selectedItem = document.querySelector(`.category-item[data-id="${selectedCategoryId}"]`);
-            const categoryName = selectedItem.querySelector('.category-name').textContent;
-            
-            document.getElementById('deleteCategoryText').textContent = 
-                `Opravdu chcete smazat kategorii "${categoryName}"? Tato akce je nevratná.`;
-            
-            document.getElementById('deleteCategoryModal').classList.add('active');
-        }
-        
-        // Zavřít modaly
-        function closeModal() {
-            document.querySelectorAll('.fullscreen-modal').forEach(modal => {
-                modal.classList.remove('active');
-            });
-        }
-        
-        // Přidat kategorii (AJAX)
-        async function addCategory() {
-            const name = document.getElementById('newCategoryName').value.trim();
-            if (!name) {
-                alert('Zadejte název kategorie');
-                return;
-            }
-            
-            try {
-                const response = await fetch(window.location.href, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                    },
-                    body: `ajax_action=add_category&category_name=${encodeURIComponent(name)}`
-                });
-                
-                const result = await response.json();
-                
-                if (result.success) {
-                    // Přidat do seznamu
-                    const newItem = document.createElement('div');
-                    newItem.className = 'category-item';
-                    newItem.setAttribute('data-id', result.id);
-                    newItem.onclick = () => selectCategory(result.id);
-                    newItem.innerHTML = `<div class="category-name">${escapeHtml(result.name)}</div>`;
-                    
-                    document.querySelector('.categories-list').appendChild(newItem);
-                    
-                    // Automaticky vybrat
-                    selectCategory(result.id);
-                    
-                    closeModal();
-                } else {
-                    alert(result.message || 'Chyba při vytváření kategorie');
-                }
-            } catch (error) {
-                alert('Chyba: ' + error.message);
-            }
-        }
-        
-        // Smazat kategorii (AJAX)
-        async function deleteCategory() {
-            if (!selectedCategoryId) return;
-            
-            try {
-                const response = await fetch(window.location.href, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                    },
-                    body: `ajax_action=delete_category&category_id=${selectedCategoryId}`
-                });
-                
-                const result = await response.json();
-                
-                if (result.success) {
-                    // Odstranit ze seznamu
-                    const item = document.querySelector(`.category-item[data-id="${selectedCategoryId}"]`);
-                    if (item) {
-                        item.remove();
-                    }
-                    
-                    // Vybrat "Bez kategorie"
-                    selectCategory('');
-                    
-                    closeModal();
-                } else {
-                    alert(result.message || 'Chyba při mazání kategorie');
-                }
-            } catch (error) {
-                alert('Chyba: ' + error.message);
-            }
-        }
-        
-        // Helper funkce
-        function escapeHtml(text) {
-            const div = document.createElement('div');
-            div.textContent = text;
-            return div.innerHTML;
-        }
-        
-        // Zavření modalu při kliku mimo
-        document.querySelectorAll('.fullscreen-modal').forEach(modal => {
-            modal.addEventListener('click', (e) => {
-                if (e.target === modal) {
-                    closeModal();
-                }
-            });
-        });
-        
-        // Enter v inputu = odeslat
-        document.getElementById('newCategoryName').addEventListener('keypress', (e) => {
-            if (e.key === 'Enter') {
-                addCategory();
-            }
-        });
-        
-        // ESC = zavřít modal
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') {
-                closeModal();
-                closePreview();
-            }
-        });
-        
-        // ============================================
-        // NÁHLED PŘÍSPĚVKU
-        // ============================================
-        
-        function openPreview() {
-            const title = document.querySelector('input[name="title"]').value || 'Bez názvu';
-            const content = quill.root.innerHTML;
-            const categoryId = document.getElementById('categoryInput').value;
-            
-            // Najít název kategorie
-            let categoryName = '';
-            if (categoryId) {
-                const categoryItem = document.querySelector(`.category-item[data-id="${categoryId}"]`);
-                if (categoryItem) {
-                    categoryName = categoryItem.querySelector('.category-name').textContent;
-                }
-            }
-            
-            // Počet slov pro čas čtení
-            const text = quill.getText().trim();
-            const words = text.length > 0 ? text.split(/\s+/).length : 0;
-            const readTime = Math.ceil(words / 200) || 1;
-            
-            // Sestavit náhled
-            let previewHTML = `
-                <h1>${escapeHtml(title)}</h1>
-                <div class="preview-article-meta">
-                    <span>📅 ${getCurrentDate()}</span>
-                    ${categoryName ? `<span>📁 ${escapeHtml(categoryName)}</span>` : ''}
-                    <span>📖 ${readTime} min čtení</span>
-                    <span>📝 ${words} slov</span>
-                </div>
-            `;
-            
-            // Přidat featured image pokud existuje
-            const fileInput = document.querySelector('input[name="featured_image"]');
-            if (fileInput && fileInput.files && fileInput.files[0]) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const imgHTML = `<img src="${e.target.result}" class="preview-featured-image" alt="${escapeHtml(title)}">`;
-                    document.getElementById('previewArticle').innerHTML = previewHTML + imgHTML + `<div class="preview-article-content">${content}</div>`;
-                };
-                reader.readAsDataURL(fileInput.files[0]);
-            } else {
-                previewHTML += `<div class="preview-article-content">${content}</div>`;
-                document.getElementById('previewArticle').innerHTML = previewHTML;
-            }
-            
-            // Zobrazit modal
-            document.getElementById('previewModal').classList.add('active');
-            document.body.style.overflow = 'hidden';
-        }
-        
-        function closePreview() {
-            document.getElementById('previewModal').classList.remove('active');
-            document.body.style.overflow = '';
-        }
-        
-        function getCurrentDate() {
-            const now = new Date();
-            const day = now.getDate();
-            const month = now.getMonth() + 1;
-            const year = now.getFullYear();
-            return `${day}.${month}.${year}`;
-        }
-        
-        // Zavřít náhled kliknutím mimo
-        document.getElementById('previewModal').addEventListener('click', function(e) {
-            if (e.target === this) {
-                closePreview();
-            }
-        });
-        
-        // ============================================
-        // PLÁNOVANÉ PUBLIKOVÁNÍ
-        // ============================================
-        
-        function toggleSchedule() {
-            const isScheduled = document.querySelector('input[name="publish_type"]:checked').value === 'scheduled';
-            const scheduleDatetime = document.getElementById('scheduleDatetime');
-            const statusSelect = document.getElementById('postStatus');
-            
-            if (isScheduled) {
-                scheduleDatetime.style.display = 'block';
-                statusSelect.value = 'scheduled';
-                
-                // Aktuální datum a čas
-                const now = new Date();
-                const dateStr = now.toISOString().split('T')[0];
-                const timeStr = now.toTimeString().substring(0, 5);
-                
-                document.getElementById('scheduledDate').value = dateStr;
-                document.getElementById('scheduledTime').value = timeStr;
-            } else {
-                scheduleDatetime.style.display = 'none';
-                statusSelect.value = 'published';
-            }
-        }
-        
-        // ============================================
-        // CHYTRÉ GENEROVÁNÍ SEO (bez API)
-        // ============================================
-        
-        function generateSEO() {
-            const title = document.querySelector('input[name="title"]').value.trim();
-            const content = quill.getText().trim();
-            
-            if (!title || content.length < 50) {
-                alert('❌ Nejdříve napište titulek a nějaký obsah článku (minimálně 50 znaků)');
-                return;
-            }
-            
-            const btn = document.getElementById('aiGenerateBtn');
-            btn.disabled = true;
-            btn.innerHTML = '<span class="ai-icon">⏳</span><span>Generuji...</span>';
-            
-            // Simulace načítání (vypadá to profesionálně)
-            setTimeout(() => {
-                // 1. SEO TITLE (50-60 znaků)
-                let seoTitle = title;
-                if (seoTitle.length > 60) {
-                    seoTitle = seoTitle.substring(0, 57) + '...';
-                } else if (seoTitle.length < 50) {
-                    // Přidat rok nebo krátký popisek
-                    const year = new Date().getFullYear();
-                    if ((seoTitle + ' - ' + year).length <= 60) {
-                        seoTitle = seoTitle + ' - ' + year;
-                    }
-                }
-                
-                // 2. META DESCRIPTION (150-160 znaků)
-                let metaDesc = content
-                    .replace(/\n+/g, ' ')
-                    .replace(/\s+/g, ' ')
-                    .substring(0, 157);
-                
-                // Ukončit na poslední celé slovo
-                const lastSpace = metaDesc.lastIndexOf(' ');
-                if (lastSpace > 100) {
-                    metaDesc = metaDesc.substring(0, lastSpace);
-                }
-                metaDesc += '...';
-                
-                // 3. KEYWORDS (nejčastější slova z článku)
-                const keywords = extractKeywords(title + ' ' + content);
-                
-                // Vyplnit formulář
-                document.querySelector('input[name="meta_title"]').value = seoTitle;
-                document.querySelector('textarea[name="meta_description"]').value = metaDesc;
-                document.getElementById('metaKeywords').value = keywords;
-                
-                btn.disabled = false;
-                btn.innerHTML = '<span class="ai-icon">✅</span><span>Vygenerováno! Klikněte pro nové generování</span>';
-                
-                setTimeout(() => {
-                    btn.innerHTML = '<span class="ai-icon">🤖</span><span>Generovat SEO automaticky</span>';
-                }, 3000);
-                
-            }, 1500); // 1.5s delay pro realistický efekt
-        }
-        
-        // Extrakce klíčových slov
-        function extractKeywords(text) {
-            // Odstranit diakritiku a převést na malá
-            const normalized = text.toLowerCase()
-                .normalize('NFD')
-                .replace(/[\u0300-\u036f]/g, '');
-            
-            // Rozdělit na slova
-            const words = normalized
-                .replace(/[^\w\s]/g, ' ')
-                .split(/\s+/)
-                .filter(word => word.length > 3); // Min 4 znaky
-            
-            // Stopwords (ignorovat časté slova)
-            const stopwords = ['jsou', 'jsme', 'který', 'která', 'které', 'tento', 'tato', 'toto', 
-                              'také', 'nebo', 'ale', 'jeho', 'její', 'jejich', 'moje', 'tvoje',
-                              'jako', 'více', 'méně', 'když', 'byla', 'bylo', 'byly', 'mohl',
-                              'může', 'musí', 'můžeme', 'with', 'that', 'this', 'from', 'have'];
-            
-            // Spočítat četnost
-            const frequency = {};
-            words.forEach(word => {
-                if (!stopwords.includes(word)) {
-                    frequency[word] = (frequency[word] || 0) + 1;
-                }
-            });
-            
-            // Seřadit podle četnosti
-            const sorted = Object.entries(frequency)
-                .sort((a, b) => b[1] - a[1])
-                .slice(0, 7) // Top 7 slov
-                .map(entry => entry[0]);
-            
-            return sorted.join(', ');
-        }
-        
-        // ============================================
-        // EXCERPT - AUTOMATICKÉ GENEROVÁNÍ
-        // ============================================
-        
-        // Při odeslání formuláře automaticky vygenerovat excerpt
-       // PŘIDEJ DO submit handleru v add_post.php (řádek ~2129)
+        <div class="savebar">
+          <div class="savebar-info">
+            <span class="save-pill" id="savePill2"><span class="dot"></span><span id="saveText2">Neuloženo</span></span>
+            <span style="color:var(--faint)">·</span>
+            <span class="mono" style="font-size:11.5px">Ctrl+S uloží koncept</span>
+          </div>
+          <div class="savebar-actions">
+            <a href="<?= ADMIN_URL ?>posts.php" class="btn btn-cancel btn-sm">Zrušit</a>
+            <button type="button" class="btn btn-ghost btn-sm" id="saveDraftBtn">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/></svg>
+              Uložit koncept
+            </button>
+            <button type="button" class="btn btn-primary btn-sm" id="publishBtn">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2 11 13"/><path d="m22 2-7 20-4-9-9-4z"/></svg>
+              Publikovat příspěvek
+            </button>
+          </div>
+        </div>
+      </div>
+    </form>
+  </main>
+</div>
 
-        document.getElementById('postForm').addEventListener('submit', function(e) {
-        // NASTAVIT FLAG - blokuj auto-save!
-        isSubmitting = true;
-        console.log('🛑 Submit začíná - auto-save BLOKOVÁN!');
-        
-        // Zastavit interval
-        if (autoSaveInterval) {
-            clearInterval(autoSaveInterval);
-            console.log('⏹️ Auto-save interval VYPNUT!');
-        }
-        
-        // Nastavit obsah z editoru
-        document.getElementById('content').value = quill.root.innerHTML;
-            // Automaticky vygenerovat excerpt pokud není vyplněn
-            const excerptField = document.querySelector('input[name="excerpt"]');
-            if (!excerptField.value || excerptField.value.trim() === '') {
-                const content = quill.getText().trim();
-                if (content.length > 0) {
-                    let excerpt = content.substring(0, 160);
-                    const lastSpace = excerpt.lastIndexOf(' ');
-                    if (lastSpace > 0) {
-                        excerpt = excerpt.substring(0, lastSpace);
-                    }
-                    excerpt += '...';
-                    excerptField.value = excerpt;
-                }
-            }
-        });
-        
-        // ==========================================
-        // MEDIA GALERIE (FIXED)
-        // ==========================================
-        let currentGallerySearch = '';
-        
-        async function openMediaGallery(page = 1) {
-            document.getElementById('mediaGalleryModal').classList.add('active');
-            await loadGallery(page, currentGallerySearch);
-            
-            // Připojit search listener po otevření modalu
-            const searchInput = document.getElementById('gallerySearch');
-            if(searchInput && !searchInput.dataset.listenerAttached) {
-                searchInput.dataset.listenerAttached = 'true';
-                searchInput.addEventListener('input', function(e) {
-                    currentGallerySearch = e.target.value;
-                    console.log('🔎 Search:', currentGallerySearch);
-                    loadGallery(1, currentGallerySearch);
-                });
-            }
-        }
-        
-        async function loadGallery(page, search = '') {
-            console.log('🔍 Loading gallery - Page:', page, 'Search:', search);
-            const res = await fetch(`get_media_ajax.php?page=${page}&per_page=9&search=${encodeURIComponent(search)}`);
-            const data = await res.json();
-            console.log('📦 Gallery data:', data);
-            console.log('📊 Items count:', data.items ? data.items.length : 0);
-            console.log('📋 Items:', data.items);
-            console.log('🐛 DEBUG INFO:', data.debug);
-            const grid = document.getElementById('galleryGrid');
-            const pagination = document.getElementById('galleryPagination');
-            
-            if(!grid) {
-                console.error('❌ galleryGrid element not found!');
-                return;
-            }
-            
-            if(!data.items || data.items.length === 0) {
-                grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #718096;">Žádné obrázky</div>';
-                pagination.innerHTML = '';
-                return;
-            }
-            
-            grid.innerHTML = data.items.map(item => `
-                <div onclick="selectImageFromGallery('${item.path}')" style="cursor: pointer; border: 3px solid #e2e8f0; border-radius: 12px; overflow: hidden; transition: all 0.2s;" onmouseover="this.style.borderColor='#667eea'; this.style.transform='scale(1.05)'" onmouseout="this.style.borderColor='#e2e8f0'; this.style.transform='scale(1)'">
-                    <img src="<?= BASE_URL ?>${item.path}" style="width: 100%; height: 200px; object-fit: cover;">
-                    <div style="padding: 10px; font-size: 12px; color: #4a5568; text-align: center; background: white; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${item.original_name}</div>
-                </div>
-            `).join('');
-            
-            console.log('✅ Grid HTML updated, items rendered:', data.items.length);
-            
-            const totalPages = Math.ceil(data.total / 9);
-            if(totalPages > 1) {
-                pagination.innerHTML = `
-                    <button onclick="loadGallery(${page - 1}, currentGallerySearch)" ${page <= 1 ? 'disabled' : ''} style="padding: 8px 16px; border: 2px solid #e2e8f0; background: white; border-radius: 6px; cursor: pointer; font-weight: 600;">← Předchozí</button>
-                    <span style="padding: 8px 16px; color: #718096;">Stránka ${page} z ${totalPages}</span>
-                    <button onclick="loadGallery(${page + 1}, currentGallerySearch)" ${page >= totalPages ? 'disabled' : ''} style="padding: 8px 16px; border: 2px solid #e2e8f0; background: white; border-radius: 6px; cursor: pointer; font-weight: 600;">Další →</button>
-                `;
-            } else {
-                pagination.innerHTML = '';
-            }
-        }
-        
-        function closeMediaGallery() {
-            document.getElementById('mediaGalleryModal').classList.remove('active');
-            currentGallerySearch = '';
-            document.getElementById('gallerySearch').value = '';
-        }
-        
-        function selectImageFromGallery(path) {
-            document.getElementById('featuredImageFromGallery').value = path;
-            document.getElementById('uploadZoneContent').style.display = 'none';
-            document.getElementById('selectedImagePreview').style.display = 'block';
-            document.getElementById('selectedImagePreviewImg').src = '<?= BASE_URL ?>' + path;
-            featuredZone.classList.add('has-image');
-            document.getElementById('featuredImageInput').value = '';
-            closeMediaGallery();
-        }
-        
-        function clearSelectedImage() {
-            document.getElementById('featuredImageFromGallery').value = '';
-            document.getElementById('uploadZoneContent').style.display = 'block';
-            document.getElementById('selectedImagePreview').style.display = 'none';
-            featuredZone.classList.remove('has-image');
-            document.getElementById('featuredImageInput').value = '';
-        }
-        
-        // ==========================================
-        // DRAG & DROP - DEFINITIVNÍ FIX
-        // ==========================================
-        const featuredZone = document.getElementById('featuredDropZone');
-        const editorContainer = document.querySelector('.ql-container');
-        const overlay = document.getElementById('dragOverlay');
-        let isDragging = false;
-        
-        // Detekce začátku drag
-        window.addEventListener('dragenter', (e) => {
-            if(!isDragging && e.dataTransfer.types.includes('Files')) {
-                isDragging = true;
-                overlay.classList.add('active');
-                featuredZone.classList.add('drag-active');
-                editorContainer.classList.add('drag-active');
-            }
-        }, true);
-        
-        // Detekce konce drag (opuštění okna)
-        window.addEventListener('dragleave', (e) => {
-            if(e.target === document.documentElement || e.clientX <= 0 || e.clientY <= 0) {
-                isDragging = false;
-                overlay.classList.remove('active');
-                featuredZone.classList.remove('drag-active');
-                editorContainer.classList.remove('drag-active');
-                featuredZone.classList.remove('drag-over');
-                editorContainer.classList.remove('drag-over-editor');
-            }
-        }, true);
-        
-        // Drop nebo escape
-        window.addEventListener('drop', () => {
-            isDragging = false;
-            overlay.classList.remove('active');
-            featuredZone.classList.remove('drag-active');
-            editorContainer.classList.remove('drag-active');
-            featuredZone.classList.remove('drag-over');
-            editorContainer.classList.remove('drag-over-editor');
-        }, true);
-        
-        // Featured zone hover
-        featuredZone.addEventListener('dragenter', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            if(isDragging) featuredZone.classList.add('drag-over');
-        });
-        featuredZone.addEventListener('dragleave', (e) => {
-            if(!featuredZone.contains(e.relatedTarget)) {
-                featuredZone.classList.remove('drag-over');
-            }
-        });
-        featuredZone.addEventListener('dragover', (e) => { e.preventDefault(); e.stopPropagation(); });
-        featuredZone.addEventListener('drop', handleFeaturedDrop);
-        
-        // Editor hover
-        editorContainer.addEventListener('dragenter', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            if(isDragging) editorContainer.classList.add('drag-over-editor');
-        });
-        editorContainer.addEventListener('dragleave', (e) => {
-            if(!editorContainer.contains(e.relatedTarget)) {
-                editorContainer.classList.remove('drag-over-editor');
-            }
-        });
-        editorContainer.addEventListener('dragover', (e) => { e.preventDefault(); e.stopPropagation(); });
-        editorContainer.addEventListener('drop', handleEditorDrop);
-        
-        document.getElementById('featuredImageInput').addEventListener('change', function(e) {
-            if(e.target.files[0]) {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    document.getElementById('uploadZoneContent').style.display = 'none';
-                    document.getElementById('selectedImagePreview').style.display = 'block';
-                    document.getElementById('selectedImagePreviewImg').src = e.target.result;
-                    featuredZone.classList.add('has-image');
-                };
-                reader.readAsDataURL(e.target.files[0]);
-            }
-        });
-        
-        async function handleFeaturedDrop(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            const file = e.dataTransfer.files[0];
-            if(!file || !file.type.startsWith('image/')) return;
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                document.getElementById('uploadZoneContent').style.display = 'none';
-                document.getElementById('selectedImagePreview').style.display = 'block';
-                document.getElementById('selectedImagePreviewImg').src = e.target.result;
-                featuredZone.classList.add('has-image');
-            };
-            reader.readAsDataURL(file);
-            const dt = new DataTransfer();
-            dt.items.add(file);
-            document.getElementById('featuredImageInput').files = dt.files;
-        }
-        
-        async function handleEditorDrop(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            const file = e.dataTransfer.files[0];
-            if(!file || !file.type.startsWith('image/')) return;
-            const formData = new FormData();
-            formData.append('ajax_action', 'upload_media');
-            formData.append('file', file);
-            const res = await fetch('media.php', {method: 'POST', body: formData});
-            const data = await res.json();
-            if(data.success) {
-                const range = quill.getSelection(true);
-                quill.insertEmbed(range.index, 'image', '<?= BASE_URL ?>uploads/' + data.filename);
-            }
-        }
-    </script>
+<script>
+const slugify = s => s.toLowerCase()
+  .normalize('NFD').replace(/[̀-ͯ]/g,'')
+  .replace(/[^a-z0-9 -]/g,'').trim().replace(/\s+/g,'-').slice(0,80) || 'novy-prispevek';
+
+const titleEl = document.getElementById('titleInput');
+const slugDisp = document.getElementById('slugDisplay');
+const serpSlug = document.getElementById('serpSlug');
+const serpTitle = document.getElementById('serpTitle');
+const edContent = document.getElementById('edContent');
+
+let slugDirty = false;
+titleEl.addEventListener('input', () => {
+  if (!slugDirty) { const s=slugify(titleEl.value); slugDisp.value=s; serpSlug.textContent=s; }
+  serpTitle.textContent = (titleEl.value||'Nový příspěvek')+' — <?= e(SITE_NAME) ?>';
+  markUnsaved();
+});
+document.getElementById('slugRegen').addEventListener('click', () => {
+  slugDirty=false; const s=slugify(titleEl.value); slugDisp.value=s; serpSlug.textContent=s;
+});
+
+function updateStats() {
+  const txt=(edContent.innerText||'').trim();
+  const words=txt?txt.split(/\s+/).filter(Boolean).length:0;
+  document.getElementById('statWords').textContent=words.toLocaleString('cs-CZ');
+  document.getElementById('statChars').textContent=(txt.length).toLocaleString('cs-CZ');
+  document.getElementById('statRead').innerHTML=Math.max(0,Math.round(words/220))+'<span class="unit">min</span>';
+  document.getElementById('statReadability').textContent=words>800?'A':words>300?'B':words>50?'C':'—';
+}
+edContent.addEventListener('input',()=>{ updateStats(); markUnsaved(); });
+updateStats();
+
+const excerptEl=document.getElementById('excerptText');
+const excerptCount=document.getElementById('excerptCount');
+excerptEl?.addEventListener('input',()=>{ excerptCount.textContent=excerptEl.value.length+' / 280'; });
+
+const seoTitleEl=document.getElementById('seoTitle');
+const seoDescEl=document.getElementById('seoDesc');
+const seoTitleCount=document.getElementById('seoTitleCount');
+const seoDescCount=document.getElementById('seoDescCount');
+const serpDescEl=document.getElementById('serpDesc');
+seoTitleEl?.addEventListener('input',()=>{ const n=seoTitleEl.value.length; seoTitleCount.textContent=n+' / 60'; seoTitleCount.className=n>60?'warn':'ok'; });
+seoDescEl?.addEventListener('input',()=>{ const n=seoDescEl.value.length; seoDescCount.textContent=n+' / 160'; seoDescCount.className=n>160?'warn':'ok'; serpDescEl.textContent=seoDescEl.value||'Krátký popis příspěvku se zobrazí ve výsledcích vyhledávání.'; });
+
+// Status switch
+document.querySelectorAll('#statusSwitch button').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    document.querySelectorAll('#statusSwitch button').forEach(b=>b.classList.remove('on'));
+    btn.classList.add('on');
+    document.getElementById('statusInput').value=btn.dataset.val;
+  });
+});
+
+// Category (single-select)
+let selectedCatId='';
+function selectCat(el) {
+  document.querySelectorAll('.cat-item').forEach(i=>i.classList.remove('on'));
+  el.classList.add('on');
+  selectedCatId=el.dataset.id;
+  document.getElementById('catInput').value=selectedCatId;
+  document.getElementById('catCount').textContent='1';
+}
+
+// Save pill
+const pill1=document.getElementById('savePill');
+const pill2=document.getElementById('savePill2');
+const txt1=document.getElementById('saveText');
+const txt2=document.getElementById('saveText2');
+let saveTimer=null, draftId='';
+function markUnsaved(){
+  pill1.classList.remove('saved'); pill2.classList.remove('saved');
+  txt1.textContent='Neuloženo'; txt2.textContent='Neuloženo';
+  clearTimeout(saveTimer);
+  saveTimer=setTimeout(autoSave,3000);
+}
+async function autoSave(){
+  syncHiddenInputs();
+  const fd=new FormData();
+  fd.append('ajax_action','autosave_draft');
+  fd.append('title',titleEl.value);
+  fd.append('content',edContent.innerHTML);
+  fd.append('category_id',selectedCatId);
+  if(draftId) fd.append('draft_id',draftId);
+  try{
+    const r=await fetch(location.href,{method:'POST',body:fd});
+    const data=await r.json();
+    if(data.success){
+      draftId=data.draft_id;
+      document.getElementById('draftId').value=draftId;
+      const t=new Date().toLocaleTimeString('cs-CZ',{hour:'2-digit',minute:'2-digit'});
+      pill1.classList.add('saved'); pill2.classList.add('saved');
+      txt1.textContent='Uloženo · '+t; txt2.textContent='Koncept uložen · '+t;
+    }
+  }catch(e){}
+}
+
+function syncHiddenInputs(){
+  document.getElementById('contentInput').value=edContent.innerHTML;
+  document.getElementById('metaTitleInput').value=seoTitleEl?.value||'';
+  document.getElementById('metaDescInput').value=seoDescEl?.value||'';
+  document.getElementById('metaKwInput').value=document.getElementById('seoKeywords')?.value||'';
+  document.getElementById('excerptInput').value=excerptEl?.value||'';
+}
+
+function submitForm(status){
+  syncHiddenInputs();
+  document.getElementById('statusInput').value=status;
+  document.getElementById('postForm').submit();
+}
+
+document.getElementById('publishBtn')?.addEventListener('click',()=>submitForm('published'));
+document.getElementById('topPublish')?.addEventListener('click',()=>submitForm('published'));
+document.getElementById('saveDraftBtn')?.addEventListener('click',()=>submitForm('draft'));
+
+document.addEventListener('keydown',e=>{
+  if((e.ctrlKey||e.metaKey)&&e.key==='s'){e.preventDefault();submitForm('draft');}
+});
+
+// Featured image preview
+document.getElementById('featuredInput')?.addEventListener('change',function(){
+  if(this.files[0]){
+    const r=new FileReader();
+    r.onload=e=>{
+      const dz=document.getElementById('dropzone');
+      dz.style.backgroundImage='url('+e.target.result+')';
+      dz.style.backgroundSize='cover';
+      dz.style.backgroundPosition='center';
+      dz.style.minHeight='120px';
+    };
+    r.readAsDataURL(this.files[0]);
+  }
+});
+</script>
 </body>
 </html>
