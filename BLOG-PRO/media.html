@@ -1,0 +1,875 @@
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Média · Blog Pro</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="blog-pro.css">
+<style>
+  /* Page head */
+  .ph { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; margin-bottom: 22px; flex-wrap: wrap; }
+  .ph-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  /* Storage strip */
+  .storage {
+    display: grid; grid-template-columns: 1fr auto; gap: 18px; align-items: center;
+    padding: 14px 18px; background: var(--card); border: 1px solid var(--border);
+    border-radius: 12px; margin-bottom: 22px;
+  }
+  .storage-bar { height: 8px; border-radius: 999px; background: var(--paper-2); overflow: hidden; display: flex; }
+  .storage-bar > span { height: 100%; }
+  .seg-img { background: linear-gradient(90deg,#667eea,#7d8df0); }
+  .seg-doc { background: var(--secondary); }
+  .seg-vid { background: #f59e0b; }
+  .seg-aud { background: #10b981; }
+  .storage-meta { display: flex; gap: 16px; font-size: 11.5px; color: var(--muted); margin-top: 8px; flex-wrap: wrap; }
+  .storage-meta .legend { display: inline-flex; align-items: center; gap: 5px; }
+  .storage-meta .sw { width: 8px; height: 8px; border-radius: 2px; display: inline-block; }
+  .storage-num { text-align: right; }
+  .storage-num strong { font-family: var(--mono); font-size: 18px; color: var(--ink); font-weight: 500; letter-spacing: -.01em; }
+  .storage-num .of { color: var(--muted); font-size: 12px; }
+  .storage-num .pct { font-family: var(--mono); font-size: 11px; color: var(--accent-2); margin-top: 2px; }
+
+  /* Layout */
+  .media-shell { display: grid; grid-template-columns: 240px 1fr; gap: 22px; }
+
+  /* Sub-sidebar filters */
+  .filters { display: flex; flex-direction: column; gap: 18px; position: sticky; top: 78px; align-self: start; }
+  .filt { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 14px; }
+  .filt h4 { font-family: var(--mono); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; font-weight: 500; }
+  .filt-list { display: flex; flex-direction: column; gap: 1px; }
+  .filt-item {
+    display: flex; align-items: center; gap: 10px; padding: 7px 9px;
+    border-radius: 7px; font-size: 13px; color: var(--ink-2); cursor: pointer;
+    transition: background .12s, color .12s;
+  }
+  .filt-item:hover { background: var(--paper-2); }
+  .filt-item.on { background: var(--accent-soft); color: var(--accent-2); font-weight: 500; }
+  .filt-item .ico { width: 14px; height: 14px; }
+  .filt-item .ct { margin-left: auto; font-family: var(--mono); font-size: 10.5px; color: var(--muted); }
+  .filt-item.on .ct { color: var(--accent-2); }
+
+  .swatch-row { display: flex; flex-direction: column; gap: 1px; }
+  .ck { display: flex; align-items: center; gap: 8px; padding: 6px 4px; font-size: 12.5px; color: var(--ink-2); cursor: pointer; }
+  .ck input { appearance: none; width: 14px; height: 14px; border: 1.4px solid var(--border); border-radius: 4px; background: var(--card); display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; cursor: pointer; }
+  .ck input:checked { background: var(--accent); border-color: var(--accent); }
+  .ck input:checked::after { content: '✓'; color: #fff; font-size: 10px; line-height: 1; }
+  .ck .ct { margin-left: auto; font-family: var(--mono); font-size: 10.5px; color: var(--muted); }
+
+  /* Toolbar */
+  .toolbar {
+    display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    margin-bottom: 14px; flex-wrap: wrap;
+  }
+  .tb-search { position: relative; flex: 1; min-width: 220px; max-width: 360px; }
+  .tb-search input {
+    width: 100%; padding: 7px 10px 7px 30px; border: 1px solid var(--border);
+    border-radius: 7px; background: var(--paper); font-family: inherit; font-size: 12.5px; color: var(--ink);
+  }
+  .tb-search input:focus { outline: none; border-color: var(--accent); background: var(--card); }
+  .tb-search-ico { position: absolute; left: 9px; top: 50%; transform: translateY(-50%); color: var(--muted); }
+  .tb-divider { width: 1px; height: 20px; background: var(--border); }
+  .tb-meta { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+  .tb-spacer { flex: 1; }
+  .view-toggle { display: inline-flex; background: var(--paper-2); border-radius: 7px; padding: 2px; }
+  .view-toggle button { padding: 5px 9px; border-radius: 5px; color: var(--muted); display: inline-flex; align-items: center; gap: 5px; font-size: 12px; }
+  .view-toggle button.on { background: var(--card); color: var(--accent-2); box-shadow: 0 1px 2px rgba(102,126,234,.15); }
+
+  /* Selection bar (replaces toolbar when items selected) */
+  .selbar {
+    display: none; align-items: center; gap: 10px; padding: 10px 14px;
+    background: linear-gradient(135deg, rgba(102,126,234,.08), rgba(118,75,162,.08));
+    border: 1px solid var(--accent-soft); border-radius: 12px; margin-bottom: 14px;
+  }
+  .selbar.show { display: flex; }
+  .selbar-count { font-size: 13px; color: var(--accent-2); font-weight: 500; }
+  .selbar-count strong { font-family: var(--mono); font-weight: 500; }
+  .selbar-actions { margin-left: auto; display: flex; gap: 6px; }
+
+  /* Upload dropzone (compact) */
+  .upload-strip {
+    display: grid; grid-template-columns: auto 1fr auto; gap: 14px; align-items: center;
+    padding: 12px 16px; border: 1.5px dashed var(--border); border-radius: 12px;
+    background: var(--card-2); margin-bottom: 14px;
+    transition: border-color .15s, background .15s;
+  }
+  .upload-strip:hover { border-color: var(--accent); background: var(--accent-soft); }
+  .upload-ico {
+    width: 38px; height: 38px; border-radius: 9px; flex-shrink: 0;
+    background: var(--accent-soft); color: var(--accent-2);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .upload-text { font-size: 12.5px; color: var(--ink-2); font-weight: 500; }
+  .upload-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+  /* Grid */
+  .grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 12px;
+  }
+  .card-m {
+    background: var(--card); border: 1px solid var(--border); border-radius: 11px;
+    overflow: hidden; cursor: pointer; transition: transform .15s, box-shadow .15s, border-color .15s;
+    position: relative;
+  }
+  .card-m:hover { transform: translateY(-2px); box-shadow: 0 8px 18px -8px rgba(31,41,55,.18); border-color: var(--accent); }
+  .card-m.sel { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(102,126,234,.18); }
+  .thumb {
+    aspect-ratio: 1/1; position: relative;
+    background: var(--paper-2);
+    display: flex; align-items: center; justify-content: center;
+    overflow: hidden;
+  }
+  .thumb-img-1 { background: linear-gradient(135deg,#c7d0f5,#dfd1ee), repeating-linear-gradient(45deg, rgba(255,255,255,.3) 0 8px, transparent 8px 16px); background-blend-mode: overlay; }
+  .thumb-img-2 { background: linear-gradient(135deg,#d6c2ec,#e8c8b8), repeating-linear-gradient(-45deg, rgba(255,255,255,.3) 0 8px, transparent 8px 16px); background-blend-mode: overlay; }
+  .thumb-img-3 { background: linear-gradient(135deg,#fde0a3,#f7c9b4), repeating-linear-gradient(45deg, rgba(255,255,255,.3) 0 8px, transparent 8px 16px); background-blend-mode: overlay; }
+  .thumb-img-4 { background: linear-gradient(135deg,#bee9d3,#c7d0f5), repeating-linear-gradient(135deg, rgba(255,255,255,.3) 0 8px, transparent 8px 16px); background-blend-mode: overlay; }
+  .thumb-img-5 { background: linear-gradient(135deg,#fbcfe8,#c7d0f5), repeating-linear-gradient(-45deg, rgba(255,255,255,.3) 0 8px, transparent 8px 16px); background-blend-mode: overlay; }
+  .thumb-img-6 { background: linear-gradient(135deg,#cfd9fb,#bcb3e8), repeating-linear-gradient(45deg, rgba(255,255,255,.3) 0 8px, transparent 8px 16px); background-blend-mode: overlay; }
+  .thumb-doc { background: linear-gradient(180deg, #fff, #f3f4f6); }
+  .thumb-doc .doc-ico { color: var(--secondary); }
+  .thumb-vid { background: #1f2937; color: #fff; }
+  .thumb-vid::after {
+    content: ''; position: absolute; inset: 0;
+    background: repeating-linear-gradient(90deg, rgba(255,255,255,.06) 0 2px, transparent 2px 14px);
+  }
+  .thumb-aud { background: linear-gradient(135deg, #d1fae5, #bee9d3); color: var(--ok); }
+
+  .check {
+    position: absolute; top: 7px; left: 7px;
+    width: 19px; height: 19px; border-radius: 5px;
+    background: rgba(255,255,255,.92); border: 1.4px solid rgba(255,255,255,.95);
+    display: flex; align-items: center; justify-content: center;
+    color: transparent; font-size: 11px; line-height: 1;
+    box-shadow: 0 1px 3px rgba(0,0,0,.18);
+    opacity: 0; transition: opacity .12s, background .12s, color .12s;
+  }
+  .card-m:hover .check { opacity: 1; }
+  .card-m.sel .check { opacity: 1; background: var(--accent); color: #fff; border-color: var(--accent); }
+
+  .badge-type {
+    position: absolute; top: 7px; right: 7px;
+    font-family: var(--mono); font-size: 9.5px; letter-spacing: .04em; text-transform: uppercase;
+    padding: 2px 6px; border-radius: 4px; background: rgba(0,0,0,.55); color: #fff;
+    backdrop-filter: blur(4px);
+  }
+  .badge-type.l { background: rgba(255,255,255,.85); color: var(--ink-2); }
+  .duration {
+    position: absolute; bottom: 7px; right: 7px;
+    font-family: var(--mono); font-size: 10px;
+    padding: 2px 6px; border-radius: 4px; background: rgba(0,0,0,.55); color: #fff;
+  }
+  .dim {
+    position: absolute; bottom: 7px; left: 7px;
+    font-family: var(--mono); font-size: 9.5px;
+    color: rgba(255,255,255,.92); padding: 2px 6px; border-radius: 4px;
+    background: rgba(0,0,0,.4);
+  }
+  .meta {
+    padding: 9px 11px 11px;
+    border-top: 1px solid var(--line);
+  }
+  .meta-name {
+    font-size: 12.5px; color: var(--ink); font-weight: 500;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .meta-sub {
+    margin-top: 3px; display: flex; gap: 8px; align-items: center;
+    font-family: var(--mono); font-size: 10.5px; color: var(--muted);
+  }
+  .meta-sub .dot { width: 2px; height: 2px; border-radius: 50%; background: currentColor; }
+  .meta-sub .used { color: var(--ok); }
+  .meta-sub .unused { color: var(--warn); }
+
+  /* Section dividers in grid */
+  .section-head {
+    grid-column: 1 / -1;
+    display: flex; align-items: center; gap: 10px;
+    padding: 14px 4px 6px;
+  }
+  .section-head h3 { font-size: 13px; font-weight: 600; color: var(--ink); }
+  .section-head .ct { font-family: var(--mono); font-size: 11px; color: var(--muted); padding: 1px 7px; background: var(--paper-2); border-radius: 4px; }
+  .section-head .line { flex: 1; height: 1px; background: var(--border); }
+
+  /* Detail drawer */
+  .drawer-back {
+    position: fixed; inset: 0; background: rgba(31,41,55,.35); backdrop-filter: blur(2px);
+    opacity: 0; pointer-events: none; transition: opacity .2s; z-index: 80;
+  }
+  .drawer-back.show { opacity: 1; pointer-events: auto; }
+  .drawer {
+    position: fixed; top: 0; right: 0; bottom: 0; width: 380px;
+    background: var(--card); border-left: 1px solid var(--border);
+    transform: translateX(100%); transition: transform .25s cubic-bezier(.32,.72,0,1);
+    z-index: 81; display: flex; flex-direction: column;
+  }
+  .drawer.show { transform: translateX(0); }
+  .drawer-head { padding: 14px 16px; border-bottom: 1px solid var(--line); display: flex; align-items: center; gap: 10px; }
+  .drawer-head h3 { font-size: 13px; font-weight: 600; flex: 1; }
+  .drawer-close { width: 28px; height: 28px; border-radius: 7px; display: inline-flex; align-items: center; justify-content: center; color: var(--muted); }
+  .drawer-close:hover { background: var(--paper-2); color: var(--ink); }
+  .drawer-body { padding: 16px; overflow: auto; flex: 1; }
+  .drawer-preview {
+    aspect-ratio: 16/10; border-radius: 10px; margin-bottom: 14px; overflow: hidden;
+    background: linear-gradient(135deg,#c7d0f5,#dfd1ee), repeating-linear-gradient(45deg, rgba(255,255,255,.3) 0 8px, transparent 8px 16px);
+    background-blend-mode: overlay;
+    border: 1px solid var(--border); position: relative;
+  }
+  .dr-row { display: grid; grid-template-columns: 100px 1fr; gap: 10px; padding: 8px 0; font-size: 12px; border-bottom: 1px solid var(--line); }
+  .dr-row .k { color: var(--muted); }
+  .dr-row .v { color: var(--ink); }
+  .dr-row .v.mono { font-family: var(--mono); font-size: 11.5px; }
+  .dr-section { font-family: var(--mono); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); margin: 18px 0 6px; }
+  .dr-input { width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 7px; font-family: inherit; font-size: 12.5px; }
+  .dr-input:focus { outline: none; border-color: var(--accent); }
+  .copy-row { display: flex; gap: 6px; }
+  .copy-row .dr-input { flex: 1; font-family: var(--mono); font-size: 11.5px; }
+  .copy-btn { padding: 0 10px; border: 1px solid var(--border); border-radius: 7px; background: var(--card); color: var(--accent-2); font-size: 11px; }
+  .copy-btn:hover { background: var(--accent-soft); border-color: var(--accent); }
+  .dr-foot { padding: 12px 16px; border-top: 1px solid var(--line); display: flex; gap: 8px; }
+
+  /* Used-in pills */
+  .used-pill {
+    display: inline-flex; align-items: center; gap: 6px; padding: 4px 8px; border-radius: 6px;
+    background: var(--paper-2); font-size: 11.5px; color: var(--ink-2);
+    margin: 4px 4px 0 0; border: 1px solid var(--border);
+  }
+  .used-pill .dot2 { width: 5px; height: 5px; border-radius: 50%; background: var(--ok); }
+
+  /* Empty list mode toggle */
+  .list { display: none; }
+  .list.show { display: block; background: var(--card); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+  .list-row { display: grid; grid-template-columns: 36px 44px 1fr 100px 90px 110px 90px 36px; gap: 12px; align-items: center; padding: 9px 14px; border-bottom: 1px solid var(--line); font-size: 12.5px; }
+  .list-row.head { background: var(--paper-2); font-family: var(--mono); font-size: 10.5px; letter-spacing: .05em; text-transform: uppercase; color: var(--muted); font-weight: 500; }
+  .list-row:last-child { border-bottom: none; }
+  .list-row:hover:not(.head) { background: var(--card-2); }
+  .list-thumb { width: 36px; height: 36px; border-radius: 6px; overflow: hidden; background: var(--paper-2); }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <!-- SIDEBAR (same as Dashboard v3) -->
+  <aside class="side">
+    <div class="brand">
+      <div class="brand-mark">BP</div>
+      <div>
+        <div class="brand-name">Blog Pro</div>
+        <div class="brand-sub">CMS / v1.0</div>
+      </div>
+    </div>
+
+    <div>
+      <div class="nav-label">Workspace</div>
+      <nav class="nav">
+        <a href="Blog Pro Dashboard v3.html"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>Přehled</a>
+        <a href="Posts.html"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 4h12l4 4v12H4z"/><path d="M16 4v4h4"/><path d="M8 13h8M8 17h5"/></svg>Příspěvky <span class="count">31</span></a>
+        <a href="media.html" class="active"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 16V6a2 2 0 0 1 2-2h8l6 6v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/><circle cx="9" cy="11" r="1.5"/><path d="m4 18 5-5 5 5 3-3 3 3"/></svg>Média <span class="count">138</span></a>
+        <a href="#"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 7h10M7 12h10M7 17h7"/><rect x="3" y="4" width="18" height="16" rx="2"/></svg>Kategorie <span class="count">5</span></a>
+        <a href="#"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>Uživatelé <span class="count">2</span></a>
+        <a href="#"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 22 4 17V7l8-5 8 5v10z"/><path d="M12 22V12M4 7l8 5 8-5"/></svg>Zálohy <span class="count">12</span></a>
+      </nav>
+    </div>
+
+    <div>
+      <div class="nav-label">Nástroje</div>
+      <nav class="nav">
+        <a href="#"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 12h4l3-9 4 18 3-9h4"/></svg>Analytika</a>
+        <a href="monitoring.html"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>Monitoring</a>
+        <a href="Settings.html"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M12 2v2M12 20v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M2 12h2M20 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/></svg>Nastavení</a>
+      </nav>
+    </div>
+
+    <div class="side-user">
+      <div class="avatar">AT</div>
+      <div class="side-user-info">
+        <div class="side-user-name">Adéla Těšitelová</div>
+        <div class="side-user-role">Šéfredaktor</div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+    <div class="topbar">
+      <div class="crumb">
+        <span>Blog Pro</span><span class="sep">/</span>
+        <span class="here">Knihovna médií</span>
+      </div>
+      <div class="search">
+        <svg class="search-ico" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+        <input type="text" placeholder="Hledat napříč CMS…">
+        <span class="kbd">⌘K</span>
+      </div>
+      <div class="top-actions">
+        <button class="icon-btn" title="Nápověda"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 1 1 5.5 1.6c-.6.9-1.6 1.4-1.6 2.4v.5"/><circle cx="12" cy="17" r=".7" fill="currentColor"/></svg></button>
+        <button class="icon-btn" title="Notifikace"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg><span class="dot"></span></button>
+      </div>
+    </div>
+
+    <div class="content">
+      <!-- PAGE HEAD -->
+      <div class="ph">
+        <div>
+          <div class="eyebrow"><span class="pulse"></span>Knihovna · 138 souborů · 4,2 GB</div>
+          <h1 class="page-title">Vaše <em>média.</em></h1>
+          <p class="page-sub">Centrální úložiště obrázků, dokumentů, videí a zvuků pro celý blog. Soubory můžete hromadně spravovat, optimalizovat a vkládat do příspěvků jedním kliknutím.</p>
+        </div>
+        <div class="ph-actions">
+          <button class="btn btn-ghost btn-sm">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            Stáhnout vše
+          </button>
+          <button class="btn btn-ghost btn-sm">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 2"/></svg>
+            Vyčistit nepoužité
+          </button>
+          <button class="btn btn-primary btn-sm">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            Nahrát soubory
+          </button>
+        </div>
+      </div>
+
+      <!-- STORAGE STRIP -->
+      <div class="storage">
+        <div>
+          <div class="storage-bar">
+            <span class="seg-img" style="width:48%;"></span>
+            <span class="seg-doc" style="width:14%;"></span>
+            <span class="seg-vid" style="width:22%;"></span>
+            <span class="seg-aud" style="width:6%;"></span>
+          </div>
+          <div class="storage-meta">
+            <span class="legend"><span class="sw" style="background:#667eea;"></span>Obrázky · 2,01 GB</span>
+            <span class="legend"><span class="sw" style="background:var(--secondary);"></span>Dokumenty · 591 MB</span>
+            <span class="legend"><span class="sw" style="background:#f59e0b;"></span>Videa · 924 MB</span>
+            <span class="legend"><span class="sw" style="background:#10b981;"></span>Zvuky · 252 MB</span>
+            <span class="legend" style="margin-left:auto;color:var(--faint);">Volné: 5,8 GB</span>
+          </div>
+        </div>
+        <div class="storage-num">
+          <strong>4,2<span style="opacity:.5;font-size:13px;">GB</span></strong> <span class="of">/ 10 GB</span>
+          <div class="pct">42 % využito</div>
+        </div>
+      </div>
+
+      <!-- LAYOUT -->
+      <div class="media-shell">
+        <!-- FILTERS -->
+        <aside class="filters">
+          <div class="filt">
+            <h4>Typ souboru</h4>
+            <div class="filt-list">
+              <div class="filt-item on">
+                <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="10"/></svg>
+                Vše <span class="ct">138</span>
+              </div>
+              <div class="filt-item">
+                <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>
+                Obrázky <span class="ct">94</span>
+              </div>
+              <div class="filt-item">
+                <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                Dokumenty <span class="ct">21</span>
+              </div>
+              <div class="filt-item">
+                <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+                Videa <span class="ct">14</span>
+              </div>
+              <div class="filt-item">
+                <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+                Zvuk <span class="ct">9</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="filt">
+            <h4>Datum</h4>
+            <div class="filt-list">
+              <div class="filt-item">Tento týden <span class="ct">7</span></div>
+              <div class="filt-item">Tento měsíc <span class="ct">23</span></div>
+              <div class="filt-item">Květen 2026 <span class="ct">23</span></div>
+              <div class="filt-item">Duben 2026 <span class="ct">31</span></div>
+              <div class="filt-item">Březen 2026 <span class="ct">28</span></div>
+              <div class="filt-item">Starší <span class="ct">56</span></div>
+            </div>
+          </div>
+
+          <div class="filt">
+            <h4>Stav použití</h4>
+            <div class="swatch-row">
+              <label class="ck"><input type="checkbox" checked>Použité v článcích <span class="ct">112</span></label>
+              <label class="ck"><input type="checkbox" checked>Nepoužité <span class="ct">26</span></label>
+              <label class="ck"><input type="checkbox">Pouze v draftech <span class="ct">8</span></label>
+              <label class="ck"><input type="checkbox">Z galerie <span class="ct">14</span></label>
+            </div>
+          </div>
+
+          <div class="filt">
+            <h4>Velikost</h4>
+            <div class="swatch-row">
+              <label class="ck"><input type="checkbox">&lt; 100 KB <span class="ct">38</span></label>
+              <label class="ck"><input type="checkbox">100 KB – 1 MB <span class="ct">71</span></label>
+              <label class="ck"><input type="checkbox">1 MB – 5 MB <span class="ct">22</span></label>
+              <label class="ck"><input type="checkbox">&gt; 5 MB <span class="ct">7</span></label>
+            </div>
+          </div>
+        </aside>
+
+        <!-- LIST -->
+        <div>
+          <!-- TOOLBAR -->
+          <div class="toolbar" id="toolbar">
+            <div class="tb-search">
+              <svg class="tb-search-ico" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+              <input type="text" placeholder="Hledat v médiích, alt textu, popisku…">
+            </div>
+            <div class="tb-divider"></div>
+            <div class="seg">
+              <button class="active">Nejnovější</button>
+              <button>Název</button>
+              <button>Velikost</button>
+            </div>
+            <div class="tb-spacer"></div>
+            <span class="tb-meta">138 souborů</span>
+            <div class="view-toggle" id="viewToggle">
+              <button class="on" data-view="grid">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+                Mřížka
+              </button>
+              <button data-view="list">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                Seznam
+              </button>
+            </div>
+          </div>
+
+          <!-- SELECTION BAR -->
+          <div class="selbar" id="selbar">
+            <span class="selbar-count"><strong id="selCount">0</strong> vybráno</span>
+            <span style="color:var(--faint);">·</span>
+            <span style="font-size:12px;color:var(--muted);">hromadné akce nezapomenou na výběr napříč filtry</span>
+            <div class="selbar-actions">
+              <button class="btn btn-ghost btn-sm">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Stáhnout
+              </button>
+              <button class="btn btn-ghost btn-sm">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 7h10M7 12h10M7 17h7"/><rect x="3" y="4" width="18" height="16" rx="2"/></svg>
+                Přiřadit do…
+              </button>
+              <button class="btn btn-ghost btn-sm" style="color:var(--danger);border-color:rgba(153,27,27,.18);">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>
+                Smazat
+              </button>
+              <button class="btn btn-ghost btn-sm" id="selClear">Zrušit výběr</button>
+            </div>
+          </div>
+
+          <!-- UPLOAD STRIP -->
+          <div class="upload-strip">
+            <div class="upload-ico">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            </div>
+            <div>
+              <div class="upload-text">Přetáhněte soubory sem nebo klikněte pro výběr</div>
+              <div class="upload-sub">JPG, PNG, WebP, PDF, MP4, MP3 · max. 50 MB / soubor · obrázky se automaticky optimalizují do WebP</div>
+            </div>
+            <button class="btn btn-ghost btn-sm">Z URL</button>
+          </div>
+
+          <!-- GRID -->
+          <div class="grid" id="grid">
+            <div class="section-head">
+              <h3>Tento týden</h3>
+              <span class="ct">7 souborů</span>
+              <span class="line"></span>
+            </div>
+
+            <div class="card-m" data-id="1">
+              <div class="thumb thumb-img-1">
+                <span class="check">✓</span>
+                <span class="badge-type l">webp</span>
+                <span class="dim">1920×1080</span>
+              </div>
+              <div class="meta">
+                <div class="meta-name">redakcni-workflow.webp</div>
+                <div class="meta-sub"><span class="used">●</span><span>428 KB</span><span class="dot"></span><span>před 2 dny</span></div>
+              </div>
+            </div>
+
+            <div class="card-m sel" data-id="2">
+              <div class="thumb thumb-img-2">
+                <span class="check">✓</span>
+                <span class="badge-type l">jpg</span>
+                <span class="dim">2400×1600</span>
+              </div>
+              <div class="meta">
+                <div class="meta-name">tym-konference-2026.jpg</div>
+                <div class="meta-sub"><span class="used">●</span><span>1,2 MB</span><span class="dot"></span><span>před 3 dny</span></div>
+              </div>
+            </div>
+
+            <div class="card-m" data-id="3">
+              <div class="thumb thumb-vid">
+                <span class="check">✓</span>
+                <span class="badge-type">mp4</span>
+                <svg width="36" height="36" viewBox="0 0 24 24" fill="currentColor" style="position:relative;z-index:1;"><polygon points="6 4 20 12 6 20 6 4"/></svg>
+                <span class="duration">2:14</span>
+              </div>
+              <div class="meta">
+                <div class="meta-name">demo-onboarding.mp4</div>
+                <div class="meta-sub"><span class="unused">●</span><span>18,4 MB</span><span class="dot"></span><span>před 4 dny</span></div>
+              </div>
+            </div>
+
+            <div class="card-m" data-id="4">
+              <div class="thumb thumb-img-3">
+                <span class="check">✓</span>
+                <span class="badge-type l">png</span>
+                <span class="dim">800×800</span>
+              </div>
+              <div class="meta">
+                <div class="meta-name">logo-square-light.png</div>
+                <div class="meta-sub"><span class="used">●</span><span>62 KB</span><span class="dot"></span><span>před 4 dny</span></div>
+              </div>
+            </div>
+
+            <div class="card-m" data-id="5">
+              <div class="thumb thumb-doc">
+                <span class="check">✓</span>
+                <span class="badge-type l">pdf</span>
+                <svg class="doc-ico" width="42" height="52" viewBox="0 0 24 30" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v22a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="14" x2="16" y2="14"/><line x1="8" y1="18" x2="16" y2="18"/><line x1="8" y1="22" x2="13" y2="22"/></svg>
+              </div>
+              <div class="meta">
+                <div class="meta-name">brand-guidelines-2026.pdf</div>
+                <div class="meta-sub"><span class="used">●</span><span>3,1 MB</span><span class="dot"></span><span>před 5 dny</span></div>
+              </div>
+            </div>
+
+            <div class="card-m" data-id="6">
+              <div class="thumb thumb-img-4">
+                <span class="check">✓</span>
+                <span class="badge-type l">webp</span>
+                <span class="dim">1600×900</span>
+              </div>
+              <div class="meta">
+                <div class="meta-name">hero-akce-2026.webp</div>
+                <div class="meta-sub"><span class="used">●</span><span>312 KB</span><span class="dot"></span><span>před 5 dny</span></div>
+              </div>
+            </div>
+
+            <div class="card-m" data-id="7">
+              <div class="thumb thumb-aud">
+                <span class="check">✓</span>
+                <span class="badge-type">mp3</span>
+                <svg width="42" height="42" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+                <span class="duration">14:32</span>
+              </div>
+              <div class="meta">
+                <div class="meta-name">podcast-ep-12.mp3</div>
+                <div class="meta-sub"><span class="unused">●</span><span>21,8 MB</span><span class="dot"></span><span>před 6 dny</span></div>
+              </div>
+            </div>
+
+            <div class="section-head">
+              <h3>Květen 2026</h3>
+              <span class="ct">23 souborů</span>
+              <span class="line"></span>
+            </div>
+
+            <div class="card-m" data-id="8">
+              <div class="thumb thumb-img-5">
+                <span class="check">✓</span>
+                <span class="badge-type l">jpg</span>
+                <span class="dim">3000×2000</span>
+              </div>
+              <div class="meta">
+                <div class="meta-name">portret-redaktor.jpg</div>
+                <div class="meta-sub"><span class="used">●</span><span>2,4 MB</span><span class="dot"></span><span>2. 5. 2026</span></div>
+              </div>
+            </div>
+
+            <div class="card-m" data-id="9">
+              <div class="thumb thumb-img-6">
+                <span class="check">✓</span>
+                <span class="badge-type l">webp</span>
+                <span class="dim">1200×630</span>
+              </div>
+              <div class="meta">
+                <div class="meta-name">og-novinky-blog.webp</div>
+                <div class="meta-sub"><span class="used">●</span><span>184 KB</span><span class="dot"></span><span>1. 5. 2026</span></div>
+              </div>
+            </div>
+
+            <div class="card-m" data-id="10">
+              <div class="thumb thumb-img-1">
+                <span class="check">✓</span>
+                <span class="badge-type l">png</span>
+                <span class="dim">2400×1600</span>
+              </div>
+              <div class="meta">
+                <div class="meta-name">screenshot-dashboard.png</div>
+                <div class="meta-sub"><span class="used">●</span><span>1,8 MB</span><span class="dot"></span><span>30. 4. 2026</span></div>
+              </div>
+            </div>
+
+            <div class="card-m" data-id="11">
+              <div class="thumb thumb-img-2">
+                <span class="check">✓</span>
+                <span class="badge-type l">jpg</span>
+                <span class="dim">1920×1080</span>
+              </div>
+              <div class="meta">
+                <div class="meta-name">tym-na-vyjezdu.jpg</div>
+                <div class="meta-sub"><span class="unused">●</span><span>892 KB</span><span class="dot"></span><span>28. 4. 2026</span></div>
+              </div>
+            </div>
+
+            <div class="card-m" data-id="12">
+              <div class="thumb thumb-doc">
+                <span class="check">✓</span>
+                <span class="badge-type l">docx</span>
+                <svg class="doc-ico" width="42" height="52" viewBox="0 0 24 30" fill="none" stroke="currentColor" stroke-width="1.5" style="color:var(--blue);"><path d="M14 2H6a2 2 0 0 0-2 2v22a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="14" x2="16" y2="14"/><line x1="8" y1="18" x2="16" y2="18"/></svg>
+              </div>
+              <div class="meta">
+                <div class="meta-name">tiskova-zprava-q2.docx</div>
+                <div class="meta-sub"><span class="unused">●</span><span>248 KB</span><span class="dot"></span><span>26. 4. 2026</span></div>
+              </div>
+            </div>
+
+            <div class="card-m" data-id="13">
+              <div class="thumb thumb-img-3">
+                <span class="check">✓</span>
+                <span class="badge-type l">webp</span>
+                <span class="dim">1600×1200</span>
+              </div>
+              <div class="meta">
+                <div class="meta-name">produkt-detail-04.webp</div>
+                <div class="meta-sub"><span class="used">●</span><span>238 KB</span><span class="dot"></span><span>24. 4. 2026</span></div>
+              </div>
+            </div>
+
+            <div class="card-m" data-id="14">
+              <div class="thumb thumb-img-4">
+                <span class="check">✓</span>
+                <span class="badge-type l">jpg</span>
+                <span class="dim">2200×1467</span>
+              </div>
+              <div class="meta">
+                <div class="meta-name">interier-kanclu.jpg</div>
+                <div class="meta-sub"><span class="used">●</span><span>1,4 MB</span><span class="dot"></span><span>22. 4. 2026</span></div>
+              </div>
+            </div>
+
+            <div class="card-m" data-id="15">
+              <div class="thumb thumb-vid">
+                <span class="check">✓</span>
+                <span class="badge-type">mov</span>
+                <svg width="36" height="36" viewBox="0 0 24 24" fill="currentColor" style="position:relative;z-index:1;"><polygon points="6 4 20 12 6 20 6 4"/></svg>
+                <span class="duration">0:48</span>
+              </div>
+              <div class="meta">
+                <div class="meta-name">teaser-novy-blog.mov</div>
+                <div class="meta-sub"><span class="used">●</span><span>42,1 MB</span><span class="dot"></span><span>20. 4. 2026</span></div>
+              </div>
+            </div>
+
+            <div class="card-m" data-id="16">
+              <div class="thumb thumb-img-5">
+                <span class="check">✓</span>
+                <span class="badge-type l">png</span>
+                <span class="dim">512×512</span>
+              </div>
+              <div class="meta">
+                <div class="meta-name">favicon-source.png</div>
+                <div class="meta-sub"><span class="used">●</span><span>14 KB</span><span class="dot"></span><span>18. 4. 2026</span></div>
+              </div>
+            </div>
+
+            <div class="card-m" data-id="17">
+              <div class="thumb thumb-img-6">
+                <span class="check">✓</span>
+                <span class="badge-type l">webp</span>
+                <span class="dim">1920×1080</span>
+              </div>
+              <div class="meta">
+                <div class="meta-name">akce-2026-promo.webp</div>
+                <div class="meta-sub"><span class="used">●</span><span>356 KB</span><span class="dot"></span><span>15. 4. 2026</span></div>
+              </div>
+            </div>
+
+            <div class="card-m" data-id="18">
+              <div class="thumb thumb-img-1">
+                <span class="check">✓</span>
+                <span class="badge-type l">jpg</span>
+                <span class="dim">3840×2160</span>
+              </div>
+              <div class="meta">
+                <div class="meta-name">backdrop-4k.jpg</div>
+                <div class="meta-sub"><span class="unused">●</span><span>5,2 MB</span><span class="dot"></span><span>14. 4. 2026</span></div>
+              </div>
+            </div>
+
+            <div class="card-m" data-id="19">
+              <div class="thumb thumb-doc">
+                <span class="check">✓</span>
+                <span class="badge-type l">pdf</span>
+                <svg class="doc-ico" width="42" height="52" viewBox="0 0 24 30" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v22a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="14" x2="16" y2="14"/><line x1="8" y1="18" x2="16" y2="18"/><line x1="8" y1="22" x2="13" y2="22"/></svg>
+              </div>
+              <div class="meta">
+                <div class="meta-name">redakcni-pravidla.pdf</div>
+                <div class="meta-sub"><span class="used">●</span><span>421 KB</span><span class="dot"></span><span>10. 4. 2026</span></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- LIST view (hidden) -->
+          <div class="list" id="list">
+            <div class="list-row head">
+              <span></span>
+              <span></span>
+              <span>Název</span>
+              <span>Typ</span>
+              <span>Velikost</span>
+              <span>Rozměr</span>
+              <span>Nahráno</span>
+              <span></span>
+            </div>
+            <div class="list-row"><input type="checkbox"><div class="list-thumb thumb-img-1"></div><span>redakcni-workflow.webp</span><span class="mono" style="font-size:11px;">webp</span><span class="mono" style="font-size:11px;">428 KB</span><span class="mono" style="font-size:11px;">1920×1080</span><span style="color:var(--muted);">před 2 dny</span><span>⋯</span></div>
+            <div class="list-row"><input type="checkbox" checked><div class="list-thumb thumb-img-2"></div><span>tym-konference-2026.jpg</span><span class="mono" style="font-size:11px;">jpg</span><span class="mono" style="font-size:11px;">1,2 MB</span><span class="mono" style="font-size:11px;">2400×1600</span><span style="color:var(--muted);">před 3 dny</span><span>⋯</span></div>
+            <div class="list-row"><input type="checkbox"><div class="list-thumb thumb-vid" style="background:#1f2937;"></div><span>demo-onboarding.mp4</span><span class="mono" style="font-size:11px;">mp4</span><span class="mono" style="font-size:11px;">18,4 MB</span><span class="mono" style="font-size:11px;">2:14</span><span style="color:var(--muted);">před 4 dny</span><span>⋯</span></div>
+            <div class="list-row"><input type="checkbox"><div class="list-thumb thumb-img-3"></div><span>logo-square-light.png</span><span class="mono" style="font-size:11px;">png</span><span class="mono" style="font-size:11px;">62 KB</span><span class="mono" style="font-size:11px;">800×800</span><span style="color:var(--muted);">před 4 dny</span><span>⋯</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- DETAIL DRAWER -->
+<div class="drawer-back" id="drawerBack"></div>
+<aside class="drawer" id="drawer">
+  <div class="drawer-head">
+    <h3>Detail souboru</h3>
+    <button class="drawer-close" id="drawerClose">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+  </div>
+  <div class="drawer-body">
+    <div class="drawer-preview"></div>
+
+    <div class="dr-row"><span class="k">Název souboru</span><span class="v">tym-konference-2026.jpg</span></div>
+    <div class="dr-row"><span class="k">Typ</span><span class="v mono">image/jpeg</span></div>
+    <div class="dr-row"><span class="k">Velikost</span><span class="v mono">1,24 MB</span></div>
+    <div class="dr-row"><span class="k">Rozměry</span><span class="v mono">2400 × 1600 px</span></div>
+    <div class="dr-row"><span class="k">Nahráno</span><span class="v">5. 5. 2026, 11:42</span></div>
+    <div class="dr-row"><span class="k">Autor nahrání</span><span class="v">Adéla Těšitelová</span></div>
+
+    <div class="dr-section">Použito v</div>
+    <span class="used-pill"><span class="dot2"></span>Jak jsme přepsali workflow</span>
+    <span class="used-pill"><span class="dot2"></span>Akce 2026 — pozvánka</span>
+    <span class="used-pill"><span class="dot2"></span>Týdenní souhrn 18</span>
+
+    <div class="dr-section">Alt text</div>
+    <input class="dr-input" type="text" value="Tým Blog Pro při výroční konferenci 2026 v Praze">
+
+    <div class="dr-section">Popisek</div>
+    <input class="dr-input" type="text" value="Foto z hlavního pódia, Národní dům na Vinohradech.">
+
+    <div class="dr-section">Veřejná URL</div>
+    <div class="copy-row">
+      <input class="dr-input" readonly value="https://blog-pro.cz/uploads/2026/05/tym-konference-2026.jpg">
+      <button class="copy-btn">Kopírovat</button>
+    </div>
+
+    <div class="dr-section">Markdown vložení</div>
+    <div class="copy-row">
+      <input class="dr-input" readonly value="![Tým konference 2026](/uploads/2026/05/tym-konference-2026.jpg)">
+      <button class="copy-btn">Kopírovat</button>
+    </div>
+  </div>
+  <div class="dr-foot">
+    <button class="btn btn-ghost btn-sm" style="flex:1;">Otevřít originál</button>
+    <button class="btn btn-ghost btn-sm" style="color:var(--danger);">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>
+      Smazat
+    </button>
+    <button class="btn btn-primary btn-sm">Uložit změny</button>
+  </div>
+</aside>
+
+<script>
+  // Selection
+  const grid = document.getElementById('grid');
+  const selbar = document.getElementById('selbar');
+  const selCount = document.getElementById('selCount');
+  function refreshSel() {
+    const n = grid.querySelectorAll('.card-m.sel').length;
+    selCount.textContent = n;
+    selbar.classList.toggle('show', n > 0);
+  }
+  grid.addEventListener('click', (e) => {
+    const card = e.target.closest('.card-m');
+    if (!card) return;
+    if (e.target.closest('.check')) {
+      e.stopPropagation();
+      card.classList.toggle('sel');
+      refreshSel();
+      return;
+    }
+    // open drawer
+    document.getElementById('drawer').classList.add('show');
+    document.getElementById('drawerBack').classList.add('show');
+  });
+  document.getElementById('selClear').addEventListener('click', () => {
+    grid.querySelectorAll('.card-m.sel').forEach(c => c.classList.remove('sel'));
+    refreshSel();
+  });
+  refreshSel();
+
+  // Drawer close
+  document.getElementById('drawerClose').addEventListener('click', closeDrawer);
+  document.getElementById('drawerBack').addEventListener('click', closeDrawer);
+  function closeDrawer() {
+    document.getElementById('drawer').classList.remove('show');
+    document.getElementById('drawerBack').classList.remove('show');
+  }
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDrawer(); });
+
+  // View toggle
+  document.getElementById('viewToggle').querySelectorAll('button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.getElementById('viewToggle').querySelectorAll('button').forEach(b => b.classList.remove('on'));
+      btn.classList.add('on');
+      const v = btn.dataset.view;
+      document.getElementById('grid').style.display = v === 'grid' ? 'grid' : 'none';
+      document.getElementById('list').classList.toggle('show', v === 'list');
+    });
+  });
+
+  // Filter clicks
+  document.querySelectorAll('.filt-item').forEach(it => {
+    it.addEventListener('click', () => {
+      const parent = it.parentElement;
+      parent.querySelectorAll('.filt-item').forEach(x => x.classList.remove('on'));
+      it.classList.add('on');
+    });
+  });
+
+  // Sort seg
+  document.querySelectorAll('.seg button').forEach(b => {
+    b.addEventListener('click', () => {
+      b.parentElement.querySelectorAll('button').forEach(x => x.classList.remove('active'));
+      b.classList.add('active');
+    });
+  });
+</script>
+
+</body>
+</html>
