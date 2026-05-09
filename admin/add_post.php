@@ -194,7 +194,9 @@ $baseUrl = rtrim(BASE_URL,'/').'/';
 .slug-regen{padding:3px 8px;border-radius:5px;font-size:10.5px;color:var(--muted);border:1px solid var(--border);background:var(--paper)}
 .slug-regen:hover{color:var(--accent-2);border-color:var(--accent)}
 .editor{background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden;box-shadow:0 1px 2px rgba(31,41,55,.03)}
-.ed-toolbar{display:flex;align-items:center;gap:4px;padding:8px 12px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,var(--card-2),var(--card));flex-wrap:wrap;position:sticky;top:65px;z-index:5}
+.ed-toolbar{display:flex;align-items:center;gap:4px;padding:8px 12px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,var(--card-2),var(--card));flex-wrap:wrap}
+.ed-color-btn{position:relative;flex-direction:column;gap:0;height:32px;padding:3px 4px 2px;width:auto;min-width:26px}
+.ed-color-btn input[type=color]{position:absolute;opacity:0;inset:0;width:100%;height:100%;cursor:pointer;border:none;padding:0}
 .ed-btn{width:28px;height:28px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;color:var(--body);border:1px solid transparent;font-size:13px;transition:background .15s,color .15s,border-color .15s}
 .ed-btn:hover{background:var(--paper-2);color:var(--ink);border-color:var(--border)}
 .ed-btn.active{background:var(--accent-soft);color:var(--accent-2)}
@@ -357,12 +359,31 @@ $baseUrl = rtrim(BASE_URL,'/').'/';
             </div>
             <div class="editor">
               <div class="ed-toolbar">
-                <button type="button" class="ed-select" onclick="formatBlock(this)" title="Styl odstavce"><span id="blockLabel">Normální</span><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></button>
+                <button type="button" class="ed-select" onmousedown="saveColorRange()" onclick="formatBlock(this)" title="Styl odstavce"><span id="blockLabel">Normální</span><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></button>
+                <select class="ed-select" style="min-width:100px" onmousedown="saveColorRange()" onchange="applyFont(this.value)" title="Font">
+                  <option value="">Font</option>
+                  <option value="Arial,sans-serif">Arial</option>
+                  <option value="Georgia,serif">Georgia</option>
+                  <option value="'Times New Roman',serif">Times New Roman</option>
+                  <option value="'Courier New',monospace">Courier New</option>
+                  <option value="Verdana,sans-serif">Verdana</option>
+                  <option value="'Trebuchet MS',sans-serif">Trebuchet</option>
+                </select>
                 <div class="ed-divider"></div>
                 <button type="button" class="ed-btn" title="Tučně" onclick="document.execCommand('bold')"><b>B</b></button>
                 <button type="button" class="ed-btn" title="Kurzíva" onclick="document.execCommand('italic')"><i style="font-family:var(--serif)">I</i></button>
                 <button type="button" class="ed-btn" title="Podtržení" onclick="document.execCommand('underline')" style="text-decoration:underline;">U</button>
                 <button type="button" class="ed-btn" title="Přeškrtnutí" onclick="document.execCommand('strikeThrough')" style="text-decoration:line-through;">S</button>
+                <button type="button" class="ed-btn ed-color-btn" title="Barva textu" onmousedown="saveColorRange()">
+                  <span style="font-size:12px;font-weight:700;line-height:1;display:block">A</span>
+                  <span id="fgBar" style="width:16px;height:3px;background:#000;border-radius:1px;display:block;margin-top:1px"></span>
+                  <input type="color" id="fgColorIn" value="#000000" onchange="applyFgColor(this.value)">
+                </button>
+                <button type="button" class="ed-btn ed-color-btn" title="Barva pozadí textu" onmousedown="saveColorRange()">
+                  <span style="font-size:10px;font-weight:700;line-height:1;display:block;background:#ff0;padding:0 2px">ab</span>
+                  <span id="bgBar" style="width:16px;height:3px;background:#ff0;border-radius:1px;display:block;margin-top:1px"></span>
+                  <input type="color" id="bgColorIn" value="#ffff00" onchange="applyBgColor(this.value)">
+                </button>
                 <div class="ed-divider"></div>
                 <button type="button" class="ed-btn" title="Dolní index" onclick="document.execCommand('subscript')" style="font-size:11px;">X₂</button>
                 <button type="button" class="ed-btn" title="Horní index" onclick="document.execCommand('superscript')" style="font-size:11px;">X²</button>
@@ -677,6 +698,35 @@ function formatBlock(btn) {
 function insertLink() {
   const url = prompt('URL odkazu:','https://');
   if (url) document.execCommand('createLink',false,url);
+}
+// ── Font & color ──────────────────────────────────────────────────────────────
+let colorRange = null;
+function saveColorRange() {
+  const sel = window.getSelection();
+  if (sel && sel.rangeCount) colorRange = sel.getRangeAt(0).cloneRange();
+}
+function restoreColorRange() {
+  if (!colorRange) return;
+  const sel = window.getSelection();
+  if (sel) { sel.removeAllRanges(); sel.addRange(colorRange); }
+}
+function applyFont(font) {
+  if (!font) return;
+  restoreColorRange();
+  document.execCommand('styleWithCSS', false, true);
+  document.execCommand('fontName', false, font);
+}
+function applyFgColor(c) {
+  document.getElementById('fgBar').style.background = c;
+  restoreColorRange();
+  document.execCommand('styleWithCSS', false, true);
+  document.execCommand('foreColor', false, c);
+}
+function applyBgColor(c) {
+  document.getElementById('bgBar').style.background = c;
+  restoreColorRange();
+  document.execCommand('styleWithCSS', false, true);
+  document.execCommand('hiliteColor', false, c);
 }
 // ── Media insert modal ───────────────────────────────────────────────────────
 let mediaInsertType = 'image';

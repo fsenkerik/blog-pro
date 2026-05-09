@@ -92,15 +92,23 @@ require_once INCLUDES_PATH . 'media.class.php';
 
 $db = new Database();
 
-// Auto-migrate: přidat nové sloupce pokud ještě neexistují (spustí se jednou za session)
-if (!isset($_SESSION['db_migrated_v2'])) {
+// Auto-migrate: přidat nové sloupce pokud ještě neexistují
+if (!isset($_SESSION['db_migrated_v3'])) {
     try {
-        $db->query("ALTER TABLE posts ADD COLUMN IF NOT EXISTS tags VARCHAR(500) DEFAULT NULL AFTER meta_keywords");
-        $db->execute();
-        $db->query("ALTER TABLE posts ADD COLUMN IF NOT EXISTS featured_image_alt VARCHAR(255) DEFAULT NULL AFTER featured_image");
-        $db->execute();
+        $db->query("SELECT COUNT(*) as c FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='posts' AND COLUMN_NAME='tags'");
+        $r = $db->fetch();
+        if (!$r || (int)$r['c'] === 0) {
+            $db->query("ALTER TABLE posts ADD COLUMN tags VARCHAR(500) DEFAULT NULL AFTER meta_keywords");
+            $db->execute();
+        }
+        $db->query("SELECT COUNT(*) as c FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='posts' AND COLUMN_NAME='featured_image_alt'");
+        $r = $db->fetch();
+        if (!$r || (int)$r['c'] === 0) {
+            $db->query("ALTER TABLE posts ADD COLUMN featured_image_alt VARCHAR(255) DEFAULT NULL AFTER featured_image");
+            $db->execute();
+        }
     } catch (\Throwable $e) {}
-    $_SESSION['db_migrated_v2'] = true;
+    $_SESSION['db_migrated_v3'] = true;
 }
 
 require_once INCLUDES_PATH . 'helpers.php';
