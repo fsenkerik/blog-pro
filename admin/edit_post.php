@@ -27,18 +27,19 @@ if (isset($_POST['ajax_action'])) {
         if (!isset($_FILES['image']) || $_FILES['image']['error'] !== UPLOAD_ERR_OK) {
             echo json_encode(['success'=>false,'message'=>'Chyba uploadu']); exit;
         }
-        $uploadResult = $upload->uploadImage($_FILES['image'], true, true);
+        $uploadResult = $upload->uploadImage($_FILES['image'], true, false);
         if (!$uploadResult['success']) {
             echo json_encode(['success'=>false,'message'=>$uploadResult['message']??'Chyba uploadu']); exit;
         }
+        $imgInfo = @getimagesize(ROOT_PATH . $uploadResult['path']);
         $mediaData = [
             'filename'=>basename($uploadResult['path']),
             'original_name'=>$_FILES['image']['name'],
             'path'=>$uploadResult['path'],
-            'mime_type'=>$_FILES['image']['type'],
-            'size'=>$_FILES['image']['size'],
-            'width'=>$uploadResult['width']??null,
-            'height'=>$uploadResult['height']??null,
+            'mime_type'=>$imgInfo ? $imgInfo['mime'] : $_FILES['image']['type'],
+            'size'=>$uploadResult['size'],
+            'width'=>$imgInfo ? $imgInfo[0] : null,
+            'height'=>$imgInfo ? $imgInfo[1] : null,
         ];
         $mr = $media->add($mediaData);
         echo json_encode(['success'=>true,'path'=>$uploadResult['path'],'url'=>BASE_URL.ltrim($uploadResult['path'],'/'),'media_id'=>$mr['id']??null]);
@@ -274,6 +275,9 @@ $currentTags = $postData['tags'] ?? '';
 .field-label .help:hover{background:var(--accent-soft);color:var(--accent-2)}
 .field-label .opt{color:var(--faint);text-transform:none;letter-spacing:0}
 @media(max-width:1100px){.ed-grid{grid-template-columns:1fr}.ed-side{position:static}.savebar{margin:28px -16px -64px;padding:14px 16px}}
+body.dz-dragging .page-head,body.dz-dragging .title-field,body.dz-dragging .savebar,body.dz-dragging .editor{filter:blur(3px);opacity:.5;transition:filter .15s,opacity .15s;pointer-events:none}
+body.dz-dragging .sp:not(.dz-target){filter:blur(3px);opacity:.5;transition:filter .15s,opacity .15s;pointer-events:none}
+body.dz-dragging .sp.dz-target{box-shadow:0 0 0 2px var(--accent),0 8px 32px rgba(102,126,234,.3);border-radius:14px;transition:box-shadow .15s}
 </style>
 </head>
 <body>
@@ -517,18 +521,25 @@ document.getElementById('featuredInput')?.addEventListener('change',function(){
 // Drag & drop with blur overlay
 (function(){
   let dragCounter = 0;
-  const overlay = document.createElement('div');
-  overlay.style.cssText = 'display:none;position:fixed;inset:0;z-index:50;pointer-events:none;';
-  overlay.innerHTML = '<div style="position:absolute;inset:0;backdrop-filter:blur(6px);background:rgba(102,126,234,.08);"></div>';
-  document.body.appendChild(overlay);
-  function getDropTarget(){ return document.getElementById('dropzone')||document.getElementById('featPreview'); }
-  function showOverlay() { overlay.style.display='block'; const t=getDropTarget(); if(t){t.style.filter='none';t.style.zIndex='51';t.style.position='relative';} }
-  function hideOverlay() { overlay.style.display='none'; const t=getDropTarget(); if(t){t.style.filter='';t.style.zIndex='';} }
-  document.addEventListener('dragenter', e => { if(e.dataTransfer.types.includes('Files')){dragCounter++;showOverlay();} });
-  document.addEventListener('dragleave', e => { dragCounter--;if(dragCounter<=0){dragCounter=0;hideOverlay();} });
+  function showBlur() {
+    const dz = document.getElementById('dropzone') || document.getElementById('featPreview');
+    const sp = dz?.closest('.sp');
+    if (sp) sp.classList.add('dz-target');
+    document.body.classList.add('dz-dragging');
+  }
+  function hideBlur() {
+    document.body.classList.remove('dz-dragging');
+    document.querySelectorAll('.dz-target').forEach(el => el.classList.remove('dz-target'));
+  }
+  document.addEventListener('dragenter', e => {
+    if(e.dataTransfer.types.includes('Files')){ dragCounter++; if(dragCounter===1) showBlur(); }
+  });
+  document.addEventListener('dragleave', e => {
+    dragCounter--; if(dragCounter<=0){dragCounter=0; hideBlur();}
+  });
   document.addEventListener('dragover', e => e.preventDefault());
   document.addEventListener('drop', e => {
-    e.preventDefault(); dragCounter=0; hideOverlay();
+    e.preventDefault(); dragCounter=0; hideBlur();
     const file=e.dataTransfer.files[0];
     if(file&&file.type.startsWith('image/')) uploadFeaturedImage(file);
   });

@@ -69,20 +69,21 @@ if (isset($_POST['ajax_action'])) {
                 echo json_encode(['success'=>false,'message'=>'Chyba uploadu']);
                 exit;
             }
-            $uploadResult = $upload->uploadImage($_FILES['image'], true, true);
+            $uploadResult = $upload->uploadImage($_FILES['image'], true, false);
             if (!$uploadResult['success']) {
                 echo json_encode(['success'=>false,'message'=>$uploadResult['message']??'Chyba uploadu']);
                 exit;
             }
             $mediaObj = new Media();
+            $imgInfo = @getimagesize(ROOT_PATH . $uploadResult['path']);
             $mediaData = [
                 'filename'      => basename($uploadResult['path']),
                 'original_name' => $_FILES['image']['name'],
                 'path'          => $uploadResult['path'],
-                'mime_type'     => $_FILES['image']['type'],
-                'size'          => $_FILES['image']['size'],
-                'width'         => $uploadResult['width'] ?? null,
-                'height'        => $uploadResult['height'] ?? null,
+                'mime_type'     => $imgInfo ? $imgInfo['mime'] : $_FILES['image']['type'],
+                'size'          => $uploadResult['size'],
+                'width'         => $imgInfo ? $imgInfo[0] : null,
+                'height'        => $imgInfo ? $imgInfo[1] : null,
             ];
             $mediaResult = $mediaObj->add($mediaData);
             echo json_encode([
@@ -306,6 +307,9 @@ $baseUrl = rtrim(BASE_URL,'/').'/';
 .btn-cancel{background:transparent;color:var(--muted);border:1px solid transparent}
 .btn-cancel:hover{color:var(--danger);border-color:var(--danger-soft);background:var(--danger-soft)}
 @media(max-width:1100px){.ed-grid{grid-template-columns:1fr}.ed-side{position:static}.savebar{margin:28px -16px -64px;padding:14px 16px}}
+body.dz-dragging .page-head,body.dz-dragging .title-field,body.dz-dragging .savebar,body.dz-dragging .editor{filter:blur(3px);opacity:.5;transition:filter .15s,opacity .15s;pointer-events:none}
+body.dz-dragging .sp:not(.dz-target){filter:blur(3px);opacity:.5;transition:filter .15s,opacity .15s;pointer-events:none}
+body.dz-dragging .sp.dz-target{box-shadow:0 0 0 2px var(--accent),0 8px 32px rgba(102,126,234,.3);border-radius:14px;transition:box-shadow .15s}
 </style>
 </head>
 <body>
@@ -590,39 +594,28 @@ document.getElementById('featuredInput')?.addEventListener('change',function(){
 // Drag & drop with blur overlay
 (function(){
   let dragCounter = 0;
-  const overlay = document.createElement('div');
-  overlay.style.cssText = 'display:none;position:fixed;inset:0;z-index:50;pointer-events:none;';
-  overlay.innerHTML = '<div style="position:absolute;inset:0;backdrop-filter:blur(6px);background:rgba(102,126,234,.08);"></div>';
-  document.body.appendChild(overlay);
-
-  function showOverlay(targetEl) {
-    overlay.style.display='block';
-    if(targetEl) {
-      targetEl.style.filter='none';
-      targetEl.style.zIndex='51';
-      targetEl.style.position='relative';
-    }
+  function showBlur() {
+    const dz = document.getElementById('dropzone') || document.getElementById('featPreviewAdd');
+    const sp = dz?.closest('.sp');
+    if (sp) sp.classList.add('dz-target');
+    document.body.classList.add('dz-dragging');
   }
-  function hideOverlay(targetEl) {
-    overlay.style.display='none';
-    if(targetEl) { targetEl.style.filter=''; targetEl.style.zIndex=''; }
+  function hideBlur() {
+    document.body.classList.remove('dz-dragging');
+    document.querySelectorAll('.dz-target').forEach(el => el.classList.remove('dz-target'));
   }
-
   document.addEventListener('dragenter', e => {
-    if (e.dataTransfer.types.includes('Files')) { dragCounter++; showOverlay(document.getElementById('dropzone')||document.getElementById('featPreviewAdd')); }
+    if (e.dataTransfer.types.includes('Files')) { dragCounter++; if(dragCounter===1) showBlur(); }
   });
   document.addEventListener('dragleave', e => {
-    dragCounter--;
-    if (dragCounter <= 0) { dragCounter=0; hideOverlay(document.getElementById('dropzone')||document.getElementById('featPreviewAdd')); }
+    dragCounter--; if (dragCounter <= 0) { dragCounter=0; hideBlur(); }
   });
   document.addEventListener('dragover', e => e.preventDefault());
   document.addEventListener('drop', e => {
-    e.preventDefault(); dragCounter=0;
-    hideOverlay(document.getElementById('dropzone')||document.getElementById('featPreviewAdd'));
+    e.preventDefault(); dragCounter=0; hideBlur();
     const file = e.dataTransfer.files[0];
     if (file && file.type.startsWith('image/')) uploadFeaturedImage(file);
   });
-
   const dz = document.getElementById('dropzone');
   if (dz) {
     dz.addEventListener('dragover', e => { e.preventDefault(); dz.style.borderColor='var(--accent)'; });
