@@ -92,9 +92,26 @@ require_once INCLUDES_PATH . 'media.class.php';
 
 $db = new Database();
 
-// Auto-migrate: přidat nové sloupce pokud ještě neexistují
-if (!isset($_SESSION['db_migrated_v3'])) {
+// Auto-migrate: ensure media table exists and posts have new columns
+if (!isset($_SESSION['db_migrated_v4'])) {
     try {
+        // Create media table if it doesn't exist
+        $db->query("CREATE TABLE IF NOT EXISTS `media` (
+            `id` int(11) NOT NULL AUTO_INCREMENT,
+            `filename` varchar(255) NOT NULL,
+            `original_name` varchar(255) NOT NULL,
+            `path` varchar(500) NOT NULL,
+            `mime_type` varchar(100) DEFAULT NULL,
+            `size` int(11) DEFAULT NULL,
+            `width` int(11) DEFAULT NULL,
+            `height` int(11) DEFAULT NULL,
+            `uploaded_at` datetime DEFAULT CURRENT_TIMESTAMP,
+            PRIMARY KEY (`id`),
+            KEY `idx_filename` (`filename`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+        $db->execute();
+
+        // Add posts columns if missing
         $db->query("SELECT COUNT(*) as c FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='posts' AND COLUMN_NAME='tags'");
         $r = $db->fetch();
         if (!$r || (int)$r['c'] === 0) {
@@ -107,8 +124,10 @@ if (!isset($_SESSION['db_migrated_v3'])) {
             $db->query("ALTER TABLE posts ADD COLUMN featured_image_alt VARCHAR(255) DEFAULT NULL AFTER featured_image");
             $db->execute();
         }
-    } catch (\Throwable $e) {}
-    $_SESSION['db_migrated_v3'] = true;
+    } catch (\Throwable $e) {
+        error_log(date('Y-m-d H:i:s') . " - Migration v4: " . $e->getMessage() . "\n", 3, ROOT_PATH . 'error.log');
+    }
+    $_SESSION['db_migrated_v4'] = true;
 }
 
 require_once INCLUDES_PATH . 'helpers.php';
