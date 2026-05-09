@@ -92,6 +92,17 @@ require_once INCLUDES_PATH . 'media.class.php';
 
 $db = new Database();
 
+// Auto-migrate: přidat nové sloupce pokud ještě neexistují (spustí se jednou za session)
+if (!isset($_SESSION['db_migrated_v2'])) {
+    try {
+        $db->query("ALTER TABLE posts ADD COLUMN IF NOT EXISTS tags VARCHAR(500) DEFAULT NULL AFTER meta_keywords");
+        $db->execute();
+        $db->query("ALTER TABLE posts ADD COLUMN IF NOT EXISTS featured_image_alt VARCHAR(255) DEFAULT NULL AFTER featured_image");
+        $db->execute();
+    } catch (\Throwable $e) {}
+    $_SESSION['db_migrated_v2'] = true;
+}
+
 require_once INCLUDES_PATH . 'helpers.php';
 
 require_once INCLUDES_PATH . 'sessionTracker.class.php';
