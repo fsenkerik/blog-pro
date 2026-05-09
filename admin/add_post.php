@@ -69,28 +69,15 @@ if (isset($_POST['ajax_action'])) {
                 echo json_encode(['success'=>false,'message'=>'Chyba uploadu']);
                 exit;
             }
-            $uploadResult = $upload->uploadImage($_FILES['image'], true, false);
+            $uploadResult = $upload->uploadImage($_FILES['image'], true, true);
             if (!$uploadResult['success']) {
                 echo json_encode(['success'=>false,'message'=>$uploadResult['message']??'Chyba uploadu']);
                 exit;
             }
-            $mediaObj = new Media();
-            $imgInfo = @getimagesize(ROOT_PATH . $uploadResult['path']);
-            $mediaData = [
-                'filename'      => basename($uploadResult['path']),
-                'original_name' => $_FILES['image']['name'],
-                'path'          => $uploadResult['path'],
-                'mime_type'     => $imgInfo ? $imgInfo['mime'] : $_FILES['image']['type'],
-                'size'          => $uploadResult['size'],
-                'width'         => $imgInfo ? $imgInfo[0] : null,
-                'height'        => $imgInfo ? $imgInfo[1] : null,
-            ];
-            $mediaResult = $mediaObj->add($mediaData);
             echo json_encode([
                 'success' => true,
                 'path'    => $uploadResult['path'],
                 'url'     => BASE_URL . ltrim($uploadResult['path'], '/'),
-                'media_id'=> $mediaResult['id'] ?? null,
             ]);
             exit;
         }

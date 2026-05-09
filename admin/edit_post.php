@@ -27,22 +27,11 @@ if (isset($_POST['ajax_action'])) {
         if (!isset($_FILES['image']) || $_FILES['image']['error'] !== UPLOAD_ERR_OK) {
             echo json_encode(['success'=>false,'message'=>'Chyba uploadu']); exit;
         }
-        $uploadResult = $upload->uploadImage($_FILES['image'], true, false);
+        $uploadResult = $upload->uploadImage($_FILES['image'], true, true);
         if (!$uploadResult['success']) {
             echo json_encode(['success'=>false,'message'=>$uploadResult['message']??'Chyba uploadu']); exit;
         }
-        $imgInfo = @getimagesize(ROOT_PATH . $uploadResult['path']);
-        $mediaData = [
-            'filename'=>basename($uploadResult['path']),
-            'original_name'=>$_FILES['image']['name'],
-            'path'=>$uploadResult['path'],
-            'mime_type'=>$imgInfo ? $imgInfo['mime'] : $_FILES['image']['type'],
-            'size'=>$uploadResult['size'],
-            'width'=>$imgInfo ? $imgInfo[0] : null,
-            'height'=>$imgInfo ? $imgInfo[1] : null,
-        ];
-        $mr = $media->add($mediaData);
-        echo json_encode(['success'=>true,'path'=>$uploadResult['path'],'url'=>BASE_URL.ltrim($uploadResult['path'],'/'),'media_id'=>$mr['id']??null]);
+        echo json_encode(['success'=>true,'path'=>$uploadResult['path'],'url'=>BASE_URL.ltrim($uploadResult['path'],'/')]);
         exit;
     }
     if ($_POST['ajax_action'] === 'add_category') {
