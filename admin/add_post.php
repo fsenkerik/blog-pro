@@ -307,9 +307,10 @@ $baseUrl = rtrim(BASE_URL,'/').'/';
 .btn-cancel{background:transparent;color:var(--muted);border:1px solid transparent}
 .btn-cancel:hover{color:var(--danger);border-color:var(--danger-soft);background:var(--danger-soft)}
 @media(max-width:1100px){.ed-grid{grid-template-columns:1fr}.ed-side{position:static}.savebar{margin:28px -16px -64px;padding:14px 16px}}
-body.dz-dragging .page-head,body.dz-dragging .title-field,body.dz-dragging .savebar,body.dz-dragging .editor{filter:blur(3px);opacity:.5;transition:filter .15s,opacity .15s;pointer-events:none}
+body.dz-dragging .page-head,body.dz-dragging .title-field,body.dz-dragging .savebar{filter:blur(3px);opacity:.5;transition:filter .15s,opacity .15s;pointer-events:none}
 body.dz-dragging .sp:not(.dz-target){filter:blur(3px);opacity:.5;transition:filter .15s,opacity .15s;pointer-events:none}
-body.dz-dragging .sp.dz-target{box-shadow:0 0 0 2px var(--accent),0 8px 32px rgba(102,126,234,.3);border-radius:14px;transition:box-shadow .15s}
+body.dz-dragging .sp.dz-target,body.dz-dragging .editor.dz-target{box-shadow:0 0 0 2px var(--accent),0 8px 32px rgba(102,126,234,.3);border-radius:14px;transition:box-shadow .15s}
+body.dz-dragging .editor.dz-hover,body.dz-dragging .sp.dz-hover{box-shadow:0 0 0 3px var(--accent),0 12px 40px rgba(102,126,234,.45);border-radius:14px}
 </style>
 </head>
 <body>
@@ -594,16 +595,20 @@ document.getElementById('featuredInput')?.addEventListener('change',function(){
 // Drag & drop with blur overlay
 (function(){
   let dragCounter = 0;
+  const editorEl = document.querySelector('.editor');
+  const getImageSp = () => (document.getElementById('dropzone') || document.getElementById('featPreviewAdd'))?.closest('.sp');
+
   function showBlur() {
-    const dz = document.getElementById('dropzone') || document.getElementById('featPreviewAdd');
-    const sp = dz?.closest('.sp');
+    const sp = getImageSp();
     if (sp) sp.classList.add('dz-target');
+    if (editorEl) editorEl.classList.add('dz-target');
     document.body.classList.add('dz-dragging');
   }
   function hideBlur() {
     document.body.classList.remove('dz-dragging');
-    document.querySelectorAll('.dz-target').forEach(el => el.classList.remove('dz-target'));
+    document.querySelectorAll('.dz-target,.dz-hover').forEach(el => el.classList.remove('dz-target','dz-hover'));
   }
+
   document.addEventListener('dragenter', e => {
     if (e.dataTransfer.types.includes('Files')) { dragCounter++; if(dragCounter===1) showBlur(); }
   });
@@ -616,6 +621,24 @@ document.getElementById('featuredInput')?.addEventListener('change',function(){
     const file = e.dataTransfer.files[0];
     if (file && file.type.startsWith('image/')) uploadFeaturedImage(file);
   });
+
+  // Hover highlight on editor
+  if (editorEl) {
+    editorEl.addEventListener('dragover', e => { e.preventDefault(); editorEl.classList.add('dz-hover'); });
+    editorEl.addEventListener('dragleave', () => editorEl.classList.remove('dz-hover'));
+    editorEl.addEventListener('drop', e => {
+      e.preventDefault(); e.stopPropagation(); editorEl.classList.remove('dz-hover');
+      const f = e.dataTransfer.files[0]; if(f && f.type.startsWith('image/')) uploadFeaturedImage(f);
+    });
+  }
+
+  // Hover highlight on featured image panel
+  const imageSp = getImageSp();
+  if (imageSp) {
+    imageSp.addEventListener('dragover', e => { e.preventDefault(); imageSp.classList.add('dz-hover'); });
+    imageSp.addEventListener('dragleave', () => imageSp.classList.remove('dz-hover'));
+  }
+
   const dz = document.getElementById('dropzone');
   if (dz) {
     dz.addEventListener('dragover', e => { e.preventDefault(); dz.style.borderColor='var(--accent)'; });
