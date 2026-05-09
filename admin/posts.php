@@ -145,10 +145,6 @@ tr:hover .row-actions{opacity:1}
         <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 16V6a2 2 0 0 1 2-2h8l6 6v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/><circle cx="9" cy="11" r="1.5"/><path d="m4 18 5-5 5 5 3-3 3 3"/></svg>
         Média
       </a>
-      <a href="#">
-        <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 7h10M7 12h10M7 17h7"/><rect x="3" y="4" width="18" height="16" rx="2"/></svg>
-        Kategorie <span class="count"><?= count($categories) ?></span>
-      </a>
     </nav>
   </div>
   <div>
@@ -392,5 +388,6 @@ function execDel() {
 document.getElementById('delModal').addEventListener('click', e => { if (e.target === e.currentTarget) closeDel(); });
 document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDel(); });
 </script>
+<script src="<?= ASSETS_URL ?>js/admin.js"></script>
 </body>
 </html>

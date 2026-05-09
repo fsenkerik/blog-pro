@@ -68,20 +68,6 @@ class Media {
         
         $sql = "SELECT COUNT(*) as count FROM media";
         $this->db->query($sql);
-        
-        if (!empty($search)) {
-            // EXPLICITNĚ PDO::PARAM_STR!
-            $this->db->bind(':search', '%' . $search . '%', PDO::PARAM_STR);
-        }
-        
-        // Database třída má fetch() která interně volá execute()!
-        $result = $this->db->fetch();
-        return $result['count'] ?? 0;
-        
-        if (!empty($search)) {
-            $this->db->bind(':search', '%' . $search . '%');
-        }
-        
         $result = $this->db->fetch();
         return $result['count'] ?? 0;
     }

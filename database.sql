@@ -38,6 +38,8 @@ CREATE TABLE IF NOT EXISTS posts (
     meta_title VARCHAR(255),
     meta_description TEXT,
     meta_keywords VARCHAR(255),
+    tags VARCHAR(500) DEFAULT NULL,
+    featured_image_alt VARCHAR(255) DEFAULT NULL,
     published_at TIMESTAMP NULL,
     scheduled_at TIMESTAMP NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

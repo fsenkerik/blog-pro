@@ -287,5 +287,6 @@ uploadStrip?.addEventListener('drop',e=>{e.preventDefault();uploadStrip.style.bo
 uploadInput?.addEventListener('change',e=>handleFiles(e.target.files));
 async function handleFiles(files){const arr=[...files];if(!arr.length)return;for(const file of arr){const fd=new FormData();fd.append('ajax_action','upload_media');fd.append('file',file);try{await fetch(location.href,{method:'POST',body:fd});}catch(e){}}location.reload();}
 </script>
+<script src="<?= ASSETS_URL ?>js/admin.js"></script>
 </body>
 </html>

@@ -597,5 +597,6 @@ $tab     = $_GET['tab'] ?? 'obecne';
 </div>
 
 <?php if (isset($_GET['phpinfo']) && $_SESSION['user_role'] === 'IT'): phpinfo(); endif; ?>
+<script src="<?= ASSETS_URL ?>js/admin.js"></script>
 </body>
 </html>
