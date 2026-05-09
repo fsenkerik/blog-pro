@@ -175,10 +175,6 @@ $catColors = ['#667eea','#764ba2','#10b981','#f59e0b','#ef4444','#3b82f6','#8b5c
         <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 16V6a2 2 0 0 1 2-2h8l6 6v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/><circle cx="9" cy="11" r="1.5"/><path d="m4 18 5-5 5 5 3-3 3 3"/></svg>
         Média <span class="count"><?= $totalMedia ?></span>
       </a>
-      <a href="#">
-        <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 7h10M7 12h10M7 17h7"/><rect x="3" y="4" width="18" height="16" rx="2"/></svg>
-        Kategorie <span class="count"><?= count($categories) ?></span>
-      </a>
     </nav>
   </div>
   <div>
@@ -478,6 +474,7 @@ $catColors = ['#667eea','#764ba2','#10b981','#f59e0b','#ef4444','#3b82f6','#8b5c
 </main>
 </div>
 
+<script src="<?= ASSETS_URL ?>js/admin.js"></script>
 <!-- Delete modal -->
 <div class="del-modal" id="delModal">
   <div class="del-modal-box">
@@ -500,7 +497,60 @@ function confirmDel(id, title) {
 function closeDel() { document.getElementById('delModal').classList.remove('on'); delId = null; }
 function execDel() { if (delId) window.location.href = 'delete_post.php?id=' + delId; }
 document.getElementById('delModal').addEventListener('click', e => { if (e.target === e.currentTarget) closeDel(); });
-document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDel(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeDel(); hideSearch(); } });
+
+// ── Search ──────────────────────────────────────────────────────────────────
+const searchInput = document.getElementById('topSearch');
+let searchDropdown = null, searchTimer = null;
+
+function getOrCreateDropdown() {
+  if (!searchDropdown) {
+    searchDropdown = document.createElement('div');
+    searchDropdown.id = 'searchDropdown';
+    searchDropdown.style.cssText = 'position:absolute;top:calc(100% + 6px);left:0;right:0;background:var(--card);border:1px solid var(--border);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.1);z-index:200;overflow:hidden;max-height:360px;overflow-y:auto';
+    searchInput.closest('.search').style.position = 'relative';
+    searchInput.closest('.search').appendChild(searchDropdown);
+  }
+  return searchDropdown;
+}
+
+function hideSearch() {
+  if (searchDropdown) { searchDropdown.remove(); searchDropdown = null; }
+}
+
+function renderSearchResults(results) {
+  const d = getOrCreateDropdown();
+  if (!results.length) {
+    d.innerHTML = '<div style="padding:14px 16px;font-size:13px;color:var(--muted)">Žádné výsledky.</div>';
+    return;
+  }
+  const stMap = {'published':'<span style="color:var(--ok);font-size:10.5px;font-weight:500;">● Publikováno</span>','draft':'<span style="color:var(--warn);font-size:10.5px;font-weight:500;">● Koncept</span>'};
+  d.innerHTML = results.map(r => `
+    <a href="edit_post.php?id=${r.id}" style="display:flex;align-items:center;gap:12px;padding:10px 14px;border-bottom:1px solid var(--line);text-decoration:none;transition:background .1s;" onmouseenter="this.style.background='var(--paper-2)'" onmouseleave="this.style.background=''">
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:13px;font-weight:500;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${r.title}</div>
+        <div style="font-size:11.5px;color:var(--muted);margin-top:2px;">${r.category_name} · ${r.created_at}</div>
+      </div>
+      <div>${stMap[r.status] || r.status}</div>
+    </a>`).join('');
+}
+
+searchInput.addEventListener('input', () => {
+  clearTimeout(searchTimer);
+  const q = searchInput.value.trim();
+  if (q.length < 2) { hideSearch(); return; }
+  searchTimer = setTimeout(async () => {
+    try {
+      const res = await fetch('search_posts.php?q=' + encodeURIComponent(q));
+      const data = await res.json();
+      if (data.success) renderSearchResults(data.results);
+    } catch(e) {}
+  }, 280);
+});
+
+document.addEventListener('click', e => {
+  if (searchDropdown && !searchDropdown.contains(e.target) && e.target !== searchInput) hideSearch();
+});
 </script>
 </body>
 </html>

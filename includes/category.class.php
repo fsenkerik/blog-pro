@@ -16,7 +16,13 @@ class Category {
      * Získat všechny kategorie
      */
     public function getAll() {
-        $this->db->query("SELECT * FROM categories ORDER BY name ASC");
+        $this->db->query(
+            "SELECT c.*, COUNT(p.id) as post_count
+             FROM categories c
+             LEFT JOIN posts p ON p.category_id = c.id
+             GROUP BY c.id
+             ORDER BY c.name ASC"
+        );
         return $this->db->fetchAll();
     }
     

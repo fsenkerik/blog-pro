@@ -103,25 +103,27 @@ class Post {
         }
         
         $this->db->query(
-            "INSERT INTO posts 
-            (title, slug, content, excerpt, featured_image, category_id, author_id, status,
-             meta_title, meta_description, meta_keywords, published_at, scheduled_at)
-            VALUES 
-            (:title, :slug, :content, :excerpt, :image, :category, :author, :status,
-             :meta_title, :meta_desc, :meta_keys, :published, :scheduled_at)"
+            "INSERT INTO posts
+            (title, slug, content, excerpt, featured_image, featured_image_alt, category_id, author_id, status,
+             meta_title, meta_description, meta_keywords, tags, published_at, scheduled_at)
+            VALUES
+            (:title, :slug, :content, :excerpt, :image, :image_alt, :category, :author, :status,
+             :meta_title, :meta_desc, :meta_keys, :tags, :published, :scheduled_at)"
         );
-        
+
         $this->db->bind(':title', $data['title']);
         $this->db->bind(':slug', $data['slug']);
         $this->db->bind(':content', $data['content']);
         $this->db->bind(':excerpt', $data['excerpt']);
         $this->db->bind(':image', $data['featured_image'] ?? null);
+        $this->db->bind(':image_alt', $data['featured_image_alt'] ?? null);
         $this->db->bind(':category', $data['category_id'] ?? null);
         $this->db->bind(':author', $data['author_id']);
         $this->db->bind(':status', $data['status'] ?? 'draft');
         $this->db->bind(':meta_title', $data['meta_title']);
         $this->db->bind(':meta_desc', $data['meta_description']);
         $this->db->bind(':meta_keys', $data['meta_keywords'] ?? '');
+        $this->db->bind(':tags', $data['tags'] ?? null);
         
         $publishedAt = ($data['status'] ?? 'draft') === 'published' 
             ? date('Y-m-d H:i:s') 
@@ -164,7 +166,7 @@ class Post {
             $data['excerpt'] = $this->generateExcerpt($data['content']);
         }
         
-        $sql = "UPDATE posts SET 
+        $sql = "UPDATE posts SET
                 title = :title,
                 slug = :slug,
                 content = :content,
@@ -173,8 +175,10 @@ class Post {
                 status = :status,
                 meta_title = :meta_title,
                 meta_description = :meta_desc,
-                meta_keywords = :meta_keys";
-        
+                meta_keywords = :meta_keys,
+                tags = :tags,
+                featured_image_alt = :image_alt";
+
         // Přidat featured_image pokud je
         if (isset($data['featured_image'])) {
             $sql .= ", featured_image = :image";
@@ -188,7 +192,7 @@ class Post {
             $current = $this->db->fetch();
             
             if (!$current['published_at']) {
-                $sql .= ", published_at = NOW()";
+                $sql .= ", published_at = :published_at";
             }
         }
         
@@ -205,11 +209,17 @@ class Post {
         $this->db->bind(':meta_title', $data['meta_title'] ?? $data['title']);
         $this->db->bind(':meta_desc', $data['meta_description'] ?? $data['excerpt']);
         $this->db->bind(':meta_keys', $data['meta_keywords'] ?? '');
-        
+        $this->db->bind(':tags', $data['tags'] ?? null);
+        $this->db->bind(':image_alt', $data['featured_image_alt'] ?? null);
+
         if (isset($data['featured_image'])) {
             $this->db->bind(':image', $data['featured_image']);
         }
-        
+
+        if (isset($data['status']) && $data['status'] === 'published' && strpos($sql, ':published_at') !== false) {
+            $this->db->bind(':published_at', date('Y-m-d H:i:s'));
+        }
+
         if ($this->db->execute()) {
                 // Zalogovat do audit_log
                 global $auditLog;
