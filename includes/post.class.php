@@ -102,13 +102,18 @@ class Post {
             $data['meta_description'] = $data['excerpt'];
         }
         
+        // Zahrnout nové sloupce pouze pokud mají hodnotu (ochrana proti chybějícím sloupcům v DB)
+        $xCols = $xVals = '';
+        if (!empty($data['tags']))               { $xCols .= ', tags';               $xVals .= ', :tags'; }
+        if (!empty($data['featured_image_alt'])) { $xCols .= ', featured_image_alt'; $xVals .= ', :image_alt'; }
+
         $this->db->query(
             "INSERT INTO posts
-            (title, slug, content, excerpt, featured_image, featured_image_alt, category_id, author_id, status,
-             meta_title, meta_description, meta_keywords, tags, published_at, scheduled_at)
+            (title, slug, content, excerpt, featured_image, category_id, author_id, status,
+             meta_title, meta_description, meta_keywords{$xCols}, published_at, scheduled_at)
             VALUES
-            (:title, :slug, :content, :excerpt, :image, :image_alt, :category, :author, :status,
-             :meta_title, :meta_desc, :meta_keys, :tags, :published, :scheduled_at)"
+            (:title, :slug, :content, :excerpt, :image, :category, :author, :status,
+             :meta_title, :meta_desc, :meta_keys{$xVals}, :published, :scheduled_at)"
         );
 
         $this->db->bind(':title', $data['title']);
@@ -116,14 +121,14 @@ class Post {
         $this->db->bind(':content', $data['content']);
         $this->db->bind(':excerpt', $data['excerpt']);
         $this->db->bind(':image', $data['featured_image'] ?? null);
-        $this->db->bind(':image_alt', $data['featured_image_alt'] ?? null);
         $this->db->bind(':category', $data['category_id'] ?? null);
         $this->db->bind(':author', $data['author_id']);
         $this->db->bind(':status', $data['status'] ?? 'draft');
         $this->db->bind(':meta_title', $data['meta_title']);
         $this->db->bind(':meta_desc', $data['meta_description']);
         $this->db->bind(':meta_keys', $data['meta_keywords'] ?? '');
-        $this->db->bind(':tags', $data['tags'] ?? null);
+        if (!empty($data['tags']))               $this->db->bind(':tags', $data['tags']);
+        if (!empty($data['featured_image_alt'])) $this->db->bind(':image_alt', $data['featured_image_alt']);
         
         $publishedAt = ($data['status'] ?? 'draft') === 'published' 
             ? date('Y-m-d H:i:s') 
@@ -175,11 +180,12 @@ class Post {
                 status = :status,
                 meta_title = :meta_title,
                 meta_description = :meta_desc,
-                meta_keywords = :meta_keys,
-                tags = :tags,
-                featured_image_alt = :image_alt";
+                meta_keywords = :meta_keys";
 
-        // Přidat featured_image pokud je
+        // Zahrnout nové sloupce pouze pokud DB sloupce existují (bezpečný fallback)
+        if (array_key_exists('tags', $data))               $sql .= ", tags = :tags";
+        if (array_key_exists('featured_image_alt', $data)) $sql .= ", featured_image_alt = :image_alt";
+
         if (isset($data['featured_image'])) {
             $sql .= ", featured_image = :image";
         }
@@ -209,8 +215,8 @@ class Post {
         $this->db->bind(':meta_title', $data['meta_title'] ?? $data['title']);
         $this->db->bind(':meta_desc', $data['meta_description'] ?? $data['excerpt']);
         $this->db->bind(':meta_keys', $data['meta_keywords'] ?? '');
-        $this->db->bind(':tags', $data['tags'] ?? null);
-        $this->db->bind(':image_alt', $data['featured_image_alt'] ?? null);
+        if (array_key_exists('tags', $data))               $this->db->bind(':tags', $data['tags']);
+        if (array_key_exists('featured_image_alt', $data)) $this->db->bind(':image_alt', $data['featured_image_alt']);
 
         if (isset($data['featured_image'])) {
             $this->db->bind(':image', $data['featured_image']);
