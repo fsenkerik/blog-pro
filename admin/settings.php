@@ -518,7 +518,7 @@ $tab     = $_GET['tab'] ?? 'obecne';
                     <div class="backup-name"><?= htmlspecialchars($bk['filename'] ?? $bk['file_path'] ?? 'záloha-' . $bk['id']) ?></div>
                     <div class="backup-meta"><?= date('j.n.Y H:i', strtotime($bk['created_at'])) ?> &middot; <?= htmlspecialchars($bk['created_by_name'] ?? 'Systém') ?> &middot; <?= htmlspecialchars($bk['type'] ?? 'db') ?></div>
                   </div>
-                  <div class="backup-size"><?= isset($bk['file_size']) ? round($bk['file_size']/1024/1024, 1) . ' MB' : '&mdash;' ?></div>
+                  <div class="backup-size"><?= isset($bk['size_bytes']) ? round($bk['size_bytes']/1024/1024, 1) . ' MB' : '&mdash;' ?></div>
                   <div style="display:flex;gap:6px">
                     <form method="POST" style="display:inline" onsubmit="return confirm('Obnovit tuto zálohu? Aktuální data budou nahrazena.')">
                       <input type="hidden" name="action" value="restore_backup">

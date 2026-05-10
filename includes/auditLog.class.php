@@ -39,15 +39,18 @@ class AuditLog {
                 FROM audit_log a
                 LEFT JOIN users u ON a.user_id = u.id
                 WHERE 1=1";
+        $params = [];
         
         // Filtr: uživatel
         if (!empty($filters['user_id'])) {
-            $sql .= " AND a.user_id = " . (int)$filters['user_id'];
+            $sql .= " AND a.user_id = :user_id";
+            $params[':user_id'] = (int)$filters['user_id'];
         }
         
         // Filtr: akce
         if (!empty($filters['action'])) {
-            $sql .= " AND a.action = '" . $this->db->escape($filters['action']) . "'";
+            $sql .= " AND a.action = :action";
+            $params[':action'] = $filters['action'];
         }
         
         // Filtr: období
@@ -67,13 +70,18 @@ class AuditLog {
         
         // Filtr: vyhledávání
         if (!empty($filters['search'])) {
-            $search = $this->db->escape($filters['search']);
-            $sql .= " AND (a.entity_name LIKE '%" . $search . "%' OR u.username LIKE '%" . $search . "%')";
+            $sql .= " AND (a.entity_name LIKE :search_entity OR u.username LIKE :search_user)";
+            $search = '%' . str_replace(['%', '_'], ['\%', '\_'], $filters['search']) . '%';
+            $params[':search_entity'] = $search;
+            $params[':search_user'] = $search;
         }
         
         $sql .= " ORDER BY a.created_at DESC LIMIT " . (int)$limit;
         
         $this->db->query($sql);
+        foreach ($params as $key => $value) {
+            $this->db->bind($key, $value);
+        }
         
         return $this->db->fetchAll();
     }

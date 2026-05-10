@@ -9,7 +9,8 @@ CREATE TABLE IF NOT EXISTS users (
     username VARCHAR(50) UNIQUE NOT NULL,
     password VARCHAR(255) NOT NULL,
     email VARCHAR(100),
-    role ENUM('admin', 'editor') DEFAULT 'editor',
+    role ENUM('admin', 'editor', 'IT') DEFAULT 'editor',
+    monitoring_access TINYINT(1) NOT NULL DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     last_login TIMESTAMP NULL,
     INDEX idx_username (username)
@@ -33,7 +34,7 @@ CREATE TABLE IF NOT EXISTS posts (
     featured_image VARCHAR(255),
     category_id INT,
     author_id INT NOT NULL,
-    status ENUM('draft', 'published') DEFAULT 'draft',
+    status ENUM('draft', 'published', 'scheduled') DEFAULT 'draft',
     menu_order INT DEFAULT 0,
     meta_title VARCHAR(255),
     meta_description TEXT,
@@ -55,7 +56,7 @@ CREATE TABLE IF NOT EXISTS posts (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS sessions (
-    id INT AUTO_INCREMENT PRIMARY KEY,
+    id VARCHAR(128) PRIMARY KEY,
     user_id INT NOT NULL,
     ip_address VARCHAR(45),
     user_agent VARCHAR(255),
@@ -100,10 +101,26 @@ CREATE TABLE IF NOT EXISTS backups (
     filename VARCHAR(255) NOT NULL,
     filepath VARCHAR(255) NOT NULL,
     size_bytes BIGINT,
+    type ENUM('database', 'full') DEFAULT 'database',
     created_by INT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    last_restored_at DATETIME DEFAULT NULL,
     FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
-    INDEX idx_created (created_at)
+    INDEX idx_created (created_at),
+    INDEX idx_type (type)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS media (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    filename VARCHAR(255) NOT NULL,
+    original_name VARCHAR(255) NOT NULL,
+    path VARCHAR(500) NOT NULL,
+    mime_type VARCHAR(100) DEFAULT NULL,
+    size INT DEFAULT NULL,
+    width INT DEFAULT NULL,
+    height INT DEFAULT NULL,
+    uploaded_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    KEY idx_filename (filename)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 INSERT IGNORE INTO categories (name, slug, description) VALUES

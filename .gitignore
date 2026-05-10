@@ -1,1 +1,6 @@
 error.log
+.env
+uploads/*
+!uploads/.gitkeep
+backups/*
+!backups/.gitkeep

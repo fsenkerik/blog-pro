@@ -92,9 +92,17 @@ require_once INCLUDES_PATH . 'media.class.php';
 
 $db = new Database();
 
-// Auto-migrate: ensure media table exists and posts have new columns
-if (!isset($_SESSION['db_migrated_v4'])) {
+// Auto-migrate lightweight schema drift from older installs.
+if (!isset($_SESSION['db_migrated_v5'])) {
     try {
+        $columnExists = function (string $table, string $column) use ($db): bool {
+            $db->query("SELECT COUNT(*) as c FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=:table AND COLUMN_NAME=:column");
+            $db->bind(':table', $table);
+            $db->bind(':column', $column);
+            $row = $db->fetch();
+            return $row && (int)$row['c'] > 0;
+        };
+
         // Create media table if it doesn't exist
         $db->query("CREATE TABLE IF NOT EXISTS `media` (
             `id` int(11) NOT NULL AUTO_INCREMENT,
@@ -111,23 +119,38 @@ if (!isset($_SESSION['db_migrated_v4'])) {
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
         $db->execute();
 
-        // Add posts columns if missing
-        $db->query("SELECT COUNT(*) as c FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='posts' AND COLUMN_NAME='tags'");
-        $r = $db->fetch();
-        if (!$r || (int)$r['c'] === 0) {
+        if (!$columnExists('posts', 'tags')) {
             $db->query("ALTER TABLE posts ADD COLUMN tags VARCHAR(500) DEFAULT NULL AFTER meta_keywords");
             $db->execute();
         }
-        $db->query("SELECT COUNT(*) as c FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME='posts' AND COLUMN_NAME='featured_image_alt'");
-        $r = $db->fetch();
-        if (!$r || (int)$r['c'] === 0) {
+        if (!$columnExists('posts', 'featured_image_alt')) {
             $db->query("ALTER TABLE posts ADD COLUMN featured_image_alt VARCHAR(255) DEFAULT NULL AFTER featured_image");
             $db->execute();
         }
+        if (!$columnExists('users', 'monitoring_access')) {
+            $db->query("ALTER TABLE users ADD COLUMN monitoring_access TINYINT(1) NOT NULL DEFAULT 0 AFTER role");
+            $db->execute();
+        }
+        if ($columnExists('users', 'role')) {
+            $db->query("ALTER TABLE users MODIFY role ENUM('admin','editor','IT') DEFAULT 'editor'");
+            $db->execute();
+        }
+        if ($columnExists('sessions', 'id')) {
+            $db->query("ALTER TABLE sessions MODIFY id VARCHAR(128) NOT NULL");
+            $db->execute();
+        }
+        if (!$columnExists('backups', 'type')) {
+            $db->query("ALTER TABLE backups ADD COLUMN type ENUM('database','full') DEFAULT 'database' AFTER size_bytes");
+            $db->execute();
+        }
+        if (!$columnExists('backups', 'last_restored_at')) {
+            $db->query("ALTER TABLE backups ADD COLUMN last_restored_at DATETIME DEFAULT NULL AFTER created_at");
+            $db->execute();
+        }
+        $_SESSION['db_migrated_v5'] = true;
     } catch (\Throwable $e) {
-        error_log(date('Y-m-d H:i:s') . " - Migration v4: " . $e->getMessage() . "\n", 3, ROOT_PATH . 'error.log');
+        error_log(date('Y-m-d H:i:s') . " - Migration v5: " . $e->getMessage() . "\n", 3, ROOT_PATH . 'error.log');
     }
-    $_SESSION['db_migrated_v4'] = true;
 }
 
 require_once INCLUDES_PATH . 'helpers.php';
@@ -143,7 +166,7 @@ if (isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true) {
 }
 
 if (isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true) {
-    $timeout = 5 * 60;
+    $timeout = SESSION_LIFETIME;
 
     if (isset($_SESSION['last_activity'])) {
         $elapsed = time() - $_SESSION['last_activity'];

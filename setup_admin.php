@@ -1,4 +1,10 @@
 <?php
+// One-time setup. Enable explicitly with ALLOW_SETUP_ADMIN=1.
+if (getenv('ALLOW_SETUP_ADMIN') !== '1') {
+    http_response_code(403);
+    echo 'Setup is disabled. Set ALLOW_SETUP_ADMIN=1 only for the one-time installation run.';
+    exit;
+}
 // JEDNORÁZOVÝ SETUP - PO POUZITI SMAZ TENTO SOUBOR
 
 $host = getenv('DB_HOST') ?: 'localhost';
@@ -46,11 +52,13 @@ try {
             featured_image VARCHAR(255),
             category_id INT,
             author_id INT NOT NULL,
-            status ENUM('draft','published') DEFAULT 'draft',
+            status ENUM('draft','published','scheduled') DEFAULT 'draft',
             menu_order INT DEFAULT 0,
             meta_title VARCHAR(255),
             meta_description TEXT,
             meta_keywords VARCHAR(255),
+            tags VARCHAR(500) DEFAULT NULL,
+            featured_image_alt VARCHAR(255) DEFAULT NULL,
             published_at TIMESTAMP NULL,
             scheduled_at TIMESTAMP NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -103,9 +111,24 @@ try {
             filename VARCHAR(255) NOT NULL,
             filepath VARCHAR(255) NOT NULL,
             size_bytes BIGINT,
+            type ENUM('database','full') DEFAULT 'database',
             created_by INT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            last_restored_at DATETIME DEFAULT NULL,
             FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
+
+        "CREATE TABLE IF NOT EXISTS media (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            filename VARCHAR(255) NOT NULL,
+            original_name VARCHAR(255) NOT NULL,
+            path VARCHAR(500) NOT NULL,
+            mime_type VARCHAR(100) DEFAULT NULL,
+            size INT DEFAULT NULL,
+            width INT DEFAULT NULL,
+            height INT DEFAULT NULL,
+            uploaded_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            KEY idx_filename (filename)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
     ];
 
