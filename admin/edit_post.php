@@ -31,7 +31,7 @@ if (isset($_POST['ajax_action'])) {
         if (!$uploadResult['success']) {
             echo json_encode(['success'=>false,'message'=>$uploadResult['message']??'Chyba uploadu']); exit;
         }
-        echo json_encode(['success'=>true,'path'=>$uploadResult['path'],'url'=>BASE_URL.ltrim($uploadResult['path'],'/')]);
+        echo json_encode(['success'=>true,'path'=>$uploadResult['path'],'url'=>rtrim(BASE_URL, '/').'/'.ltrim($uploadResult['path'],'/')]);
         exit;
     }
     if ($_POST['ajax_action'] === 'add_category') {
@@ -89,9 +89,14 @@ if (isPost() && !isset($_POST['ajax_action'])) {
             'tags' => post('tags') ?: null,
             'featured_image_alt' => post('featured_image_alt') ?: null,
         ];
-        if (post('featured_image_id')) {
-            $mediaItem = $media->getById(post('featured_image_id'));
-            if ($mediaItem) $data['featured_image'] = $mediaItem['path'];
+        $featuredImage = trim(post('featured_image_id') ?? '');
+        if ($featuredImage !== '') {
+            if (ctype_digit($featuredImage)) {
+                $mediaItem = $media->getById($featuredImage);
+                if ($mediaItem) $data['featured_image'] = $mediaItem['path'];
+            } else {
+                $data['featured_image'] = $featuredImage;
+            }
         } else {
             $data['featured_image'] = null;
         }
@@ -292,7 +297,7 @@ body.dz-dragging .editor.dz-hover,body.dz-dragging .sp.dz-hover{box-shadow:0 0 0
       <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?? '' ?>">
       <input type="hidden" name="status" id="statusInput" value="<?= e($currentStatus) ?>">
       <input type="hidden" name="category_id" id="catInput" value="<?= e($currentCatId) ?>">
-      <input type="hidden" name="featured_image_id" id="featuredImageId" value="">
+      <input type="hidden" name="featured_image_id" id="featuredImageId" value="<?= e($currentFeatured) ?>">
       <textarea name="content" id="contentInput" style="display:none"><?= e($currentContent) ?></textarea>
       <input type="hidden" name="meta_title" id="metaTitleInput" value="<?= e($currentMetaTitle) ?>">
       <input type="hidden" name="meta_description" id="metaDescInput" value="<?= e($currentMetaDesc) ?>">
@@ -462,7 +467,7 @@ document.getElementById('saveBtn')?.addEventListener('click',()=>submitForm(docu
 document.getElementById('topSave')?.addEventListener('click',()=>submitForm(document.getElementById('statusInput').value));
 document.getElementById('saveDraftBtn')?.addEventListener('click',()=>submitForm('draft'));
 document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key==='s'){e.preventDefault();submitForm(document.getElementById('statusInput').value);}});
-function removeFeatured(){const p=document.getElementById('featPreview');if(p)p.remove();document.getElementById('featuredImageId').value='';const dz=document.createElement('div');dz.className='dropzone';dz.id='dropzone';dz.onclick=()=>document.getElementById('featuredInput').click();dz.innerHTML='<div class="dz-ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div><div class="dz-text">Přetáhněte obrázek příspěvku</div><div class="dz-sub">JPG, PNG nebo WebP · max. 8 MB</div><button type="button" class="dz-btn primary">Vybrat obrázek</button>';document.querySelector('.sp-body')?.prepend(dz);markChanged();}
+function removeFeatured(){const p=document.getElementById('featPreview');const body=p?.closest('.sp-body')||document.getElementById('featuredInput')?.closest('.sp-body');if(p)p.remove();document.getElementById('featuredImageId').value='';const dz=document.createElement('div');dz.className='dropzone';dz.id='dropzone';dz.onclick=()=>document.getElementById('featuredInput').click();dz.innerHTML='<div class="dz-ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div><div class="dz-text">Přetáhněte obrázek příspěvku</div><div class="dz-sub">JPG, PNG nebo WebP · max. 8 MB</div><button type="button" class="dz-btn primary">Vybrat obrázek</button>';body?.prepend(dz);markChanged();}
 // ── Category filter + inline edit (edit_post) ──────────────────────────────
 function filterCatsE(q){ document.querySelectorAll('#catList .cat-item').forEach(el=>{ el.style.display=(el.dataset.name||'').toLowerCase().includes(q.toLowerCase())?'':'none'; }); }
 document.querySelectorAll('#catList .cat-item').forEach(el=>{
@@ -510,8 +515,54 @@ async function uploadFeaturedImage(file) {
     const data = await r.json();
     if (data.success) {
       showFeaturedPreview(data.url, data.path);
+      const featuredInput = document.getElementById('featuredInput');
+      if (featuredInput) featuredInput.value = '';
     }
   } catch(e) {}
+}
+async function uploadArticleImageEdit(file, range) {
+  if (!file || !file.type.startsWith('image/')) return;
+  const fd = new FormData();
+  fd.append('ajax_action','upload_image');
+  fd.append('image', file);
+  try {
+    const r = await fetch(location.href,{method:'POST',body:fd});
+    const data = await r.json();
+    if (data.success) {
+      insertImageIntoEditorEdit(data.url, range);
+      updateStats();
+      markChanged();
+    }
+  } catch(e) {}
+}
+function escapeAttrEdit(value) {
+  return String(value).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[ch]));
+}
+function insertImageIntoEditorEdit(url, range) {
+  const ed = document.getElementById('edContent');
+  ed.focus();
+  const imgHtml = `<img src="${escapeAttrEdit(url)}" alt="" style="max-width:100%;border-radius:6px;margin:8px 0;"><br>`;
+  if (range) {
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+  }
+  document.execCommand('insertHTML', false, imgHtml);
+}
+function getDropRangeEdit(e) {
+  if (document.caretRangeFromPoint) {
+    return document.caretRangeFromPoint(e.clientX, e.clientY);
+  }
+  if (document.caretPositionFromPoint) {
+    const pos = document.caretPositionFromPoint(e.clientX, e.clientY);
+    if (pos) {
+      const range = document.createRange();
+      range.setStart(pos.offsetNode, pos.offset);
+      range.collapse(true);
+      return range;
+    }
+  }
+  return null;
 }
 function showFeaturedPreview(url, path) {
   let p = document.getElementById('featPreview');
@@ -520,7 +571,8 @@ function showFeaturedPreview(url, path) {
     p = document.createElement('div');
     p.className='feat-preview'; p.id='featPreview';
     p.innerHTML='<img src="" alt=""><button type="button" class="feat-remove" onclick="removeFeatured()"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>';
-    dz?.replaceWith(p);
+    if (dz) dz.replaceWith(p);
+    else document.getElementById('featuredInput')?.before(p);
   }
   p.querySelector('img').src = url;
   if (path) document.getElementById('featuredImageId').value = path;
@@ -533,7 +585,9 @@ document.getElementById('featuredInput')?.addEventListener('change',function(){
 (function(){
   let dragCounter = 0;
   const editorEl = document.querySelector('.editor');
+  const editorBody = document.getElementById('edContent');
   const getImageSp = () => (document.getElementById('dropzone') || document.getElementById('featPreview'))?.closest('.sp');
+  const isFileDrag = e => e.dataTransfer && Array.from(e.dataTransfer.types || []).includes('Files');
 
   function showBlur() {
     const sp = getImageSp();
@@ -547,40 +601,49 @@ document.getElementById('featuredInput')?.addEventListener('change',function(){
   }
 
   document.addEventListener('dragenter', e => {
-    if(e.dataTransfer.types.includes('Files')){ dragCounter++; if(dragCounter===1) showBlur(); }
+    if(isFileDrag(e)){ dragCounter++; if(dragCounter===1) showBlur(); }
   });
   document.addEventListener('dragleave', e => {
     dragCounter--; if(dragCounter<=0){dragCounter=0; hideBlur();}
   });
-  document.addEventListener('dragover', e => e.preventDefault());
+  document.addEventListener('dragover', e => { if (isFileDrag(e)) e.preventDefault(); });
   document.addEventListener('drop', e => {
-    e.preventDefault(); dragCounter=0; hideBlur();
-    const file=e.dataTransfer.files[0];
-    if(file&&file.type.startsWith('image/')) uploadFeaturedImage(file);
+    if (!isFileDrag(e)) return;
+    e.preventDefault();
+    dragCounter=0;
+    hideBlur();
   });
+  document.addEventListener('dragend', () => { dragCounter=0; hideBlur(); });
+  window.addEventListener('blur', () => { dragCounter=0; hideBlur(); });
 
   // Hover highlight on editor
-  if (editorEl) {
-    editorEl.addEventListener('dragover', e => { e.preventDefault(); editorEl.classList.add('dz-hover'); });
-    editorEl.addEventListener('dragleave', () => editorEl.classList.remove('dz-hover'));
-    editorEl.addEventListener('drop', e => {
-      e.preventDefault(); e.stopPropagation(); editorEl.classList.remove('dz-hover');
-      const f=e.dataTransfer.files[0]; if(f&&f.type.startsWith('image/')) uploadFeaturedImage(f);
+  if (editorBody) {
+    editorBody.addEventListener('dragover', e => { if (!isFileDrag(e)) return; e.preventDefault(); editorEl?.classList.add('dz-hover'); });
+    editorBody.addEventListener('dragleave', () => editorEl?.classList.remove('dz-hover'));
+    editorBody.addEventListener('drop', e => {
+      if (!isFileDrag(e)) return;
+      e.preventDefault(); e.stopPropagation(); dragCounter=0; hideBlur();
+      const f=e.dataTransfer.files[0]; if(f&&f.type.startsWith('image/')) uploadArticleImageEdit(f, getDropRangeEdit(e));
     });
   }
 
   // Hover highlight on featured image panel
   const imageSp = getImageSp();
   if (imageSp) {
-    imageSp.addEventListener('dragover', e => { e.preventDefault(); imageSp.classList.add('dz-hover'); });
+    imageSp.addEventListener('dragover', e => { if (!isFileDrag(e)) return; e.preventDefault(); imageSp.classList.add('dz-hover'); });
     imageSp.addEventListener('dragleave', () => imageSp.classList.remove('dz-hover'));
+    imageSp.addEventListener('drop', e => {
+      if (!isFileDrag(e)) return;
+      e.preventDefault(); e.stopPropagation(); dragCounter=0; hideBlur();
+      const f=e.dataTransfer.files[0]; if(f&&f.type.startsWith('image/')) uploadFeaturedImage(f);
+    });
   }
 
   const dz = document.getElementById('dropzone');
   if(dz){
-    dz.addEventListener('dragover', e=>{e.preventDefault();dz.style.borderColor='var(--accent)';});
+    dz.addEventListener('dragover', e=>{if (!isFileDrag(e)) return;e.preventDefault();dz.style.borderColor='var(--accent)';});
     dz.addEventListener('dragleave', ()=>{dz.style.borderColor='';});
-    dz.addEventListener('drop', e=>{e.preventDefault();e.stopPropagation();dz.style.borderColor='';const f=e.dataTransfer.files[0];if(f)uploadFeaturedImage(f);});
+    dz.addEventListener('drop', e=>{if (!isFileDrag(e)) return;e.preventDefault();e.stopPropagation();dragCounter=0;hideBlur();dz.style.borderColor='';const f=e.dataTransfer.files[0];if(f)uploadFeaturedImage(f);});
   }
 })();
 </script>
