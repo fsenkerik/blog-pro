@@ -49,8 +49,8 @@ class Upload {
         
         // Agresivní optimalizace
         if ($optimize) {
-            $optimized = $this->aggressiveOptimize($filepath);
-            if (!$optimized) {
+            $optimizedPath = $this->aggressiveOptimize($filepath);
+            if (!$optimizedPath) {
                 // Pokud optimalizace selhala, smazat soubor
                 @unlink($filepath);
                 return [
@@ -58,6 +58,8 @@ class Upload {
                     'message' => 'Nepodařilo se optimalizovat obrázek'
                 ];
             }
+            $filepath = $optimizedPath;
+            $filename = basename($filepath);
         }
         
         $filesize = filesize($filepath);
@@ -266,12 +268,17 @@ class Upload {
             
             // Změnit příponu na .jpg pokud není
             $ext = strtolower(pathinfo($filepath, PATHINFO_EXTENSION));
+            $originalPath = null;
             if ($ext !== 'jpg' && $ext !== 'jpeg') {
+                $originalPath = $filepath;
                 $newPath = preg_replace('/\.[^.]+$/', '.jpg', $filepath);
                 $filepath = $newPath;
             }
             
             imagejpeg($resized, $filepath, $quality);
+            if ($originalPath && $originalPath !== $filepath) {
+                @unlink($originalPath);
+            }
             $saved = true;
         }
         
@@ -284,7 +291,7 @@ class Upload {
             $this->secondPassCompression($filepath);
         }
         
-        return $saved;
+        return $saved ? $filepath : false;
     }
     
     /**

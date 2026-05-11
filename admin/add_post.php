@@ -23,17 +23,24 @@ if (isset($_POST['ajax_action'])) {
         if ($_POST['ajax_action'] === 'autosave_draft') {
             $title = trim($_POST['title'] ?? '');
             $content = $_POST['content'] ?? '';
-            if (empty($title) && empty($content)) { echo json_encode(['success'=>false,'message'=>'Prázdný obsah']); exit; }
+            $featuredImage = trim($_POST['featured_image_from_gallery'] ?? '');
+            if (empty($title) && empty($content) && empty($featuredImage)) { echo json_encode(['success'=>false,'message'=>'Prázdný obsah']); exit; }
             $data = [
                 'title' => $title ?: 'Bez názvu',
                 'content' => $content,
+                'excerpt' => $_POST['excerpt'] ?? '',
                 'category_id' => !empty($_POST['category_id']) ? intval($_POST['category_id']) : null,
                 'author_id' => $_SESSION['user_id'],
                 'status' => 'draft',
                 'meta_title' => $_POST['meta_title'] ?? '',
                 'meta_description' => $_POST['meta_description'] ?? '',
-                'meta_keywords' => $_POST['meta_keywords'] ?? ''
+                'meta_keywords' => $_POST['meta_keywords'] ?? '',
+                'tags' => $_POST['tags'] ?? null,
+                'featured_image_alt' => $_POST['featured_image_alt'] ?? null
             ];
+            if ($featuredImage !== '') {
+                $data['featured_image'] = $featuredImage;
+            }
             $draftId = !empty($_POST['draft_id']) ? intval($_POST['draft_id']) : null;
             if ($draftId) {
                 $result = $post->update($draftId, $data);
@@ -77,7 +84,7 @@ if (isset($_POST['ajax_action'])) {
             echo json_encode([
                 'success' => true,
                 'path'    => $uploadResult['path'],
-                'url'     => BASE_URL . ltrim($uploadResult['path'], '/'),
+                'url'     => rtrim(BASE_URL, '/') . '/' . ltrim($uploadResult['path'], '/'),
             ]);
             exit;
         }
@@ -484,7 +491,7 @@ function selectCat(el){document.querySelectorAll('.cat-item').forEach(i=>i.class
 const pill1=document.getElementById('savePill'),pill2=document.getElementById('savePill2'),txt1=document.getElementById('saveText'),txt2=document.getElementById('saveText2');
 let saveTimer=null,draftId='',isSaving=false;
 function markUnsaved(){pill1.classList.remove('saved');pill2.classList.remove('saved');txt1.textContent='Neuloženo';txt2.textContent='Neuloženo';clearTimeout(saveTimer);saveTimer=setTimeout(autoSave,3000);}
-async function autoSave(){if(isSaving)return;isSaving=true;syncHiddenInputs();const fd=new FormData();fd.append('ajax_action','autosave_draft');fd.append('title',titleEl.value);fd.append('content',edContent.innerHTML);fd.append('category_id',selectedCatId);if(draftId)fd.append('draft_id',draftId);try{const r=await fetch(location.href,{method:'POST',body:fd});const data=await r.json();if(data.success){draftId=data.draft_id;document.getElementById('draftId').value=draftId;const t=new Date().toLocaleTimeString('cs-CZ',{hour:'2-digit',minute:'2-digit'});pill1.classList.add('saved');pill2.classList.add('saved');txt1.textContent='Uloženo · '+t;txt2.textContent='Koncept uložen · '+t;}}catch(e){}finally{isSaving=false;}}
+async function autoSave(){if(isSaving)return;isSaving=true;syncHiddenInputs();const fd=new FormData();fd.append('ajax_action','autosave_draft');fd.append('title',titleEl.value);fd.append('content',edContent.innerHTML);fd.append('category_id',selectedCatId);fd.append('meta_title',document.getElementById('metaTitleInput').value);fd.append('meta_description',document.getElementById('metaDescInput').value);fd.append('meta_keywords',document.getElementById('metaKwInput').value);fd.append('excerpt',document.getElementById('excerptInput').value);fd.append('tags',document.getElementById('tagsInput').value);fd.append('featured_image_alt',document.getElementById('featAltInput').value);fd.append('featured_image_from_gallery',document.getElementById('galleryImage')?.value||'');if(draftId)fd.append('draft_id',draftId);try{const r=await fetch(location.href,{method:'POST',body:fd});const data=await r.json();if(data.success){draftId=data.draft_id;document.getElementById('draftId').value=draftId;const t=new Date().toLocaleTimeString('cs-CZ',{hour:'2-digit',minute:'2-digit'});pill1.classList.add('saved');pill2.classList.add('saved');txt1.textContent='Uloženo · '+t;txt2.textContent='Koncept uložen · '+t;}}catch(e){}finally{isSaving=false;}}
 function syncHiddenInputs(){document.getElementById('contentInput').value=edContent.innerHTML;document.getElementById('metaTitleInput').value=seoTitleEl?.value||'';document.getElementById('metaDescInput').value=seoDescEl?.value||'';document.getElementById('metaKwInput').value=document.getElementById('seoKeywords')?.value||'';document.getElementById('excerptInput').value=excerptEl?.value||'';document.getElementById('tagsInput').value=getTags().join(',');}
 // ── Tags ─────────────────────────────────────────────────────────────────────
 let tags = [];
@@ -569,11 +576,61 @@ async function uploadFeaturedImage(file) {
     if (data.success) {
       showFeaturedPreview(data.url);
       document.getElementById('galleryImage').value = data.path;
+      const featuredInput = document.getElementById('featuredInput');
+      if (featuredInput) featuredInput.value = '';
+      markUnsaved();
+      autoSave();
     }
   } catch(e) {}
 }
+async function uploadArticleImage(file, range) {
+  if (!file || !file.type.startsWith('image/')) return;
+  const fd = new FormData();
+  fd.append('ajax_action','upload_image');
+  fd.append('image', file);
+  try {
+    const r = await fetch(location.href,{method:'POST',body:fd});
+    const data = await r.json();
+    if (data.success) {
+      insertImageIntoEditor(data.url, range);
+      updateStats();
+      markUnsaved();
+      autoSave();
+    }
+  } catch(e) {}
+}
+function escapeAttr(value) {
+  return String(value).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[ch]));
+}
+function insertImageIntoEditor(url, range) {
+  const ed = document.getElementById('edContent');
+  ed.focus();
+  const imgHtml = `<img src="${escapeAttr(url)}" alt="" style="max-width:100%;border-radius:6px;margin:8px 0;"><br>`;
+  if (range) {
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+  }
+  document.execCommand('insertHTML', false, imgHtml);
+}
+function getDropRange(e) {
+  if (document.caretRangeFromPoint) {
+    return document.caretRangeFromPoint(e.clientX, e.clientY);
+  }
+  if (document.caretPositionFromPoint) {
+    const pos = document.caretPositionFromPoint(e.clientX, e.clientY);
+    if (pos) {
+      const range = document.createRange();
+      range.setStart(pos.offsetNode, pos.offset);
+      range.collapse(true);
+      return range;
+    }
+  }
+  return null;
+}
 function showFeaturedPreview(url) {
-  const sp = document.getElementById('dropzone')?.closest('.sp-body') || document.getElementById('dropzone')?.parentNode;
+  const target = document.getElementById('featPreviewAdd') || document.getElementById('dropzone');
+  const sp = target?.closest('.sp-body') || target?.parentNode;
   const existing = document.getElementById('featPreviewAdd');
   if (existing) existing.remove();
   const dz = document.getElementById('dropzone');
@@ -584,7 +641,8 @@ function showFeaturedPreview(url) {
     <button type="button" onclick="removeFeaturedAdd()" style="position:absolute;top:8px;right:8px;width:26px;height:26px;border-radius:50%;background:rgba(0,0,0,.5);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;border:none;">
       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
     </button>`;
-  dz.replaceWith(wrap);
+  if (dz) dz.replaceWith(wrap);
+  else if (sp) sp.prepend(wrap);
 }
 function removeFeaturedAdd() {
   const wrap = document.getElementById('featPreviewAdd');
@@ -604,7 +662,9 @@ document.getElementById('featuredInput')?.addEventListener('change',function(){
 (function(){
   let dragCounter = 0;
   const editorEl = document.querySelector('.editor');
+  const editorBody = document.getElementById('edContent');
   const getImageSp = () => (document.getElementById('dropzone') || document.getElementById('featPreviewAdd'))?.closest('.sp');
+  const isFileDrag = e => e.dataTransfer && Array.from(e.dataTransfer.types || []).includes('Files');
 
   function showBlur() {
     const sp = getImageSp();
@@ -618,40 +678,50 @@ document.getElementById('featuredInput')?.addEventListener('change',function(){
   }
 
   document.addEventListener('dragenter', e => {
-    if (e.dataTransfer.types.includes('Files')) { dragCounter++; if(dragCounter===1) showBlur(); }
+    if (isFileDrag(e)) { dragCounter++; if(dragCounter===1) showBlur(); }
   });
   document.addEventListener('dragleave', e => {
     dragCounter--; if (dragCounter <= 0) { dragCounter=0; hideBlur(); }
   });
-  document.addEventListener('dragover', e => e.preventDefault());
+  document.addEventListener('dragover', e => { if (isFileDrag(e)) e.preventDefault(); });
   document.addEventListener('drop', e => {
-    e.preventDefault(); dragCounter=0; hideBlur();
-    const file = e.dataTransfer.files[0];
-    if (file && file.type.startsWith('image/')) uploadFeaturedImage(file);
+    if (!isFileDrag(e)) return;
+    e.preventDefault();
+    dragCounter=0;
+    hideBlur();
   });
+  document.addEventListener('dragend', () => { dragCounter=0; hideBlur(); });
+  window.addEventListener('blur', () => { dragCounter=0; hideBlur(); });
 
   // Hover highlight on editor
-  if (editorEl) {
-    editorEl.addEventListener('dragover', e => { e.preventDefault(); editorEl.classList.add('dz-hover'); });
-    editorEl.addEventListener('dragleave', () => editorEl.classList.remove('dz-hover'));
-    editorEl.addEventListener('drop', e => {
-      e.preventDefault(); e.stopPropagation(); editorEl.classList.remove('dz-hover');
-      const f = e.dataTransfer.files[0]; if(f && f.type.startsWith('image/')) uploadFeaturedImage(f);
+  if (editorBody) {
+    editorBody.addEventListener('dragover', e => { if (!isFileDrag(e)) return; e.preventDefault(); editorEl?.classList.add('dz-hover'); });
+    editorBody.addEventListener('dragleave', () => editorEl?.classList.remove('dz-hover'));
+    editorBody.addEventListener('drop', e => {
+      if (!isFileDrag(e)) return;
+      e.preventDefault(); e.stopPropagation(); dragCounter=0; hideBlur();
+      const f = e.dataTransfer.files[0];
+      if(f && f.type.startsWith('image/')) uploadArticleImage(f, getDropRange(e));
     });
   }
 
   // Hover highlight on featured image panel
   const imageSp = getImageSp();
   if (imageSp) {
-    imageSp.addEventListener('dragover', e => { e.preventDefault(); imageSp.classList.add('dz-hover'); });
+    imageSp.addEventListener('dragover', e => { if (!isFileDrag(e)) return; e.preventDefault(); imageSp.classList.add('dz-hover'); });
     imageSp.addEventListener('dragleave', () => imageSp.classList.remove('dz-hover'));
+    imageSp.addEventListener('drop', e => {
+      if (!isFileDrag(e)) return;
+      e.preventDefault(); e.stopPropagation(); dragCounter=0; hideBlur();
+      const f = e.dataTransfer.files[0]; if(f && f.type.startsWith('image/')) uploadFeaturedImage(f);
+    });
   }
 
   const dz = document.getElementById('dropzone');
   if (dz) {
-    dz.addEventListener('dragover', e => { e.preventDefault(); dz.style.borderColor='var(--accent)'; });
+    dz.addEventListener('dragover', e => { if (!isFileDrag(e)) return; e.preventDefault(); dz.style.borderColor='var(--accent)'; });
     dz.addEventListener('dragleave', () => { dz.style.borderColor=''; });
-    dz.addEventListener('drop', e => { e.preventDefault(); e.stopPropagation(); dz.style.borderColor=''; const f=e.dataTransfer.files[0]; if(f) uploadFeaturedImage(f); });
+    dz.addEventListener('drop', e => { if (!isFileDrag(e)) return; e.preventDefault(); e.stopPropagation(); dragCounter=0; hideBlur(); dz.style.borderColor=''; const f=e.dataTransfer.files[0]; if(f) uploadFeaturedImage(f); });
   }
 })();
 </script>
