@@ -127,7 +127,7 @@ $currentTags = $postData['tags'] ?? '';
 <title>Upravit: <?= e($postData['title']) ?> · <?= e(SITE_NAME) ?></title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Merriweather:wght@400;700&family=Playfair+Display:wght@400;600&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="<?= ASSETS_URL ?>css/admin.css">
 <style>
 .ed-grid{display:grid;grid-template-columns:1fr 360px;gap:22px;align-items:flex-start}
@@ -182,8 +182,11 @@ $currentTags = $postData['tags'] ?? '';
 .ed-content{min-height:480px;padding:28px 32px;font-size:16px;line-height:1.7;color:var(--ink);outline:none;background:var(--card);border-top:1px solid var(--line)}
 .ed-content:empty::before{content:attr(data-placeholder);color:var(--faint);font-style:italic}
 .ed-content p{margin-bottom:1em}
-.ed-content h2{font-family:var(--serif);font-size:28px;font-weight:400;line-height:1.2;margin:1.4em 0 .5em}
-.ed-content h3{font-family:var(--serif);font-size:22px;font-weight:400;margin:1.2em 0 .4em}
+.ed-content h1,.ed-content h2,.ed-content h3,.ed-content h4{font-family:var(--serif);line-height:1.18;letter-spacing:-0.01em}
+.ed-content h2{font-size:28px;font-weight:400;margin:.85em 0 .35em}
+.ed-content h3{font-size:22px;font-weight:400;margin:.75em 0 .3em}
+.ed-content figure{margin:12px auto;max-width:100%;clear:both}
+.ed-content figure img{display:block;width:100%;max-width:100%;height:auto}
 .ed-content blockquote{border-left:3px solid var(--accent);padding:4px 0 4px 18px;margin:18px 0;font-family:var(--serif);font-size:19px;font-style:italic;color:var(--ink-2)}
 .ed-content code{font-family:var(--mono);font-size:.9em;background:var(--paper-2);padding:1px 5px;border-radius:4px;color:var(--accent-2)}
 .ed-content ul,.ed-content ol{padding-left:22px;margin-bottom:1em}
@@ -335,6 +338,21 @@ body.dz-dragging .editor.dz-hover,body.dz-dragging .sp.dz-hover{box-shadow:0 0 0
                   <option value="'Courier New',monospace">Courier New</option>
                   <option value="Verdana,sans-serif">Verdana</option>
                   <option value="'Trebuchet MS',sans-serif">Trebuchet</option>
+                  <option value="Inter,sans-serif" style="font-family:Inter,sans-serif">Inter</option>
+                  <option value="'Playfair Display',serif" style="font-family:'Playfair Display',serif">Playfair Display</option>
+                  <option value="'Merriweather',serif" style="font-family:'Merriweather',serif">Merriweather</option>
+                  <option value="'Space Grotesk',sans-serif" style="font-family:'Space Grotesk',sans-serif">Space Grotesk</option>
+                  <option value="'IBM Plex Sans',sans-serif" style="font-family:'IBM Plex Sans',sans-serif">IBM Plex Sans</option>
+                  <option value="'JetBrains Mono',monospace" style="font-family:'JetBrains Mono',monospace">JetBrains Mono</option>
+                </select>
+                <select class="ed-select" style="min-width:88px" onmousedown="saveColorRangeE()" onchange="applyFontSizeE(this.value)" title="Velikost písma">
+                  <option value="">Velikost</option>
+                  <option value="14px">14 px</option>
+                  <option value="16px">16 px</option>
+                  <option value="18px">18 px</option>
+                  <option value="22px">22 px</option>
+                  <option value="28px">28 px</option>
+                  <option value="36px">36 px</option>
                 </select>
                 <div class="ed-divider"></div>
                 <button type="button" class="ed-btn" title="Tučně" onclick="document.execCommand('bold')"><b>B</b></button>
@@ -648,6 +666,7 @@ document.getElementById('featuredInput')?.addEventListener('change',function(){
 })();
 </script>
 <script src="<?= ASSETS_URL ?>js/admin.js"></script>
+<script src="<?= ASSETS_URL ?>js/post-editor.js"></script>
 <!-- Media insert modal -->
 <div class="media-modal" id="mediaModal">
   <div class="media-modal-box">
@@ -745,6 +764,128 @@ const modalDzE=document.getElementById('modalDzE');
 modalDzE.addEventListener('dragover',e=>{e.preventDefault();modalDzE.style.borderColor='var(--accent)';});
 modalDzE.addEventListener('dragleave',()=>modalDzE.style.borderColor='');
 modalDzE.addEventListener('drop',e=>{ e.preventDefault();modalDzE.style.borderColor=''; const f=e.dataTransfer.files[0]; if(f){const dt=new DataTransfer();dt.items.add(f);document.getElementById('modalFileInputE').files=dt.files;document.getElementById('modalFileInputE').dispatchEvent(new Event('change'));} });
+</script>
+<script>
+function formatBlockEdit(tag){
+  const cycle = ['p', 'h2', 'h3'];
+  if (typeof tag !== 'string') {
+    const nextIndex = (cycle.indexOf(document.getElementById('blockSelect')?.value || 'p') + 1) % cycle.length;
+    tag = cycle[nextIndex];
+    if (document.getElementById('blockSelect')) {
+      document.getElementById('blockSelect').value = tag;
+    }
+  }
+  if (!tag) return;
+  restoreColorRangeE();
+  document.execCommand('formatBlock', false, tag);
+}
+function applyFontE(font) {
+  if (!font) return;
+  restoreColorRangeE();
+  document.execCommand('styleWithCSS', false, true);
+  document.execCommand('fontName', false, font);
+  PostEditorUtils.normalizeEditorMarkup(document.getElementById('edContent'));
+}
+function applyFontSizeE(size) {
+  if (!size) return;
+  PostEditorUtils.applyFontSize(size, colorRangeE);
+  PostEditorUtils.normalizeEditorMarkup(document.getElementById('edContent'));
+  updateStats();
+  markChanged();
+}
+async function uploadFeaturedImage(file) {
+  if (!file || !file.type.startsWith('image/')) return;
+  file = await PostEditorUtils.prepareImageForUpload(file, { maxDimension: 1600, quality: 0.84 });
+  const fd = new FormData();
+  fd.append('ajax_action','upload_image');
+  fd.append('image',file);
+  try {
+    const r = await fetch(location.href,{method:'POST',body:fd});
+    const data = await r.json();
+    if (data.success) {
+      showFeaturedPreview(data.url, data.path);
+      const featuredInput = document.getElementById('featuredInput');
+      if (featuredInput) featuredInput.value = '';
+    }
+  } catch(e) {}
+}
+async function uploadArticleImageEdit(file, range) {
+  if (!file || !file.type.startsWith('image/')) return;
+  file = await PostEditorUtils.prepareImageForUpload(file, { maxDimension: 2200, quality: 0.82 });
+  const fd = new FormData();
+  fd.append('ajax_action','upload_image');
+  fd.append('image', file);
+  try {
+    const r = await fetch(location.href,{method:'POST',body:fd});
+    const data = await r.json();
+    if (data.success) {
+      insertImageIntoEditorEdit(data.url, range);
+      updateStats();
+      markChanged();
+    }
+  } catch(e) {}
+}
+function insertImageIntoEditorEdit(url, range) {
+  const ed = document.getElementById('edContent');
+  ed.focus();
+  const imgHtml = PostEditorUtils.buildResponsiveImageHtml(url);
+  if (range) {
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+  }
+  document.execCommand('insertHTML', false, imgHtml);
+  PostEditorUtils.normalizeEditorMarkup(ed);
+}
+function confirmMediaInsertEdit(){
+  if(!selectedGalleryUrlE) return;
+  const ed=document.getElementById('edContent');
+  ed.focus();
+  if(savedRangeE){
+    const sel=window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(savedRangeE);
+  }
+  const baseUrl='<?= rtrim(BASE_URL,"/") ?>';
+  const fullUrl=selectedGalleryUrlE.startsWith('http')?selectedGalleryUrlE:baseUrl+selectedGalleryUrlE;
+  const html=mediaInsertTypeE==='image'
+    ? PostEditorUtils.buildResponsiveImageHtml(fullUrl)
+    : `<video src="${fullUrl}" controls style="max-width:100%;border-radius:6px;margin:8px 0;"></video>`;
+  document.execCommand('insertHTML',false,html);
+  PostEditorUtils.normalizeEditorMarkup(ed);
+  closeMediaModalEdit();
+  markChanged();
+}
+(function rewireModalUploadEdit(){
+  const oldInput = document.getElementById('modalFileInputE');
+  if (!oldInput) return;
+  const nextInput = oldInput.cloneNode();
+  oldInput.replaceWith(nextInput);
+  nextInput.addEventListener('change', async function(){
+    if(!this.files[0]) return;
+    const preparedFile = await PostEditorUtils.prepareImageForUpload(this.files[0], { maxDimension: 2200, quality: 0.82 });
+    const fd=new FormData();
+    fd.append('ajax_action','upload_image');
+    fd.append('image',preparedFile);
+    try{
+      const r=await fetch(location.href,{method:'POST',body:fd});
+      const data=await r.json();
+      if(data.success){
+        selectedGalleryUrlE=data.url;
+        document.getElementById('mediaInsertBtnE').disabled=false;
+        document.getElementById('modalDzE').innerHTML=`<img src="${data.url}" style="max-height:160px;border-radius:8px;max-width:100%;">`;
+      }
+    }catch(e){}
+  });
+})();
+PostEditorUtils.mountImageToolbar({
+  editorId: 'edContent',
+  onChange: () => {
+    updateStats();
+    markChanged();
+  }
+});
+PostEditorUtils.normalizeEditorMarkup(document.getElementById('edContent'));
 </script>
 </body>
 </html>
