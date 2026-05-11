@@ -127,7 +127,7 @@ $currentTags = $postData['tags'] ?? '';
 <title>Upravit: <?= e($postData['title']) ?> · <?= e(SITE_NAME) ?></title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Merriweather:wght@400;700&family=Playfair+Display:wght@400;600&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="<?= ASSETS_URL ?>css/admin.css">
 <style>
 .ed-grid{display:grid;grid-template-columns:1fr 360px;gap:22px;align-items:flex-start}
@@ -182,8 +182,11 @@ $currentTags = $postData['tags'] ?? '';
 .ed-content{min-height:480px;padding:28px 32px;font-size:16px;line-height:1.7;color:var(--ink);outline:none;background:var(--card);border-top:1px solid var(--line)}
 .ed-content:empty::before{content:attr(data-placeholder);color:var(--faint);font-style:italic}
 .ed-content p{margin-bottom:1em}
-.ed-content h2{font-family:var(--serif);font-size:28px;font-weight:400;line-height:1.2;margin:1.4em 0 .5em}
-.ed-content h3{font-family:var(--serif);font-size:22px;font-weight:400;margin:1.2em 0 .4em}
+.ed-content h1,.ed-content h2,.ed-content h3,.ed-content h4{font-family:var(--font);line-height:1.18;letter-spacing:-0.01em}
+.ed-content h2{font-size:28px;font-weight:400;margin:.85em 0 .35em}
+.ed-content h3{font-size:22px;font-weight:400;margin:.75em 0 .3em}
+.ed-content figure{margin:12px auto;max-width:100%;clear:both}
+.ed-content figure img{display:block;width:100%;max-width:100%;height:auto}
 .ed-content blockquote{border-left:3px solid var(--accent);padding:4px 0 4px 18px;margin:18px 0;font-family:var(--serif);font-size:19px;font-style:italic;color:var(--ink-2)}
 .ed-content code{font-family:var(--mono);font-size:.9em;background:var(--paper-2);padding:1px 5px;border-radius:4px;color:var(--accent-2)}
 .ed-content ul,.ed-content ol{padding-left:22px;margin-bottom:1em}
@@ -200,6 +203,15 @@ $currentTags = $postData['tags'] ?? '';
 .sp-title .ico{width:14px;height:14px;color:var(--accent-2)}
 .sp-meta{font-family:var(--mono);font-size:10.5px;color:var(--muted)}
 .sp-body{padding:14px 16px}
+.adv-box{border:1px dashed var(--border);border-radius:12px;background:linear-gradient(180deg,var(--card),var(--card-2));overflow:hidden}
+.adv-box summary{list-style:none;cursor:pointer;display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding:14px 16px}
+.adv-box summary::-webkit-details-marker{display:none}
+.adv-copy{display:flex;flex-direction:column;gap:4px}
+.adv-title{font-size:12.5px;font-weight:600;color:var(--ink)}
+.adv-sub{font-size:11.5px;line-height:1.55;color:var(--muted)}
+.adv-chip{flex-shrink:0;padding:5px 9px;border-radius:999px;background:var(--paper);border:1px solid var(--border);font-family:var(--mono);font-size:10.5px;color:var(--muted)}
+.adv-panel{padding:0 16px 16px;border-top:1px solid var(--line)}
+.adv-help{margin:12px 0 14px;padding:10px 12px;border-radius:10px;background:var(--accent-soft);font-size:11.5px;line-height:1.6;color:var(--ink-2)}
 .status-switch{display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;padding:4px;background:var(--paper-2);border:1px solid var(--border);border-radius:8px}
 .status-switch button{padding:7px 4px;font-size:11.5px;border-radius:5px;color:var(--muted);font-weight:500;transition:background .15s,color .15s;display:flex;align-items:center;justify-content:center;gap:5px}
 .status-switch button.on{background:var(--card);color:var(--accent-2);box-shadow:0 1px 2px rgba(102,126,234,.12)}
@@ -335,6 +347,21 @@ body.dz-dragging .editor.dz-hover,body.dz-dragging .sp.dz-hover{box-shadow:0 0 0
                   <option value="'Courier New',monospace">Courier New</option>
                   <option value="Verdana,sans-serif">Verdana</option>
                   <option value="'Trebuchet MS',sans-serif">Trebuchet</option>
+                  <option value="Inter,sans-serif" style="font-family:Inter,sans-serif">Inter</option>
+                  <option value="'Playfair Display',serif" style="font-family:'Playfair Display',serif">Playfair Display</option>
+                  <option value="'Merriweather',serif" style="font-family:'Merriweather',serif">Merriweather</option>
+                  <option value="'Space Grotesk',sans-serif" style="font-family:'Space Grotesk',sans-serif">Space Grotesk</option>
+                  <option value="'IBM Plex Sans',sans-serif" style="font-family:'IBM Plex Sans',sans-serif">IBM Plex Sans</option>
+                  <option value="'JetBrains Mono',monospace" style="font-family:'JetBrains Mono',monospace">JetBrains Mono</option>
+                </select>
+                <select class="ed-select" style="min-width:88px" onmousedown="saveColorRangeE()" onchange="applyFontSizeE(this.value)" title="Velikost písma">
+                  <option value="">Velikost</option>
+                  <option value="14px">14 px</option>
+                  <option value="16px">16 px</option>
+                  <option value="18px">18 px</option>
+                  <option value="22px">22 px</option>
+                  <option value="28px">28 px</option>
+                  <option value="36px">36 px</option>
                 </select>
                 <div class="ed-divider"></div>
                 <button type="button" class="ed-btn" title="Tučně" onclick="document.execCommand('bold')"><b>B</b></button>
@@ -419,11 +446,26 @@ body.dz-dragging .editor.dz-hover,body.dz-dragging .sp.dz-hover{box-shadow:0 0 0
               <div class="field-label" style="margin-top:6px">Náhled v Google</div>
               <div class="serp"><div class="serp-url"><?= parse_url(BASE_URL, PHP_URL_HOST) ?> › <span id="serpSlug"><?= e($postData['slug']??'clanek') ?></span></div><div class="serp-title" id="serpTitle"><?= e($currentMetaTitle?:$postData['title']) ?> — <?= e(SITE_NAME) ?></div><div class="serp-desc" id="serpDesc"><?= e($currentMetaDesc?:'Krátký popis příspěvku se zobrazí ve výsledcích vyhledávání.') ?></div></div>
             </div></div>
-            <div class="sp"><div class="sp-head"><div class="sp-title"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v2M12 20v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M2 12h2M20 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/></svg>Pokročilé</div></div><div class="sp-body">
-              <div class="field"><div class="field-label">Canonical URL <span class="opt">(volitelné)</span></div><input type="text" class="field-input" id="canonicalUrl" name="canonical_url" placeholder="https://…"></div>
-              <div class="field"><div class="field-label">CSS třída <span class="opt">(volitelné)</span></div><input type="text" class="field-input" id="customClass" name="custom_class" placeholder="např. featured wide-layout"></div>
-              <div class="sp-row"><div class="sp-row-label"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Připnout nahoře</div><label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12.5px"><input type="checkbox" name="pinned" id="pinnedCheck" style="accent-color:var(--accent);width:15px;height:15px;cursor:pointer"><span style="color:var(--muted)">Zobrazit jako první</span></label></div>
-            </div></div>
+            <div class="sp">
+              <div class="sp-head"><div class="sp-title"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v2M12 20v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M2 12h2M20 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/></svg>Pokročilé</div></div>
+              <div class="sp-body">
+                <details class="adv-box">
+                  <summary>
+                    <div class="adv-copy">
+                      <div class="adv-title">Volitelné technické nastavení článku</div>
+                      <div class="adv-sub">Pro běžný článek to většinou nemusíte řešit. Otevřete jen tehdy, když chcete článek připnout nahoru nebo řešíte speciální SEO či vzhled.</div>
+                    </div>
+                    <span class="adv-chip">Volitelné</span>
+                  </summary>
+                  <div class="adv-panel">
+                    <div class="adv-help">Použití v praxi: <strong>Připnout nahoře</strong> je užitečné pro důležitý článek nebo novinku. <strong>Canonical URL</strong> vyplňte jen když chcete Googlu říct, že originál článku je na jiné adrese. <strong>CSS třída</strong> je technická volba pro speciální vzhled a běžně může zůstat prázdná.</div>
+                    <div class="field"><div class="field-label">Canonical URL <span class="opt">(volitelné)</span></div><input type="text" class="field-input" id="canonicalUrl" name="canonical_url" placeholder="https://…"></div>
+                    <div class="field"><div class="field-label">CSS třída <span class="opt">(volitelné)</span></div><input type="text" class="field-input" id="customClass" name="custom_class" placeholder="např. featured wide-layout"></div>
+                    <div class="sp-row"><div class="sp-row-label"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Připnout nahoře</div><label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12.5px"><input type="checkbox" name="pinned" id="pinnedCheck" style="accent-color:var(--accent);width:15px;height:15px;cursor:pointer"><span style="color:var(--muted)">Zobrazit jako první</span></label></div>
+                  </div>
+                </details>
+              </div>
+            </div>
           </div>
         </div>
         <div class="savebar">
@@ -648,6 +690,7 @@ document.getElementById('featuredInput')?.addEventListener('change',function(){
 })();
 </script>
 <script src="<?= ASSETS_URL ?>js/admin.js"></script>
+<script src="<?= ASSETS_URL ?>js/post-editor.js"></script>
 <!-- Media insert modal -->
 <div class="media-modal" id="mediaModal">
   <div class="media-modal-box">
@@ -745,6 +788,134 @@ const modalDzE=document.getElementById('modalDzE');
 modalDzE.addEventListener('dragover',e=>{e.preventDefault();modalDzE.style.borderColor='var(--accent)';});
 modalDzE.addEventListener('dragleave',()=>modalDzE.style.borderColor='');
 modalDzE.addEventListener('drop',e=>{ e.preventDefault();modalDzE.style.borderColor=''; const f=e.dataTransfer.files[0]; if(f){const dt=new DataTransfer();dt.items.add(f);document.getElementById('modalFileInputE').files=dt.files;document.getElementById('modalFileInputE').dispatchEvent(new Event('change'));} });
+</script>
+<script>
+function formatBlockEdit(tag){
+  const cycle = ['p', 'h2', 'h3'];
+  if (typeof tag !== 'string') {
+    const nextIndex = (cycle.indexOf(document.getElementById('blockSelect')?.value || 'p') + 1) % cycle.length;
+    tag = cycle[nextIndex];
+    if (document.getElementById('blockSelect')) {
+      document.getElementById('blockSelect').value = tag;
+    }
+  }
+  if (!tag) return;
+  restoreColorRangeE();
+  document.execCommand('formatBlock', false, tag);
+}
+function applyFontE(font) {
+  if (!font) return;
+  restoreColorRangeE();
+  document.execCommand('styleWithCSS', false, true);
+  document.execCommand('fontName', false, font);
+  PostEditorUtils.normalizeEditorMarkup(document.getElementById('edContent'));
+}
+function applyFontSizeE(size) {
+  if (!size) return;
+  PostEditorUtils.applyFontSize(size, colorRangeE);
+  PostEditorUtils.normalizeEditorMarkup(document.getElementById('edContent'));
+  updateStats();
+  markChanged();
+}
+async function uploadFeaturedImage(file) {
+  if (!file || !file.type.startsWith('image/')) return;
+  try {
+    const data = await PostEditorUtils.uploadImageWithProgress({
+      url: location.href,
+      file,
+      target: document.getElementById('dropzone') || document.getElementById('featPreview')?.parentElement,
+      label: 'Nahrávám hlavní obrázek',
+      prepareOptions: { maxDimension: 1600, quality: 0.84 }
+    });
+    showFeaturedPreview(data.url, data.path);
+    const featuredInput = document.getElementById('featuredInput');
+    if (featuredInput) featuredInput.value = '';
+  } catch(e) {}
+}
+async function uploadArticleImageEdit(file, range) {
+  if (!file || !file.type.startsWith('image/')) return;
+  try {
+    const data = await PostEditorUtils.uploadImageWithProgress({
+      url: location.href,
+      file,
+      target: document.querySelector('.editor'),
+      label: 'Vkládám obrázek do článku',
+      prepareOptions: { maxDimension: 2200, quality: 0.82 }
+    });
+    insertImageIntoEditorEdit(data.url, range);
+    updateStats();
+    markChanged();
+  } catch(e) {}
+}
+function insertImageIntoEditorEdit(url, range) {
+  const ed = document.getElementById('edContent');
+  ed.focus();
+  const imgHtml = PostEditorUtils.buildResponsiveImageHtml(url);
+  if (range) {
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+  }
+  document.execCommand('insertHTML', false, imgHtml);
+  PostEditorUtils.normalizeEditorMarkup(ed);
+}
+function confirmMediaInsertEdit(){
+  if(!selectedGalleryUrlE) return;
+  const ed=document.getElementById('edContent');
+  ed.focus();
+  if(savedRangeE){
+    const sel=window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(savedRangeE);
+  }
+  const baseUrl='<?= rtrim(BASE_URL,"/") ?>';
+  const fullUrl=selectedGalleryUrlE.startsWith('http')?selectedGalleryUrlE:baseUrl+selectedGalleryUrlE;
+  const html=mediaInsertTypeE==='image'
+    ? PostEditorUtils.buildResponsiveImageHtml(fullUrl)
+    : `<video src="${fullUrl}" controls style="max-width:100%;border-radius:6px;margin:8px 0;"></video>`;
+  document.execCommand('insertHTML',false,html);
+  PostEditorUtils.normalizeEditorMarkup(ed);
+  closeMediaModalEdit();
+  markChanged();
+}
+(function rewireModalUploadEdit(){
+  const oldInput = document.getElementById('modalFileInputE');
+  if (!oldInput) return;
+  const nextInput = oldInput.cloneNode();
+  oldInput.replaceWith(nextInput);
+  nextInput.addEventListener('change', async function(){
+    if(!this.files[0]) return;
+    try{
+      const data = await PostEditorUtils.uploadImageWithProgress({
+        url: location.href,
+        file: this.files[0],
+        target: document.getElementById('modalDzE'),
+        label: 'Nahrávám obrázek z počítače',
+        prepareOptions: { maxDimension: 2200, quality: 0.82 }
+      });
+      selectedGalleryUrlE=data.url;
+      document.getElementById('mediaInsertBtnE').disabled=false;
+      document.getElementById('modalDzE').innerHTML=`<img src="${data.url}" style="max-height:160px;border-radius:8px;max-width:100%;">`;
+    }catch(e){}
+  });
+})();
+PostEditorUtils.mountImageToolbar({
+  editorId: 'edContent',
+  onChange: () => {
+    updateStats();
+    markChanged();
+  }
+});
+PostEditorUtils.initToolbar({
+  editorId: 'edContent',
+  toolbarSelector: '.ed-toolbar',
+  applyBlock: (tag) => formatBlockEdit(tag),
+  onChange: () => {
+    updateStats();
+    markChanged();
+  }
+});
+PostEditorUtils.normalizeEditorMarkup(document.getElementById('edContent'));
 </script>
 </body>
 </html>
