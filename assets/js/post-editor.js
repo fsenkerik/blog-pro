@@ -26,6 +26,14 @@
       .ed-content .editor-media img{display:block;width:100%;max-width:100%;height:auto;border-radius:10px}
       .ed-content .editor-media.is-selected{outline:2px solid rgba(102,126,234,.45);outline-offset:4px}
       .ed-stats{clear:both}
+      .editor-upload-progress{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:18px;background:rgba(255,255,255,.9);backdrop-filter:blur(6px);border:1px solid rgba(102,126,234,.16);border-radius:14px;z-index:35}
+      .editor-upload-progress.is-floating{position:fixed;inset:auto 18px 18px auto;width:min(320px,calc(100vw - 36px));box-shadow:0 20px 60px rgba(15,23,42,.18)}
+      .editor-upload-card{width:min(280px,100%);padding:16px 16px 14px;border-radius:14px;background:linear-gradient(180deg,#fff,#f8faff);box-shadow:0 10px 35px rgba(102,126,234,.12)}
+      .editor-upload-label{font-size:12px;font-weight:600;color:var(--ink);margin-bottom:8px}
+      .editor-upload-meta{display:flex;justify-content:space-between;align-items:center;gap:12px;font-family:var(--mono);font-size:11px;color:var(--muted);margin-bottom:8px}
+      .editor-upload-bar{height:8px;border-radius:999px;background:rgba(102,126,234,.12);overflow:hidden}
+      .editor-upload-bar > span{display:block;height:100%;width:0;background:linear-gradient(90deg,#667eea,#7c3aed);border-radius:inherit;transition:width .18s ease}
+      .editor-upload-stage{margin-top:8px;font-size:11.5px;color:var(--muted)}
       .editor-image-tools{position:fixed;z-index:1200;display:none;flex-wrap:wrap;align-items:center;gap:6px;max-width:min(92vw,520px);padding:8px 10px;border-radius:12px;background:rgba(17,24,39,.94);box-shadow:0 12px 30px rgba(15,23,42,.28);backdrop-filter:blur(8px)}
       .editor-image-tools.is-visible{display:flex}
       .editor-image-tools button{border:none;border-radius:8px;padding:6px 8px;background:rgba(255,255,255,.08);color:#fff;font-size:11px;line-height:1;cursor:pointer;transition:background .15s ease}
@@ -206,6 +214,137 @@
 
     const nextName = file.name.replace(/\.[^.]+$/, outputType === 'image/png' ? '.png' : '.webp');
     return new File([blob], nextName, { type: outputType, lastModified: Date.now() });
+  }
+
+  function createUploadProgress(target, label) {
+    const host = target || document.body;
+    const floating = host === document.body;
+    if (!floating) {
+      const position = window.getComputedStyle(host).position;
+      if (position === 'static') {
+        host.dataset.uploadProgressPosition = 'static';
+        host.style.position = 'relative';
+      }
+    }
+
+    const wrap = document.createElement('div');
+    wrap.className = `editor-upload-progress${floating ? ' is-floating' : ''}`;
+    wrap.innerHTML = `
+      <div class="editor-upload-card">
+        <div class="editor-upload-label">${label}</div>
+        <div class="editor-upload-meta">
+          <span class="editor-upload-count">0%</span>
+          <span class="editor-upload-size">čekám…</span>
+        </div>
+        <div class="editor-upload-bar"><span></span></div>
+        <div class="editor-upload-stage">Připravuji soubor…</div>
+      </div>
+    `;
+    host.appendChild(wrap);
+
+    const percentEl = wrap.querySelector('.editor-upload-count');
+    const sizeEl = wrap.querySelector('.editor-upload-size');
+    const barEl = wrap.querySelector('.editor-upload-bar > span');
+    const stageEl = wrap.querySelector('.editor-upload-stage');
+
+    return {
+      setProgress(percent, stage, sizeText) {
+        const safe = Math.max(0, Math.min(100, Math.round(percent)));
+        percentEl.textContent = `${safe}%`;
+        barEl.style.width = `${safe}%`;
+        if (stage) stageEl.textContent = stage;
+        if (sizeText) sizeEl.textContent = sizeText;
+      },
+      finish(stage = 'Hotovo') {
+        percentEl.textContent = '100%';
+        barEl.style.width = '100%';
+        stageEl.textContent = stage;
+        sizeEl.textContent = 'dokončeno';
+        setTimeout(() => {
+          if (host.dataset.uploadProgressPosition === 'static') {
+            host.style.position = '';
+            delete host.dataset.uploadProgressPosition;
+          }
+          wrap.remove();
+        }, 500);
+      },
+      fail(stage = 'Upload selhal') {
+        stageEl.textContent = stage;
+        sizeEl.textContent = 'chyba';
+        wrap.style.background = 'rgba(255,248,248,.96)';
+        setTimeout(() => {
+          if (host.dataset.uploadProgressPosition === 'static') {
+            host.style.position = '';
+            delete host.dataset.uploadProgressPosition;
+          }
+          wrap.remove();
+        }, 1400);
+      }
+    };
+  }
+
+  function uploadFormDataWithProgress({ url, formData, onProgress }) {
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', url, true);
+      xhr.responseType = 'text';
+
+      xhr.upload.addEventListener('progress', (event) => {
+        if (event.lengthComputable && typeof onProgress === 'function') {
+          onProgress(event.loaded, event.total);
+        }
+      });
+
+      xhr.onload = () => {
+        if (xhr.status < 200 || xhr.status >= 300) {
+          reject(new Error(`Upload failed with status ${xhr.status}`));
+          return;
+        }
+        try {
+          resolve(JSON.parse(xhr.responseText));
+        } catch (error) {
+          reject(error);
+        }
+      };
+
+      xhr.onerror = () => reject(new Error('Network error'));
+      xhr.send(formData);
+    });
+  }
+
+  async function uploadImageWithProgress({ url, file, target, label, prepareOptions }) {
+    const progress = createUploadProgress(target, label);
+    try {
+      progress.setProgress(3, 'Zpracovávám obrázek…', `${Math.round(file.size / 1024)} KB`);
+      const preparedFile = await prepareImageForUpload(file, prepareOptions);
+      progress.setProgress(18, 'Obrázek připraven, začínám nahrávat…', `${Math.round(preparedFile.size / 1024)} KB`);
+
+      const formData = new FormData();
+      formData.append('ajax_action', 'upload_image');
+      formData.append('image', preparedFile);
+
+      const data = await uploadFormDataWithProgress({
+        url,
+        formData,
+        onProgress: (loaded, total) => {
+          const base = 18;
+          const percent = total > 0 ? base + ((loaded / total) * 82) : base;
+          const loadedKb = Math.round(loaded / 1024);
+          const totalKb = Math.round(total / 1024);
+          progress.setProgress(percent, 'Nahrávám obrázek…', `${loadedKb} / ${totalKb} KB`);
+        }
+      });
+
+      if (!data.success) {
+        throw new Error(data.message || 'Chyba uploadu');
+      }
+
+      progress.finish('Obrázek nahrán');
+      return data;
+    } catch (error) {
+      progress.fail(error.message || 'Chyba uploadu');
+      throw error;
+    }
   }
 
   function wrapSelectionWithSpan(styleText) {
@@ -580,6 +719,7 @@
     initToolbar,
     mountImageToolbar,
     normalizeEditorMarkup,
-    prepareImageForUpload
+    prepareImageForUpload,
+    uploadImageWithProgress
   };
 })();

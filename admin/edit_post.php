@@ -795,34 +795,32 @@ function applyFontSizeE(size) {
 }
 async function uploadFeaturedImage(file) {
   if (!file || !file.type.startsWith('image/')) return;
-  file = await PostEditorUtils.prepareImageForUpload(file, { maxDimension: 1600, quality: 0.84 });
-  const fd = new FormData();
-  fd.append('ajax_action','upload_image');
-  fd.append('image',file);
   try {
-    const r = await fetch(location.href,{method:'POST',body:fd});
-    const data = await r.json();
-    if (data.success) {
-      showFeaturedPreview(data.url, data.path);
-      const featuredInput = document.getElementById('featuredInput');
-      if (featuredInput) featuredInput.value = '';
-    }
+    const data = await PostEditorUtils.uploadImageWithProgress({
+      url: location.href,
+      file,
+      target: document.getElementById('dropzone') || document.getElementById('featPreview')?.parentElement,
+      label: 'Nahrávám hlavní obrázek',
+      prepareOptions: { maxDimension: 1600, quality: 0.84 }
+    });
+    showFeaturedPreview(data.url, data.path);
+    const featuredInput = document.getElementById('featuredInput');
+    if (featuredInput) featuredInput.value = '';
   } catch(e) {}
 }
 async function uploadArticleImageEdit(file, range) {
   if (!file || !file.type.startsWith('image/')) return;
-  file = await PostEditorUtils.prepareImageForUpload(file, { maxDimension: 2200, quality: 0.82 });
-  const fd = new FormData();
-  fd.append('ajax_action','upload_image');
-  fd.append('image', file);
   try {
-    const r = await fetch(location.href,{method:'POST',body:fd});
-    const data = await r.json();
-    if (data.success) {
-      insertImageIntoEditorEdit(data.url, range);
-      updateStats();
-      markChanged();
-    }
+    const data = await PostEditorUtils.uploadImageWithProgress({
+      url: location.href,
+      file,
+      target: document.querySelector('.editor'),
+      label: 'Vkládám obrázek do článku',
+      prepareOptions: { maxDimension: 2200, quality: 0.82 }
+    });
+    insertImageIntoEditorEdit(data.url, range);
+    updateStats();
+    markChanged();
   } catch(e) {}
 }
 function insertImageIntoEditorEdit(url, range) {
@@ -863,18 +861,17 @@ function confirmMediaInsertEdit(){
   oldInput.replaceWith(nextInput);
   nextInput.addEventListener('change', async function(){
     if(!this.files[0]) return;
-    const preparedFile = await PostEditorUtils.prepareImageForUpload(this.files[0], { maxDimension: 2200, quality: 0.82 });
-    const fd=new FormData();
-    fd.append('ajax_action','upload_image');
-    fd.append('image',preparedFile);
     try{
-      const r=await fetch(location.href,{method:'POST',body:fd});
-      const data=await r.json();
-      if(data.success){
-        selectedGalleryUrlE=data.url;
-        document.getElementById('mediaInsertBtnE').disabled=false;
-        document.getElementById('modalDzE').innerHTML=`<img src="${data.url}" style="max-height:160px;border-radius:8px;max-width:100%;">`;
-      }
+      const data = await PostEditorUtils.uploadImageWithProgress({
+        url: location.href,
+        file: this.files[0],
+        target: document.getElementById('modalDzE'),
+        label: 'Nahrávám obrázek z počítače',
+        prepareOptions: { maxDimension: 2200, quality: 0.82 }
+      });
+      selectedGalleryUrlE=data.url;
+      document.getElementById('mediaInsertBtnE').disabled=false;
+      document.getElementById('modalDzE').innerHTML=`<img src="${data.url}" style="max-height:160px;border-radius:8px;max-width:100%;">`;
     }catch(e){}
   });
 })();
