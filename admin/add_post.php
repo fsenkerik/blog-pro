@@ -1052,6 +1052,15 @@ PostEditorUtils.mountImageToolbar({
     autoSave();
   }
 });
+PostEditorUtils.initToolbar({
+  editorId: 'edContent',
+  toolbarSelector: '.ed-toolbar',
+  applyBlock: (tag) => formatBlock(tag),
+  onChange: () => {
+    updateStats();
+    markUnsaved();
+  }
+});
 PostEditorUtils.normalizeEditorMarkup(document.getElementById('edContent'));
 </script>
 </body>

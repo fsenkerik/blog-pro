@@ -885,6 +885,15 @@ PostEditorUtils.mountImageToolbar({
     markChanged();
   }
 });
+PostEditorUtils.initToolbar({
+  editorId: 'edContent',
+  toolbarSelector: '.ed-toolbar',
+  applyBlock: (tag) => formatBlockEdit(tag),
+  onChange: () => {
+    updateStats();
+    markChanged();
+  }
+});
 PostEditorUtils.normalizeEditorMarkup(document.getElementById('edContent'));
 </script>
 </body>
