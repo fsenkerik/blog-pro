@@ -203,6 +203,15 @@ $currentTags = $postData['tags'] ?? '';
 .sp-title .ico{width:14px;height:14px;color:var(--accent-2)}
 .sp-meta{font-family:var(--mono);font-size:10.5px;color:var(--muted)}
 .sp-body{padding:14px 16px}
+.adv-box{border:1px dashed var(--border);border-radius:12px;background:linear-gradient(180deg,var(--card),var(--card-2));overflow:hidden}
+.adv-box summary{list-style:none;cursor:pointer;display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding:14px 16px}
+.adv-box summary::-webkit-details-marker{display:none}
+.adv-copy{display:flex;flex-direction:column;gap:4px}
+.adv-title{font-size:12.5px;font-weight:600;color:var(--ink)}
+.adv-sub{font-size:11.5px;line-height:1.55;color:var(--muted)}
+.adv-chip{flex-shrink:0;padding:5px 9px;border-radius:999px;background:var(--paper);border:1px solid var(--border);font-family:var(--mono);font-size:10.5px;color:var(--muted)}
+.adv-panel{padding:0 16px 16px;border-top:1px solid var(--line)}
+.adv-help{margin:12px 0 14px;padding:10px 12px;border-radius:10px;background:var(--accent-soft);font-size:11.5px;line-height:1.6;color:var(--ink-2)}
 .status-switch{display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;padding:4px;background:var(--paper-2);border:1px solid var(--border);border-radius:8px}
 .status-switch button{padding:7px 4px;font-size:11.5px;border-radius:5px;color:var(--muted);font-weight:500;transition:background .15s,color .15s;display:flex;align-items:center;justify-content:center;gap:5px}
 .status-switch button.on{background:var(--card);color:var(--accent-2);box-shadow:0 1px 2px rgba(102,126,234,.12)}
@@ -437,11 +446,26 @@ body.dz-dragging .editor.dz-hover,body.dz-dragging .sp.dz-hover{box-shadow:0 0 0
               <div class="field-label" style="margin-top:6px">Náhled v Google</div>
               <div class="serp"><div class="serp-url"><?= parse_url(BASE_URL, PHP_URL_HOST) ?> › <span id="serpSlug"><?= e($postData['slug']??'clanek') ?></span></div><div class="serp-title" id="serpTitle"><?= e($currentMetaTitle?:$postData['title']) ?> — <?= e(SITE_NAME) ?></div><div class="serp-desc" id="serpDesc"><?= e($currentMetaDesc?:'Krátký popis příspěvku se zobrazí ve výsledcích vyhledávání.') ?></div></div>
             </div></div>
-            <div class="sp"><div class="sp-head"><div class="sp-title"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v2M12 20v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M2 12h2M20 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/></svg>Pokročilé</div></div><div class="sp-body">
-              <div class="field"><div class="field-label">Canonical URL <span class="opt">(volitelné)</span></div><input type="text" class="field-input" id="canonicalUrl" name="canonical_url" placeholder="https://…"></div>
-              <div class="field"><div class="field-label">CSS třída <span class="opt">(volitelné)</span></div><input type="text" class="field-input" id="customClass" name="custom_class" placeholder="např. featured wide-layout"></div>
-              <div class="sp-row"><div class="sp-row-label"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Připnout nahoře</div><label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12.5px"><input type="checkbox" name="pinned" id="pinnedCheck" style="accent-color:var(--accent);width:15px;height:15px;cursor:pointer"><span style="color:var(--muted)">Zobrazit jako první</span></label></div>
-            </div></div>
+            <div class="sp">
+              <div class="sp-head"><div class="sp-title"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v2M12 20v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M2 12h2M20 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/></svg>Pokročilé</div></div>
+              <div class="sp-body">
+                <details class="adv-box">
+                  <summary>
+                    <div class="adv-copy">
+                      <div class="adv-title">Volitelné technické nastavení článku</div>
+                      <div class="adv-sub">Pro běžný článek to většinou nemusíte řešit. Otevřete jen tehdy, když chcete článek připnout nahoru nebo řešíte speciální SEO či vzhled.</div>
+                    </div>
+                    <span class="adv-chip">Volitelné</span>
+                  </summary>
+                  <div class="adv-panel">
+                    <div class="adv-help">Použití v praxi: <strong>Připnout nahoře</strong> je užitečné pro důležitý článek nebo novinku. <strong>Canonical URL</strong> vyplňte jen když chcete Googlu říct, že originál článku je na jiné adrese. <strong>CSS třída</strong> je technická volba pro speciální vzhled a běžně může zůstat prázdná.</div>
+                    <div class="field"><div class="field-label">Canonical URL <span class="opt">(volitelné)</span></div><input type="text" class="field-input" id="canonicalUrl" name="canonical_url" placeholder="https://…"></div>
+                    <div class="field"><div class="field-label">CSS třída <span class="opt">(volitelné)</span></div><input type="text" class="field-input" id="customClass" name="custom_class" placeholder="např. featured wide-layout"></div>
+                    <div class="sp-row"><div class="sp-row-label"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Připnout nahoře</div><label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12.5px"><input type="checkbox" name="pinned" id="pinnedCheck" style="accent-color:var(--accent);width:15px;height:15px;cursor:pointer"><span style="color:var(--muted)">Zobrazit jako první</span></label></div>
+                  </div>
+                </details>
+              </div>
+            </div>
           </div>
         </div>
         <div class="savebar">
