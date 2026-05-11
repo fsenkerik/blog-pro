@@ -347,7 +347,6 @@ body.dz-dragging .editor.dz-hover,body.dz-dragging .sp.dz-hover{box-shadow:0 0 0
       <input type="hidden" name="meta_description" id="metaDescInput" value="">
       <input type="hidden" name="meta_keywords" id="metaKwInput" value="">
       <input type="hidden" name="excerpt" id="excerptInput" value="">
-      <input type="hidden" name="tags" id="tagsInput" value="">
       <input type="hidden" name="featured_image_alt" id="featAltInput" value="">
       <div class="topbar">
         <div class="crumb"><a href="<?= ADMIN_URL ?>dashboard.php" style="color:var(--muted)">Blog Pro</a><span class="sep">/</span><a href="<?= ADMIN_URL ?>posts.php" style="color:var(--muted)">Příspěvky</a><span class="sep">/</span><span class="here">Nový příspěvek</span></div>
@@ -462,12 +461,6 @@ body.dz-dragging .editor.dz-hover,body.dz-dragging .sp.dz-hover{box-shadow:0 0 0
                 <input type="text" class="field-input" id="featAltField" placeholder="Popis obrázku…" maxlength="255" oninput="document.getElementById('featAltInput').value=this.value">
               </div>
             </div></div>
-            <div class="sp"><div class="sp-head"><div class="sp-title"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>Štítky</div></div><div class="sp-body">
-              <div class="tag-input-wrap" id="tagWrap" onclick="document.getElementById('tagField').focus()">
-                <input type="text" id="tagField" placeholder="Přidat štítek a potvrdit Enterem…" onkeydown="handleTagKey(event)">
-              </div>
-              <div style="font-family:var(--mono);font-size:10.5px;color:var(--muted);margin-top:6px">Oddělte štítky klávesou Enter nebo čárkou</div>
-            </div></div>
             <div class="sp"><div class="seo-head"><div class="sp-title"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>SEO &amp; sdílení</div><button type="button" class="seo-magic" onclick="generateSEO()" title="Automaticky vyplnit SEO z obsahu"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></svg>Auto SEO</button></div><div class="sp-body">
               <div class="field"><div class="field-label">SEO Title <span class="help" title="Titulek zobrazovaný ve výsledcích vyhledávání">?</span></div><input type="text" class="field-input" id="seoTitle" placeholder="Ponechte prázdné pro titulek…" maxlength="80"><div class="field-foot"><span>Optimum 50–60 znaků</span><span id="seoTitleCount" class="ok">0 / 60</span></div></div>
               <div class="field"><div class="field-label">Meta Description <span class="help" title="Krátký popis ve výsledcích vyhledávání">?</span></div><textarea class="field-textarea" id="seoDesc" placeholder="Krátký popis pro vyhledávače…" maxlength="200"></textarea><div class="field-foot"><span>Optimum 150–160 znaků</span><span id="seoDescCount" class="ok">0 / 160</span></div></div>
@@ -475,26 +468,6 @@ body.dz-dragging .editor.dz-hover,body.dz-dragging .sp.dz-hover{box-shadow:0 0 0
               <div class="field-label" style="margin-top:6px">Náhled v Google</div>
               <div class="serp"><div class="serp-url"><?= parse_url(BASE_URL, PHP_URL_HOST) ?> › <span id="serpSlug">novy-prispevek</span></div><div class="serp-title" id="serpTitle">Nový příspěvek — <?= e(SITE_NAME) ?></div><div class="serp-desc" id="serpDesc">Krátký popis příspěvku se zobrazí ve výsledcích vyhledávání.</div></div>
             </div></div>
-            <div class="sp">
-              <div class="sp-head"><div class="sp-title"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v2M12 20v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M2 12h2M20 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/></svg>Pokročilé</div></div>
-              <div class="sp-body">
-                <details class="adv-box">
-                  <summary>
-                    <div class="adv-copy">
-                      <div class="adv-title">Volitelné technické nastavení článku</div>
-                      <div class="adv-sub">Pro běžný článek to většinou nemusíte řešit. Otevřete jen tehdy, když chcete článek připnout nahoru nebo řešíte speciální SEO či vzhled.</div>
-                    </div>
-                    <span class="adv-chip">Volitelné</span>
-                  </summary>
-                  <div class="adv-panel">
-                    <div class="adv-help">Použití v praxi: <strong>Připnout nahoře</strong> je užitečné pro důležitý článek nebo novinku. <strong>Canonical URL</strong> vyplňte jen když chcete Googlu říct, že originál článku je na jiné adrese. <strong>CSS třída</strong> je technická volba pro speciální vzhled a běžně může zůstat prázdná.</div>
-                    <div class="field"><div class="field-label">Canonical URL <span class="opt">(volitelné)</span></div><input type="text" class="field-input" id="canonicalUrl" name="canonical_url" placeholder="https://…"></div>
-                    <div class="field"><div class="field-label">CSS třída <span class="opt">(volitelné)</span></div><input type="text" class="field-input" id="customClass" name="custom_class" placeholder="např. featured wide-layout"></div>
-                    <div class="sp-row"><div class="sp-row-label"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>Připnout nahoře</div><label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12.5px"><input type="checkbox" name="pinned" id="pinnedCheck" style="accent-color:var(--accent);width:15px;height:15px;cursor:pointer"><span style="color:var(--muted)">Zobrazit jako první</span></label></div>
-                  </div>
-                </details>
-              </div>
-            </div>
           </div>
         </div>
         <div class="savebar">
@@ -533,8 +506,8 @@ function selectCat(el){document.querySelectorAll('.cat-item').forEach(i=>i.class
 const pill1=document.getElementById('savePill'),pill2=document.getElementById('savePill2'),txt1=document.getElementById('saveText'),txt2=document.getElementById('saveText2');
 let saveTimer=null,draftId='',isSaving=false;
 function markUnsaved(){pill1.classList.remove('saved');pill2.classList.remove('saved');txt1.textContent='Neuloženo';txt2.textContent='Neuloženo';clearTimeout(saveTimer);saveTimer=setTimeout(autoSave,3000);}
-async function autoSave(){if(isSaving)return;isSaving=true;syncHiddenInputs();const fd=new FormData();fd.append('ajax_action','autosave_draft');fd.append('title',titleEl.value);fd.append('content',edContent.innerHTML);fd.append('category_id',selectedCatId);fd.append('meta_title',document.getElementById('metaTitleInput').value);fd.append('meta_description',document.getElementById('metaDescInput').value);fd.append('meta_keywords',document.getElementById('metaKwInput').value);fd.append('excerpt',document.getElementById('excerptInput').value);fd.append('tags',document.getElementById('tagsInput').value);fd.append('featured_image_alt',document.getElementById('featAltInput').value);fd.append('featured_image_from_gallery',document.getElementById('galleryImage')?.value||'');if(draftId)fd.append('draft_id',draftId);try{const r=await fetch(location.href,{method:'POST',body:fd});const data=await r.json();if(data.success){draftId=data.draft_id;document.getElementById('draftId').value=draftId;const t=new Date().toLocaleTimeString('cs-CZ',{hour:'2-digit',minute:'2-digit'});pill1.classList.add('saved');pill2.classList.add('saved');txt1.textContent='Uloženo · '+t;txt2.textContent='Koncept uložen · '+t;}}catch(e){}finally{isSaving=false;}}
-function syncHiddenInputs(){document.getElementById('contentInput').value=edContent.innerHTML;document.getElementById('metaTitleInput').value=seoTitleEl?.value||'';document.getElementById('metaDescInput').value=seoDescEl?.value||'';document.getElementById('metaKwInput').value=document.getElementById('seoKeywords')?.value||'';document.getElementById('excerptInput').value=excerptEl?.value||'';document.getElementById('tagsInput').value=getTags().join(',');}
+async function autoSave(){if(isSaving)return;isSaving=true;syncHiddenInputs();const fd=new FormData();fd.append('ajax_action','autosave_draft');fd.append('title',titleEl.value);fd.append('content',edContent.innerHTML);fd.append('category_id',selectedCatId);fd.append('meta_title',document.getElementById('metaTitleInput').value);fd.append('meta_description',document.getElementById('metaDescInput').value);fd.append('meta_keywords',document.getElementById('metaKwInput').value);fd.append('excerpt',document.getElementById('excerptInput').value);fd.append('featured_image_alt',document.getElementById('featAltInput').value);fd.append('featured_image_from_gallery',document.getElementById('galleryImage')?.value||'');if(draftId)fd.append('draft_id',draftId);try{const r=await fetch(location.href,{method:'POST',body:fd});const data=await r.json();if(data.success){draftId=data.draft_id;document.getElementById('draftId').value=draftId;const t=new Date().toLocaleTimeString('cs-CZ',{hour:'2-digit',minute:'2-digit'});pill1.classList.add('saved');pill2.classList.add('saved');txt1.textContent='Uloženo · '+t;txt2.textContent='Koncept uložen · '+t;}}catch(e){}finally{isSaving=false;}}
+function syncHiddenInputs(){document.getElementById('contentInput').value=edContent.innerHTML;document.getElementById('metaTitleInput').value=seoTitleEl?.value||'';document.getElementById('metaDescInput').value=seoDescEl?.value||'';document.getElementById('metaKwInput').value=document.getElementById('seoKeywords')?.value||'';document.getElementById('excerptInput').value=excerptEl?.value||'';}
 // ── Tags ─────────────────────────────────────────────────────────────────────
 let tags = [];
 function getTags(){return tags;}
