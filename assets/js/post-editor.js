@@ -138,7 +138,8 @@
       figure.draggable = false;
 
       if (!figure.style.maxWidth) figure.style.maxWidth = '100%';
-      if (!figure.style.width) figure.style.width = '100%';
+      if (!figure.style.width) figure.style.width = '50%';
+      if (!figure.dataset.size) figure.dataset.size = (figure.style.width || '50%').replace('%', '');
       if (!figure.style.margin) figure.style.margin = '12px auto';
       if (!figure.style.clear) figure.style.clear = 'both';
 
@@ -164,7 +165,7 @@
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;');
 
-    return `<figure class="editor-media" data-editor-media="image" contenteditable="false" draggable="false" style="width:100%;max-width:100%;margin:12px auto;clear:both;"><img src="${safeUrl}" alt="" draggable="false" style="width:100%;max-width:100%;height:auto;display:block;border-radius:10px;"></figure><p><br></p>`;
+    return `<figure class="editor-media" data-editor-media="image" data-size="50" contenteditable="false" draggable="false" style="width:50%;max-width:100%;margin:12px auto;clear:both;"><img src="${safeUrl}" alt="" draggable="false" style="width:100%;max-width:100%;height:auto;display:block;border-radius:10px;"></figure><p><br></p>`;
   }
 
   async function loadImage(file) {
@@ -400,6 +401,15 @@
     toolbar.style.left = `${Math.max(12, Math.min(window.innerWidth - toolbar.offsetWidth - 12, rect.left))}px`;
   }
 
+  function syncImageToolbarState(toolbar, figure) {
+    if (!toolbar || !figure) return;
+    const activeSize = figure.dataset.size || (figure.style.width || '50%').replace('%', '');
+    toolbar.querySelectorAll('button[data-action="size"]').forEach((button) => {
+      const isActive = button.dataset.value === activeSize;
+      button.classList.toggle('is-active', isActive);
+    });
+  }
+
   function applyImageAlignment(figure, value) {
     figure.style.float = 'none';
     figure.style.marginTop = '12px';
@@ -488,6 +498,7 @@
       selectedFigure.classList.add('is-selected');
       toolbar.classList.add('is-visible');
       positionImageToolbar(toolbar, selectedFigure);
+      syncImageToolbarState(toolbar, selectedFigure);
     });
 
     document.addEventListener('click', (event) => {
@@ -517,6 +528,7 @@
 
       if (action === 'size') {
         selectedFigure.style.width = `${value}%`;
+        selectedFigure.dataset.size = value;
       } else if (action === 'align') {
         applyImageAlignment(selectedFigure, value);
       } else if (action === 'move') {
@@ -528,6 +540,7 @@
 
       if (selectedFigure) {
         positionImageToolbar(toolbar, selectedFigure);
+        syncImageToolbarState(toolbar, selectedFigure);
       }
       markChanged();
     });

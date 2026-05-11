@@ -217,7 +217,7 @@ $baseUrl = rtrim(BASE_URL,'/').'/';
 .ed-content{min-height:480px;padding:28px 32px;font-size:16px;line-height:1.7;color:var(--ink);outline:none;background:var(--card);border-top:1px solid var(--line)}
 .ed-content:empty::before{content:attr(data-placeholder);color:var(--faint);font-style:italic}
 .ed-content p{margin-bottom:1em}
-.ed-content h1,.ed-content h2,.ed-content h3,.ed-content h4{font-family:var(--serif);line-height:1.18;letter-spacing:-0.01em}
+.ed-content h1,.ed-content h2,.ed-content h3,.ed-content h4{font-family:var(--font);line-height:1.18;letter-spacing:-0.01em}
 .ed-content h2{font-size:28px;font-weight:400;margin:.85em 0 .35em}
 .ed-content h3{font-size:22px;font-weight:400;margin:.75em 0 .3em}
 .ed-content figure{margin:12px auto;max-width:100%;clear:both}
