@@ -82,34 +82,55 @@ if (isPost() && !isset($_POST['ajax_action'])) {
             'content' => Security::cleanHTML(post('content')),
             'excerpt' => post('excerpt'),
             'category_id' => post('category_id') ?: null,
-            'status' => post('status','draft'),
+            'status' => post('status','published'),
             'meta_title' => post('meta_title'),
             'meta_description' => post('meta_description'),
             'meta_keywords' => post('meta_keywords'),
             'tags' => post('tags') ?: null,
             'featured_image_alt' => post('featured_image_alt') ?: null,
         ];
-        $featuredImage = trim(post('featured_image_id') ?? '');
-        if ($featuredImage !== '') {
-            if (ctype_digit($featuredImage)) {
-                $mediaItem = $media->getById($featuredImage);
-                if ($mediaItem) $data['featured_image'] = $mediaItem['path'];
+        if (($data['status'] ?? 'published') === 'scheduled') {
+            $scheduledAtInput = trim((string) post('scheduled_at'));
+            if ($scheduledAtInput === '') {
+                $error = 'Vyberte datum a cas publikace.';
             } else {
-                $data['featured_image'] = $featuredImage;
+                $scheduledAt = strtotime($scheduledAtInput);
+                if ($scheduledAt === false || $scheduledAt <= time()) {
+                    $error = 'Naplanovane publikovani musi byt v budoucnu.';
+                } else {
+                    $data['scheduled_at'] = date('Y-m-d H:i:s', $scheduledAt);
+                    $data['status'] = 'scheduled';
+                }
             }
         } else {
-            $data['featured_image'] = null;
+            $data['scheduled_at'] = null;
+            $data['status'] = 'published';
         }
-        $result = $post->update($id, $data);
-        if ($result['success']) { setFlash('success','Příspěvek byl aktualizován!'); redirect(ADMIN_URL.'dashboard.php'); }
-        else $error = $result['message'] ?? 'Chyba při ukládání';
+        if ($error === '') {
+            $featuredImage = trim(post('featured_image_id') ?? '');
+            if ($featuredImage !== '') {
+                if (ctype_digit($featuredImage)) {
+                    $mediaItem = $media->getById($featuredImage);
+                    if ($mediaItem) $data['featured_image'] = $mediaItem['path'];
+                } else {
+                    $data['featured_image'] = $featuredImage;
+                }
+            } else {
+                $data['featured_image'] = null;
+            }
+            $result = $post->update($id, $data);
+            if ($result['success']) { setFlash('success',$data['status'] === 'scheduled' ? 'Prispevek byl naplanovan!' : 'Prispevek byl aktualizovan!'); redirect(ADMIN_URL.'dashboard.php'); }
+            else $error = $result['message'] ?? 'Chyba pri ukladani';
+        }
     }
 }
 
 $userInitials = strtoupper(substr($_SESSION['username'] ?? 'U',0,2));
 $catColors = ['#667eea','#764ba2','#5b21b6','#10b981','#f59e0b','#ef4444','#3b82f6','#6366f1'];
 $currentCatId = $postData['category_id'] ?? '';
-$currentStatus = $postData['status'] ?? 'draft';
+$currentStatus = $postData['status'] ?? 'published';
+$currentScheduledAt = !empty($postData['scheduled_at']) ? date('Y-m-d\TH:i', strtotime($postData['scheduled_at'])) : '';
+$currentStatusUi = ($currentStatus === 'scheduled' && !empty($currentScheduledAt)) ? 'scheduled' : 'published';
 $currentContent = $postData['content'] ?? '';
 $currentExcerpt = $postData['excerpt'] ?? '';
 $currentMetaTitle = $postData['meta_title'] ?? '';
@@ -212,7 +233,7 @@ $currentTags = $postData['tags'] ?? '';
 .adv-chip{flex-shrink:0;padding:5px 9px;border-radius:999px;background:var(--paper);border:1px solid var(--border);font-family:var(--mono);font-size:10.5px;color:var(--muted)}
 .adv-panel{padding:0 16px 16px;border-top:1px solid var(--line)}
 .adv-help{margin:12px 0 14px;padding:10px 12px;border-radius:10px;background:var(--accent-soft);font-size:11.5px;line-height:1.6;color:var(--ink-2)}
-.status-switch{display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;padding:4px;background:var(--paper-2);border:1px solid var(--border);border-radius:8px}
+.status-switch{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;background:var(--paper-2);border:1px solid var(--border);border-radius:8px}
 .status-switch button{padding:7px 4px;font-size:11.5px;border-radius:5px;color:var(--muted);font-weight:500;transition:background .15s,color .15s;display:flex;align-items:center;justify-content:center;gap:5px}
 .status-switch button.on{background:var(--card);color:var(--accent-2);box-shadow:0 1px 2px rgba(102,126,234,.12)}
 .status-switch button.on.draft{color:var(--warn)}
@@ -307,7 +328,8 @@ body.dz-dragging .editor.dz-hover,body.dz-dragging .sp.dz-hover{box-shadow:0 0 0
     <?php if ($error): ?><div style="background:var(--danger-soft);color:var(--danger);padding:12px 32px;font-size:13px;border-bottom:1px solid rgba(153,27,27,.15)"><?= e($error) ?></div><?php endif; ?>
     <form id="postForm" method="POST" action="">
       <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?? '' ?>">
-      <input type="hidden" name="status" id="statusInput" value="<?= e($currentStatus) ?>">
+      <input type="hidden" name="status" id="statusInput" value="<?= e($currentStatusUi) ?>">
+      <input type="hidden" name="scheduled_at" id="scheduledAtHidden" value="<?= e($currentScheduledAt) ?>">
       <input type="hidden" name="category_id" id="catInput" value="<?= e($currentCatId) ?>">
       <input type="hidden" name="featured_image_id" id="featuredImageId" value="<?= e($currentFeatured) ?>">
       <textarea name="content" id="contentInput" style="display:none"><?= e($currentContent) ?></textarea>
@@ -323,7 +345,7 @@ body.dz-dragging .editor.dz-hover,body.dz-dragging .sp.dz-hover{box-shadow:0 0 0
       <div class="content">
         <div class="page-head">
           <div>
-            <div class="ph-meta"><div class="status-badge <?= $currentStatus ?>"><span class="dot"></span><?php $sl=['published'=>'Publikováno','draft'=>'Koncept','scheduled'=>'Naplánováno']; echo $sl[$currentStatus]??ucfirst($currentStatus); ?></div><span class="save-pill saved" id="savePill"><span class="dot"></span><span id="saveText">Uloženo</span></span></div>
+            <div class="ph-meta"><div class="status-badge <?= $currentStatusUi ?>"><span class="dot"></span><?php $sl=['published'=>'Publikováno','scheduled'=>'Naplánováno']; echo $sl[$currentStatusUi]??ucfirst($currentStatusUi); ?></div><span class="save-pill saved" id="savePill"><span class="dot"></span><span id="saveText">Uloženo</span></span></div>
             <h1 class="page-title">Upravit <em>příspěvek.</em></h1>
           </div>
           <div class="ph-actions"><button type="button" class="btn btn-primary btn-sm" id="topSave"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/></svg>Uložit změny</button></div>
@@ -409,9 +431,17 @@ body.dz-dragging .editor.dz-hover,body.dz-dragging .sp.dz-hover{box-shadow:0 0 0
             <div class="sp"><div class="sp-head"><div class="sp-title"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="17" y1="10" x2="3" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="14" x2="3" y2="14"/><line x1="17" y1="18" x2="3" y2="18"/></svg>Perex</div><span class="sp-meta" id="excerptCount"><?= strlen($currentExcerpt) ?> / 280</span></div><div class="sp-body"><textarea class="field-textarea" id="excerptText" placeholder="Krátké uvedení článku…"><?= e($currentExcerpt) ?></textarea></div></div>
           </div>
           <div class="ed-side">
-            <div class="sp"><div class="sp-head"><div class="sp-title"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/></svg>Stav</div></div><div class="sp-body">
-              <div class="status-switch" id="statusSwitch"><button type="button" class="draft <?= $currentStatus==='draft'?'on':'' ?>" data-val="draft"><span class="dot"></span>Koncept</button><button type="button" class="<?= $currentStatus==='published'?'on':'' ?>" data-val="published"><span class="dot"></span>Publikováno</button><button type="button" class="scheduled <?= $currentStatus==='scheduled'?'on':'' ?>" data-val="scheduled"><span class="dot"></span>Plán</button></div>
-              <div style="margin-top:14px"><div class="sp-row"><div class="sp-row-label">Autor</div><span class="sp-row-val"><?= e($postData['author_name'] ?? $_SESSION['username'] ?? '') ?></span></div><div class="sp-row"><div class="sp-row-label">Vytvořeno</div><span class="sp-row-val"><?= date('d.m.Y', strtotime($postData['created_at'] ?? 'now')) ?></span></div><div class="sp-row"><div class="sp-row-label">Upraveno</div><span class="sp-row-val"><?= date('d.m.Y H:i', strtotime($postData['updated_at'] ?? 'now')) ?></span></div></div>
+            <div class="sp"><div class="sp-head"><div class="sp-title"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/></svg>Publikace</div></div><div class="sp-body">
+              <div class="status-switch" id="statusSwitch"><button type="button" class="<?= $currentStatusUi==='published'?'on':'' ?>" data-val="published"><span class="dot"></span>Publikovat</button><button type="button" class="scheduled <?= $currentStatusUi==='scheduled'?'on':'' ?>" data-val="scheduled"><span class="dot"></span>Plán</button></div>
+              <div id="scheduleBox" style="display:<?= $currentStatusUi==='scheduled'?'block':'none' ?>;margin-top:14px">
+                <div class="field" style="margin-bottom:0">
+                  <div class="field-label">Datum a čas publikace</div>
+                  <input type="datetime-local" class="field-input" id="scheduledAtInput" value="<?= e($currentScheduledAt) ?>" min="<?= date('Y-m-d\TH:i') ?>">
+                  <div class="field-foot"><span>Vyberte pouze budoucí termín.</span><span id="schedulePreviewLabel" class="ok">Naplánováno</span></div>
+                </div>
+              </div>
+              <div style="margin-top:14px"><div class="sp-row"><div class="sp-row-label">Autor</div><span class="sp-row-val"><?= e($postData['author_name'] ?? $_SESSION['username'] ?? '') ?></span></div><div class="sp-row"><div class="sp-row-label">Publikace</div><span class="sp-row-val" id="publishTimingLabel"><?= $currentStatusUi==='scheduled' && !empty($currentScheduledAt) ? e(str_replace('T', ' ', $currentScheduledAt)) : 'Ihned' ?></span></div><div class="sp-row"><div class="sp-row-label">Vytvořeno</div><span class="sp-row-val"><?= date('d.m.Y', strtotime($postData['created_at'] ?? 'now')) ?></span></div><div class="sp-row"><div class="sp-row-label">Upraveno</div><span class="sp-row-val"><?= date('d.m.Y H:i', strtotime($postData['updated_at'] ?? 'now')) ?></span></div></div>
+            </div></div>
             </div></div>
             <div class="sp"><div class="sp-head"><div class="sp-title"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>Kategorie</div><span class="sp-meta"><span id="catCount"><?= $currentCatId?1:0 ?></span> / <?= count($categories) ?></span></div><div class="sp-body">
               <div class="cat-tools">
@@ -461,12 +491,40 @@ excerptEl?.addEventListener('input',()=>{excerptCountEl.textContent=excerptEl.va
 const seoTitleEl=document.getElementById('seoTitle'),seoDescEl=document.getElementById('seoDesc'),seoTitleCount=document.getElementById('seoTitleCount'),seoDescCount=document.getElementById('seoDescCount'),serpDescEl=document.getElementById('serpDesc');
 seoTitleEl?.addEventListener('input',()=>{const n=seoTitleEl.value.length;seoTitleCount.textContent=n+' / 60';seoTitleCount.className=n>60?'warn':'ok';});
 seoDescEl?.addEventListener('input',()=>{const n=seoDescEl.value.length;seoDescCount.textContent=n+' / 160';seoDescCount.className=n>160?'warn':'ok';serpDescEl.textContent=seoDescEl.value||'Krátký popis příspěvku se zobrazí ve výsledcích vyhledávání.';});
-document.querySelectorAll('#statusSwitch button').forEach(btn=>{btn.addEventListener('click',()=>{document.querySelectorAll('#statusSwitch button').forEach(b=>b.classList.remove('on'));btn.classList.add('on');document.getElementById('statusInput').value=btn.dataset.val;markChanged();});});
+const scheduleBox=document.getElementById('scheduleBox');
+const scheduledAtInput=document.getElementById('scheduledAtInput');
+const scheduledAtHidden=document.getElementById('scheduledAtHidden');
+const publishTimingLabel=document.getElementById('publishTimingLabel');
+function updateScheduleMin(){
+  if(!scheduledAtInput)return;
+  const now=new Date();
+  now.setSeconds(0,0);
+  const offset=now.getTimezoneOffset();
+  scheduledAtInput.min=new Date(now.getTime()-offset*60000).toISOString().slice(0,16);
+}
+function updateScheduleState(){
+  const status=document.getElementById('statusInput').value;
+  const isScheduled=status==='scheduled';
+  if(scheduleBox) scheduleBox.style.display=isScheduled?'block':'none';
+  if(scheduledAtHidden) scheduledAtHidden.value=isScheduled?(scheduledAtInput?.value||''):'';
+  if(publishTimingLabel) publishTimingLabel.textContent=isScheduled&&scheduledAtInput?.value?scheduledAtInput.value.replace('T',' '):'Ihned';
+}
+function validateScheduledAt(){
+  if(document.getElementById('statusInput').value!=='scheduled') return true;
+  if(!scheduledAtInput?.value){ alert('Vyberte datum a čas publikace.'); scheduledAtInput?.focus(); return false; }
+  const selected=new Date(scheduledAtInput.value);
+  if(Number.isNaN(selected.getTime()) || selected.getTime() <= Date.now()){ alert('Naplánované publikování musí být v budoucnu.'); scheduledAtInput?.focus(); return false; }
+  return true;
+}
+document.querySelectorAll('#statusSwitch button').forEach(btn=>{btn.addEventListener('click',()=>{document.querySelectorAll('#statusSwitch button').forEach(b=>b.classList.remove('on'));btn.classList.add('on');document.getElementById('statusInput').value=btn.dataset.val;updateScheduleMin();updateScheduleState();markChanged();});});
+scheduledAtInput?.addEventListener('input',()=>{updateScheduleMin();updateScheduleState();markChanged();});
+updateScheduleMin();
+updateScheduleState();
 let selectedCatId='<?= $currentCatId ?>';
 function selectCat(el){document.querySelectorAll('.cat-item').forEach(i=>i.classList.remove('on'));el.classList.add('on');selectedCatId=el.dataset.id;document.getElementById('catInput').value=selectedCatId;document.getElementById('catCount').textContent='1';markChanged();}
 const pill1=document.getElementById('savePill'),pill2=document.getElementById('savePill2'),txt1=document.getElementById('saveText'),txt2=document.getElementById('saveText2');
 function markChanged(){pill1.classList.remove('saved');pill2.classList.remove('saved');txt1.textContent='Neuložené změny';txt2.textContent='Neuložené změny';}
-function syncHiddenInputs(){document.getElementById('contentInput').value=edContent.innerHTML;document.getElementById('metaTitleInput').value=seoTitleEl?.value||'';document.getElementById('metaDescInput').value=seoDescEl?.value||'';document.getElementById('metaKwInput').value=document.getElementById('seoKeywords')?.value||'';document.getElementById('excerptInput').value=excerptEl?.value||'';document.getElementById('catInput').value=selectedCatId;}
+function syncHiddenInputs(){document.getElementById('contentInput').value=edContent.innerHTML;document.getElementById('metaTitleInput').value=seoTitleEl?.value||'';document.getElementById('metaDescInput').value=seoDescEl?.value||'';document.getElementById('metaKwInput').value=document.getElementById('seoKeywords')?.value||'';document.getElementById('excerptInput').value=excerptEl?.value||'';document.getElementById('catInput').value=selectedCatId;if(scheduledAtHidden) scheduledAtHidden.value=document.getElementById('statusInput').value==='scheduled'?(scheduledAtInput?.value||''):'';}
 // ── Tags (edit) ──────────────────────────────────────────────────────────────
 let tagsE = <?= json_encode($currentTags ? array_filter(array_map('trim', explode(',', $currentTags))) : []) ?>;
 function getTagsE(){return tagsE;}
@@ -477,7 +535,7 @@ function handleTagKeyE(e){if(e.key==='Enter'||e.key===','){e.preventDefault();ad
 document.addEventListener('DOMContentLoaded',()=>renderTagsE());
 // ── Auto-SEO (edit) ───────────────────────────────────────────────────────────
 function generateSEOE(){const title=titleEl?.value.trim()||'';const text=(edContent?.innerText||'').replace(/\s+/g,' ').trim();if(!title&&!text)return;const seoTitle=title.length>60?title.substring(0,57)+'…':title;const excerpt=text.substring(0,160);const words=text.split(/\s+/).filter(Boolean).slice(0,8).join(', ');if(seoTitleEl){seoTitleEl.value=seoTitle;seoTitleEl.dispatchEvent(new Event('input'));}if(seoDescEl){seoDescEl.value=excerpt;seoDescEl.dispatchEvent(new Event('input'));}const kwEl=document.getElementById('seoKeywords');if(kwEl&&!kwEl.value)kwEl.value=words;markChanged();}
-function submitForm(status){syncHiddenInputs();document.getElementById('statusInput').value=status;document.getElementById('postForm').submit();}
+function submitForm(status){syncHiddenInputs();document.getElementById('statusInput').value=status;updateScheduleState();if(status==='scheduled' && !validateScheduledAt()) return;document.getElementById('postForm').submit();}
 document.getElementById('saveBtn')?.addEventListener('click',()=>submitForm(document.getElementById('statusInput').value));
 document.getElementById('topSave')?.addEventListener('click',()=>submitForm(document.getElementById('statusInput').value));
 document.getElementById('saveDraftBtn')?.addEventListener('click',()=>submitForm('draft'));

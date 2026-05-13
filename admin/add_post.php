@@ -135,21 +135,36 @@ if (isPost() && !isset($_POST['ajax_action'])) {
             'tags' => post('tags') ?: null,
             'featured_image_alt' => post('featured_image_alt') ?: null,
         ];
-        if (post('publish_type')==='scheduled' && post('scheduled_date') && post('scheduled_time')) {
-            $data['scheduled_at'] = post('scheduled_date').' '.post('scheduled_time').':00';
-            $data['status'] = 'scheduled';
-        } else { $data['scheduled_at'] = null; }
-        if (isset($_FILES['featured_image']) && $_FILES['featured_image']['error']===UPLOAD_ERR_OK) {
+        if (($data['status'] ?? 'published') === 'scheduled') {
+            $scheduledAtInput = trim((string) post('scheduled_at'));
+            if ($scheduledAtInput === '') {
+                $error = 'Vyberte datum a �as publikace.';
+            } else {
+                $scheduledAt = strtotime($scheduledAtInput);
+                if ($scheduledAt === false || $scheduledAt <= time()) {
+                    $error = 'Napl�novan� publikov�n� mus� b�t v budoucnu.';
+                } else {
+                    $data['scheduled_at'] = date('Y-m-d H:i:s', $scheduledAt);
+                    $data['status'] = 'scheduled';
+                }
+            }
+        } else {
+            $data['scheduled_at'] = null;
+            $data['status'] = 'published';
+        }
+        if ($error === '' && isset($_FILES['featured_image']) && $_FILES['featured_image']['error']===UPLOAD_ERR_OK) {
             $uploadResult = $upload->uploadImage($_FILES['featured_image'],true,true);
             if ($uploadResult['success']) $data['featured_image'] = $uploadResult['path'];
-        } elseif (!empty($_POST['featured_image_from_gallery'])) {
+        } elseif ($error === '' && !empty($_POST['featured_image_from_gallery'])) {
             $data['featured_image'] = $_POST['featured_image_from_gallery'];
         }
-        $draftId = !empty($_POST['draft_id']) ? intval($_POST['draft_id']) : null;
-        if ($draftId) { $result = $post->update($draftId,$data); $msg = 'Příspěvek byl publikován!'; }
-        else { $result = $post->create($data); $msg = 'Příspěvek byl vytvořen!'; }
-        if ($result['success']) { setFlash('success',$msg); redirect(ADMIN_URL.'posts.php'); }
-        else $error = $result['message'] ?? 'Nepodařilo se vytvořit příspěvek';
+        if ($error === '') {
+            $draftId = !empty($_POST['draft_id']) ? intval($_POST['draft_id']) : null;
+            if ($draftId) { $result = $post->update($draftId,$data); $msg = $data['status'] === 'scheduled' ? 'Prispevek byl naplanovan!' : 'Prispevek byl publikovan!'; }
+            else { $result = $post->create($data); $msg = $data['status'] === 'scheduled' ? 'Prispevek byl vytvoren a naplanovan!' : 'Prispevek byl vytvoren!'; }
+            if ($result['success']) { setFlash('success',$msg); redirect(ADMIN_URL.'posts.php'); }
+            else $error = $result['message'] ?? 'Nepodarilo se vytvorit prispevek';
+        }
     }
 }
 
@@ -247,7 +262,7 @@ $baseUrl = rtrim(BASE_URL,'/').'/';
 .adv-chip{flex-shrink:0;padding:5px 9px;border-radius:999px;background:var(--paper);border:1px solid var(--border);font-family:var(--mono);font-size:10.5px;color:var(--muted)}
 .adv-panel{padding:0 16px 16px;border-top:1px solid var(--line)}
 .adv-help{margin:12px 0 14px;padding:10px 12px;border-radius:10px;background:var(--accent-soft);font-size:11.5px;line-height:1.6;color:var(--ink-2)}
-.status-switch{display:grid;grid-template-columns:1fr 1fr 1fr;gap:4px;padding:4px;background:var(--paper-2);border:1px solid var(--border);border-radius:8px}
+.status-switch{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;background:var(--paper-2);border:1px solid var(--border);border-radius:8px}
 .status-switch button{padding:7px 4px;font-size:11.5px;border-radius:5px;color:var(--muted);font-weight:500;transition:background .15s,color .15s;display:flex;align-items:center;justify-content:center;gap:5px}
 .status-switch button.on{background:var(--card);color:var(--accent-2);box-shadow:0 1px 2px rgba(102,126,234,.12)}
 .status-switch button.on.draft{color:var(--warn)}
@@ -339,9 +354,10 @@ body.dz-dragging .editor.dz-hover,body.dz-dragging .sp.dz-hover{box-shadow:0 0 0
     <?php if ($error): ?><div style="background:var(--danger-soft);color:var(--danger);padding:12px 32px;font-size:13px;border-bottom:1px solid rgba(153,27,27,.15)"><?= e($error) ?></div><?php endif; ?>
     <form id="postForm" method="POST" enctype="multipart/form-data" action="">
       <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?? '' ?>">
-      <input type="hidden" name="status" id="statusInput" value="draft">
+      <input type="hidden" name="status" id="statusInput" value="published">
       <input type="hidden" name="category_id" id="catInput" value="">
       <input type="hidden" name="draft_id" id="draftId" value="">
+      <input type="hidden" name="scheduled_at" id="scheduledAtHidden" value="">
       <textarea name="content" id="contentInput" style="display:none"></textarea>
       <input type="hidden" name="meta_title" id="metaTitleInput" value="">
       <input type="hidden" name="meta_description" id="metaDescInput" value="">
@@ -442,8 +458,15 @@ body.dz-dragging .editor.dz-hover,body.dz-dragging .sp.dz-hover{box-shadow:0 0 0
           </div>
           <div class="ed-side">
             <div class="sp"><div class="sp-head"><div class="sp-title"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2 11 13"/><path d="m22 2-7 20-4-9-9-4z"/></svg>Publikace</div></div><div class="sp-body">
-              <div class="status-switch" id="statusSwitch"><button type="button" class="on draft" data-val="draft"><span class="dot"></span>Koncept</button><button type="button" data-val="published"><span class="dot"></span>Publikovat</button><button type="button" class="scheduled" data-val="scheduled"><span class="dot"></span>Plán</button></div>
-              <div style="margin-top:14px"><div class="sp-row"><div class="sp-row-label">Autor</div><span class="sp-row-val"><?= e($_SESSION['username'] ?? '') ?></span></div><div class="sp-row"><div class="sp-row-label">Datum</div><span class="sp-row-val">Ihned</span></div></div>
+              <div class="status-switch" id="statusSwitch"><button type="button" class="on" data-val="published"><span class="dot"></span>Publikovat</button><button type="button" class="scheduled" data-val="scheduled"><span class="dot"></span>Pl�n</button></div>
+              <div id="scheduleBox" style="display:none;margin-top:14px">
+                <div class="field" style="margin-bottom:0">
+                  <div class="field-label">Datum a �as publikace</div>
+                  <input type="datetime-local" class="field-input" id="scheduledAtInput" min="<?= date('Y-m-d\TH:i') ?>">
+                  <div class="field-foot"><span>Vyberte pouze budouc� term�n.</span><span id="schedulePreviewLabel" class="ok">Napl�nov�no</span></div>
+                </div>
+              </div>
+              <div style="margin-top:14px"><div class="sp-row"><div class="sp-row-label">Autor</div><span class="sp-row-val"><?= e($_SESSION['username'] ?? '') ?></span></div><div class="sp-row"><div class="sp-row-label">Publikace</div><span class="sp-row-val" id="publishTimingLabel">Ihned</span></div></div>
             </div></div>
             <div class="sp"><div class="sp-head"><div class="sp-title"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>Kategorie</div><span class="sp-meta"><span id="catCount">0</span> / <?= count($categories) ?></span></div><div class="sp-body">
               <div class="cat-tools">
@@ -491,23 +514,53 @@ excerptEl?.addEventListener('input',()=>{excerptCount.textContent=excerptEl.valu
 const seoTitleEl=document.getElementById('seoTitle'),seoDescEl=document.getElementById('seoDesc'),seoTitleCount=document.getElementById('seoTitleCount'),seoDescCount=document.getElementById('seoDescCount'),serpDescEl=document.getElementById('serpDesc');
 seoTitleEl?.addEventListener('input',()=>{const n=seoTitleEl.value.length;seoTitleCount.textContent=n+' / 60';seoTitleCount.className=n>60?'warn':'ok';});
 seoDescEl?.addEventListener('input',()=>{const n=seoDescEl.value.length;seoDescCount.textContent=n+' / 160';seoDescCount.className=n>160?'warn':'ok';serpDescEl.textContent=seoDescEl.value||'Krátký popis příspěvku se zobrazí ve výsledcích vyhledávání.';});
-const statusLabels={draft:'Koncept',published:'Publikovat',scheduled:'Naplánováno'};
-const statusColors={draft:'var(--warn)',published:'var(--ok)',scheduled:'var(--violet)'};
+const statusLabels={published:'Publikovat',scheduled:'Napl�nov�no'};
+const statusColors={published:'var(--ok)',scheduled:'var(--violet)'};
+const scheduleBox=document.getElementById('scheduleBox');
+const scheduledAtInput=document.getElementById('scheduledAtInput');
+const scheduledAtHidden=document.getElementById('scheduledAtHidden');
+const publishTimingLabel=document.getElementById('publishTimingLabel');
+function updateScheduleMin(){
+  if(!scheduledAtInput)return;
+  const now=new Date();
+  now.setSeconds(0,0);
+  const offset=now.getTimezoneOffset();
+  scheduledAtInput.min=new Date(now.getTime()-offset*60000).toISOString().slice(0,16);
+}
+function updateScheduleState(){
+  const val=document.getElementById('statusInput').value;
+  const isScheduled=val==='scheduled';
+  if(scheduleBox) scheduleBox.style.display=isScheduled?'block':'none';
+  if(scheduledAtHidden) scheduledAtHidden.value=isScheduled?(scheduledAtInput?.value||''):'';
+  if(publishTimingLabel) publishTimingLabel.textContent=isScheduled&&scheduledAtInput?.value?scheduledAtInput.value.replace('T',' '):'Ihned';
+  const eyebrow=document.querySelector('.ph-meta .eyebrow');
+  if(eyebrow){ eyebrow.innerHTML=`<span class="pulse" style="background:${statusColors[val]??'var(--ok)'};box-shadow:0 0 0 3px rgba(102,126,234,.15)"></span>${statusLabels[val]??val}`; }
+}
+function validateScheduledAt(){
+  if(document.getElementById('statusInput').value!=='scheduled') return true;
+  if(!scheduledAtInput?.value){ alert('Vyberte datum a �as publikace.'); scheduledAtInput?.focus(); return false; }
+  const selected=new Date(scheduledAtInput.value);
+  if(Number.isNaN(selected.getTime()) || selected.getTime() <= Date.now()){ alert('Napl�novan� publikov�n� mus� b�t v budoucnu.'); scheduledAtInput?.focus(); return false; }
+  return true;
+}
 document.querySelectorAll('#statusSwitch button').forEach(btn=>{btn.addEventListener('click',()=>{
   document.querySelectorAll('#statusSwitch button').forEach(b=>b.classList.remove('on'));
   btn.classList.add('on');
-  const val=btn.dataset.val;
-  document.getElementById('statusInput').value=val;
-  const eyebrow=document.querySelector('.ph-meta .eyebrow');
-  if(eyebrow){ eyebrow.innerHTML=`<span class="pulse" style="background:${statusColors[val]??'var(--warn)'};box-shadow:0 0 0 3px rgba(146,64,14,.15)"></span>${statusLabels[val]??val}`; }
+  document.getElementById('statusInput').value=btn.dataset.val;
+  updateScheduleMin();
+  updateScheduleState();
+  markUnsaved();
 });});
+scheduledAtInput?.addEventListener('input',()=>{updateScheduleMin();updateScheduleState();markUnsaved();});
+updateScheduleMin();
+updateScheduleState();
 let selectedCatId='';
 function selectCat(el){document.querySelectorAll('.cat-item').forEach(i=>i.classList.remove('on'));el.classList.add('on');selectedCatId=el.dataset.id;document.getElementById('catInput').value=selectedCatId;document.getElementById('catCount').textContent='1';}
 const pill1=document.getElementById('savePill'),pill2=document.getElementById('savePill2'),txt1=document.getElementById('saveText'),txt2=document.getElementById('saveText2');
 let saveTimer=null,draftId='',isSaving=false;
 function markUnsaved(){pill1.classList.remove('saved');pill2.classList.remove('saved');txt1.textContent='Neuloženo';txt2.textContent='Neuloženo';clearTimeout(saveTimer);saveTimer=setTimeout(autoSave,3000);}
 async function autoSave(){if(isSaving)return;isSaving=true;syncHiddenInputs();const fd=new FormData();fd.append('ajax_action','autosave_draft');fd.append('title',titleEl.value);fd.append('content',edContent.innerHTML);fd.append('category_id',selectedCatId);fd.append('meta_title',document.getElementById('metaTitleInput').value);fd.append('meta_description',document.getElementById('metaDescInput').value);fd.append('meta_keywords',document.getElementById('metaKwInput').value);fd.append('excerpt',document.getElementById('excerptInput').value);fd.append('featured_image_alt',document.getElementById('featAltInput').value);fd.append('featured_image_from_gallery',document.getElementById('galleryImage')?.value||'');if(draftId)fd.append('draft_id',draftId);try{const r=await fetch(location.href,{method:'POST',body:fd});const data=await r.json();if(data.success){draftId=data.draft_id;document.getElementById('draftId').value=draftId;const t=new Date().toLocaleTimeString('cs-CZ',{hour:'2-digit',minute:'2-digit'});pill1.classList.add('saved');pill2.classList.add('saved');txt1.textContent='Uloženo · '+t;txt2.textContent='Koncept uložen · '+t;}}catch(e){}finally{isSaving=false;}}
-function syncHiddenInputs(){document.getElementById('contentInput').value=edContent.innerHTML;document.getElementById('metaTitleInput').value=seoTitleEl?.value||'';document.getElementById('metaDescInput').value=seoDescEl?.value||'';document.getElementById('metaKwInput').value=document.getElementById('seoKeywords')?.value||'';document.getElementById('excerptInput').value=excerptEl?.value||'';}
+function syncHiddenInputs(){document.getElementById('contentInput').value=edContent.innerHTML;document.getElementById('metaTitleInput').value=seoTitleEl?.value||'';document.getElementById('metaDescInput').value=seoDescEl?.value||'';document.getElementById('metaKwInput').value=document.getElementById('seoKeywords')?.value||'';document.getElementById('excerptInput').value=excerptEl?.value||'';if(scheduledAtHidden) scheduledAtHidden.value=document.getElementById('statusInput').value==='scheduled'?(scheduledAtInput?.value||''):'';}
 // ── Tags ─────────────────────────────────────────────────────────────────────
 let tags = [];
 function getTags(){return tags;}
@@ -520,15 +573,17 @@ function generateSEO(){const title=titleEl.value.trim();const text=(edContent.in
 function submitForm(status){
   syncHiddenInputs();
   document.getElementById('statusInput').value=status;
+  updateScheduleState();
+  if(status==='scheduled' && !validateScheduledAt()) return;
   const publishBtn=document.getElementById('publishBtn');
   const saveDraftBtn=document.getElementById('saveDraftBtn');
-  const label=status==='published'?'Publikuji…':status==='scheduled'?'Plánuji…':'Ukládám koncept…';
-  if(publishBtn&&status==='published'){publishBtn.textContent=label;publishBtn.disabled=true;}
+  const label=status==='published'?'Publikuji�':status==='scheduled'?'Pl�nuji�':'Ukl�d�m koncept�';
+  if(publishBtn&&(status==='published'||status==='scheduled')){publishBtn.textContent=label;publishBtn.disabled=true;}
   if(saveDraftBtn&&status==='draft'){saveDraftBtn.textContent=label;saveDraftBtn.disabled=true;}
   document.getElementById('postForm').submit();
 }
-document.getElementById('publishBtn')?.addEventListener('click',()=>submitForm('published'));
-document.getElementById('topPublish')?.addEventListener('click',()=>submitForm('published'));
+document.getElementById('publishBtn')?.addEventListener('click',()=>submitForm(document.getElementById('statusInput').value));
+document.getElementById('topPublish')?.addEventListener('click',()=>submitForm(document.getElementById('statusInput').value));
 document.getElementById('saveDraftBtn')?.addEventListener('click',()=>submitForm('draft'));
 document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key==='s'){e.preventDefault();submitForm('draft');}});
 // ── Category filter + inline edit ──────────────────────────────────────────

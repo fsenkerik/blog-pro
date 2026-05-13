@@ -185,6 +185,7 @@ class Post {
         // Zahrnout nové sloupce pouze pokud DB sloupce existují (bezpečný fallback)
         if (array_key_exists('tags', $data))               $sql .= ", tags = :tags";
         if (array_key_exists('featured_image_alt', $data)) $sql .= ", featured_image_alt = :image_alt";
+        if (array_key_exists('scheduled_at', $data))       $sql .= ", scheduled_at = :scheduled_at";
 
         if (isset($data['featured_image'])) {
             $sql .= ", featured_image = :image";
@@ -200,6 +201,8 @@ class Post {
             if (!$current['published_at']) {
                 $sql .= ", published_at = :published_at";
             }
+        } elseif (isset($data['status']) && $data['status'] === 'scheduled') {
+            $sql .= ", published_at = NULL";
         }
         
         $sql .= " WHERE id = :id";
@@ -217,6 +220,7 @@ class Post {
         $this->db->bind(':meta_keys', $data['meta_keywords'] ?? '');
         if (array_key_exists('tags', $data))               $this->db->bind(':tags', $data['tags']);
         if (array_key_exists('featured_image_alt', $data)) $this->db->bind(':image_alt', $data['featured_image_alt']);
+        if (array_key_exists('scheduled_at', $data))       $this->db->bind(':scheduled_at', $data['scheduled_at']);
 
         if (isset($data['featured_image'])) {
             $this->db->bind(':image', $data['featured_image']);
