@@ -320,6 +320,47 @@ class Post {
         $result = $this->db->fetch();
         return $result['total'] ?? 0;
     }
+
+    /**
+     * Publikovat všechny naplánované příspěvky, kterým už vypršel termín.
+     */
+    public function publishDueScheduledPosts() {
+        $this->db->query(
+            "SELECT id, title
+             FROM posts
+             WHERE status = 'scheduled'
+               AND scheduled_at IS NOT NULL
+               AND scheduled_at <= NOW()"
+        );
+        $duePosts = $this->db->fetchAll();
+
+        if (empty($duePosts)) {
+            return 0;
+        }
+
+        $this->db->query(
+            "UPDATE posts
+             SET status = 'published',
+                 published_at = COALESCE(published_at, NOW()),
+                 scheduled_at = NULL
+             WHERE status = 'scheduled'
+               AND scheduled_at IS NOT NULL
+               AND scheduled_at <= NOW()"
+        );
+
+        if (!$this->db->execute()) {
+            return 0;
+        }
+
+        global $auditLog;
+        if (isset($auditLog)) {
+            foreach ($duePosts as $post) {
+                $auditLog->log('publish', 'post', $post['id'], $post['title'], 'Automaticke publikovani naplanovaneho prispevku');
+            }
+        }
+
+        return count($duePosts);
+    }
     
     /**
      * Generovat unikátní slug

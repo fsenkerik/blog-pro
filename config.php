@@ -161,6 +161,14 @@ require_once INCLUDES_PATH . 'auditLog.class.php';
 $sessionTracker = new SessionTracker();
 $auditLog = new AuditLog();
 
+// Průběžně publikuj naplánované články při běžném provozu aplikace.
+try {
+    $scheduledPublisher = new Post();
+    $scheduledPublisher->publishDueScheduledPosts();
+} catch (\Throwable $e) {
+    error_log(date('Y-m-d H:i:s') . " - Scheduled publish: " . $e->getMessage() . "\n", 3, ROOT_PATH . 'error.log');
+}
+
 if (isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true) {
     $sessionTracker->updateActivity();
 }
