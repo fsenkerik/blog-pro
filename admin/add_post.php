@@ -24,9 +24,9 @@ if (isset($_POST['ajax_action'])) {
             $title = trim($_POST['title'] ?? '');
             $content = Security::cleanHTML($_POST['content'] ?? '');
             $featuredImage = trim($_POST['featured_image_from_gallery'] ?? '');
-            if (empty($title) && empty($content) && empty($featuredImage)) { echo json_encode(['success'=>false,'message'=>'Pr�zdn� obsah']); exit; }
+            if (empty($title) && empty($content) && empty($featuredImage)) { echo json_encode(['success'=>false,'message'=>'Prázdný obsah']); exit; }
             $data = [
-                'title' => $title ?: 'Bez n�zvu',
+                'title' => $title ?: 'Bez názvu',
                 'content' => $content,
                 'excerpt' => $_POST['excerpt'] ?? '',
                 'category_id' => !empty($_POST['category_id']) ? intval($_POST['category_id']) : null,
@@ -44,27 +44,27 @@ if (isset($_POST['ajax_action'])) {
             $draftId = !empty($_POST['draft_id']) ? intval($_POST['draft_id']) : null;
             if ($draftId) {
                 $result = $post->update($draftId, $data);
-                if ($result['success']) echo json_encode(['success'=>true,'draft_id'=>$draftId,'time'=>date('H:i'),'message'=>'Koncept aktualizov�n']);
-                else echo json_encode(['success'=>false,'message'=>'Chyba p�i ukl�d�n�']);
+                if ($result['success']) echo json_encode(['success'=>true,'draft_id'=>$draftId,'time'=>date('H:i'),'message'=>'Koncept aktualizován']);
+                else echo json_encode(['success'=>false,'message'=>'Chyba při ukládání']);
             } else {
                 $result = $post->create($data);
-                if ($result['success']) echo json_encode(['success'=>true,'draft_id'=>$result['id'],'time'=>date('H:i'),'message'=>'Koncept vytvo�en']);
-                else echo json_encode(['success'=>false,'message'=>'Chyba p�i vytv��en�']);
+                if ($result['success']) echo json_encode(['success'=>true,'draft_id'=>$result['id'],'time'=>date('H:i'),'message'=>'Koncept vytvořen']);
+                else echo json_encode(['success'=>false,'message'=>'Chyba při vytváření']);
             }
             exit;
         }
         if ($_POST['ajax_action'] === 'add_category') {
             $name = trim($_POST['category_name'] ?? '');
-            if (empty($name)) { echo json_encode(['success'=>false,'message'=>'N�zev kategorie nesm� b�t pr�zdn�']); exit; }
+            if (empty($name)) { echo json_encode(['success'=>false,'message'=>'Název kategorie nesmí být prázdný']); exit; }
             $db = new Database();
             $slug = mb_strtolower($name,'UTF-8');
-            $slug = strtr($slug,['�'=>'a','�'=>'c','�'=>'d','�'=>'e','�'=>'e','�'=>'i','�'=>'n','�'=>'o','�'=>'r','�'=>'s','�'=>'t','�'=>'u','�'=>'u','�'=>'y','�'=>'z']);
+            $slug = strtr($slug,['á'=>'a','č'=>'c','ď'=>'d','é'=>'e','ě'=>'e','í'=>'i','ň'=>'n','ó'=>'o','ř'=>'r','š'=>'s','ť'=>'t','ú'=>'u','ů'=>'u','ý'=>'y','ž'=>'z']);
             $slug = preg_replace('/[^a-z0-9\s-]/','', $slug);
             $slug = preg_replace('/[\s-]+/','-',$slug);
             $slug = trim($slug,'-');
             $db->query('SELECT id FROM categories WHERE slug = :slug');
             $db->bind(':slug',$slug);
-            if ($db->fetch()) { echo json_encode(['success'=>false,'message'=>'Kategorie ji� existuje']); exit; }
+            if ($db->fetch()) { echo json_encode(['success'=>false,'message'=>'Kategorie již existuje']); exit; }
             $db->query('INSERT INTO categories (name,slug) VALUES (:name,:slug)');
             $db->bind(':name',$name); $db->bind(':slug',$slug);
             if ($db->execute()) { $newId=$db->lastInsertId(); echo json_encode(['success'=>true,'id'=>$newId,'name'=>$name,'slug'=>$slug]); }
@@ -91,7 +91,7 @@ if (isset($_POST['ajax_action'])) {
         if ($_POST['ajax_action'] === 'edit_category') {
             $catId = intval($_POST['category_id'] ?? 0);
             $name  = trim($_POST['category_name'] ?? '');
-            if (!$catId || empty($name)) { echo json_encode(['success'=>false,'message'=>'Neplatn� data']); exit; }
+            if (!$catId || empty($name)) { echo json_encode(['success'=>false,'message'=>'Neplatná data']); exit; }
             $db = new Database();
             $db->query('UPDATE categories SET name = :name WHERE id = :id');
             $db->bind(':name',$name); $db->bind(':id',$catId);
@@ -104,13 +104,13 @@ if (isset($_POST['ajax_action'])) {
             $db->query('SELECT COUNT(*) as count FROM posts WHERE category_id = :id');
             $db->bind(':id',$catId);
             $res = $db->fetch();
-            if ($res && $res['count'] > 0) { echo json_encode(['success'=>false,'message'=>'Nelze smazat � obsahuje '.$res['count'].' p��sp�vk�']); exit; }
+            if ($res && $res['count'] > 0) { echo json_encode(['success'=>false,'message'=>'Nelze smazat — obsahuje '.$res['count'].' příspěvků']); exit; }
             $db->query('DELETE FROM categories WHERE id = :id');
             $db->bind(':id',$catId);
             echo json_encode(['success'=>$db->execute()]);
             exit;
         }
-        echo json_encode(['success'=>false,'message'=>'Nezn�m� akce']);
+        echo json_encode(['success'=>false,'message'=>'Neznámá akce']);
         exit;
     } catch (Exception $e) {
         echo json_encode(['success'=>false,'message'=>'Chyba: '.$e->getMessage()]);
@@ -120,7 +120,7 @@ if (isset($_POST['ajax_action'])) {
 
 if (isPost() && !isset($_POST['ajax_action'])) {
     if (!verifyCsrf()) {
-        $error = 'Neplatn� CSRF token';
+        $error = 'Neplatný CSRF token';
     } else {
         $data = [
             'title' => post('title'),
@@ -138,11 +138,11 @@ if (isPost() && !isset($_POST['ajax_action'])) {
         if (($data['status'] ?? 'published') === 'scheduled') {
             $scheduledAtInput = trim((string) post('scheduled_at'));
             if ($scheduledAtInput === '') {
-                $error = 'Vyberte datum a ?as publikace.';
+                $error = 'Vyberte datum a �as publikace.';
             } else {
                 $scheduledAt = strtotime($scheduledAtInput);
                 if ($scheduledAt === false || $scheduledAt <= time()) {
-                    $error = 'Napl?novan? publikov?n? mus? b?t v budoucnu.';
+                    $error = 'Napl�novan� publikov�n� mus� b�t v budoucnu.';
                 } else {
                     $data['scheduled_at'] = date('Y-m-d H:i:s', $scheduledAt);
                     $data['status'] = 'scheduled';
@@ -177,7 +177,7 @@ $baseUrl = rtrim(BASE_URL,'/').'/';
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Nov� p��sp�vek � <?= e(SITE_NAME) ?></title>
+<title>Nový příspěvek · <?= e(SITE_NAME) ?></title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Instrument+Serif:ital@0;1&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Merriweather:wght@400;700&family=Playfair+Display:wght@400;600&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
@@ -268,16 +268,6 @@ $baseUrl = rtrim(BASE_URL,'/').'/';
 .status-switch button.on.draft{color:var(--warn)}
 .status-switch button.on.scheduled{color:var(--violet)}
 .status-switch button .dot{width:6px;height:6px;border-radius:50%;background:currentColor;opacity:.75}
-.schedule-card{margin-top:14px;padding:14px;border:1px solid rgba(102,126,234,.14);border-radius:12px;background:linear-gradient(180deg,rgba(102,126,234,.08),rgba(118,75,162,.04))}
-.schedule-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px}
-.schedule-title{font-size:12.5px;font-weight:600;color:var(--ink)}
-.schedule-copy{font-size:11.5px;line-height:1.55;color:var(--muted);margin-top:4px}
-.schedule-badge{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;background:#fff;border:1px solid rgba(102,126,234,.16);font-family:var(--mono);font-size:10.5px;color:var(--accent-2)}
-.schedule-badge .dot{width:6px;height:6px;border-radius:50%;background:currentColor}
-.schedule-grid{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:end}
-.schedule-note{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:10px;font-size:11px;color:var(--muted)}
-.schedule-note strong{color:var(--accent-2);font-weight:600}
-@media(max-width:900px){.schedule-grid{grid-template-columns:1fr}}
 .sp-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;font-size:12.5px;border-bottom:1px solid var(--line)}
 .sp-row:last-child{border-bottom:none}
 .sp-row-label{color:var(--muted);display:flex;align-items:center;gap:8px}
@@ -349,14 +339,14 @@ body.dz-dragging .editor.dz-hover,body.dz-dragging .sp.dz-hover{box-shadow:0 0 0
 <body>
 <div class="app">
   <aside class="side">
-    <div class="brand"><div class="brand-mark">BP</div><div><div class="brand-name"><?= e(SITE_NAME) ?></div><div class="brand-sub">CMS � Admin</div></div></div>
+    <div class="brand"><div class="brand-mark">BP</div><div><div class="brand-name"><?= e(SITE_NAME) ?></div><div class="brand-sub">CMS · Admin</div></div></div>
     <div><div class="nav-label">Workspace</div><nav class="nav">
-      <a href="<?= ADMIN_URL ?>dashboard.php"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>P�ehled</a>
-      <a href="<?= ADMIN_URL ?>posts.php" class="active"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 4h12l4 4v12H4z"/><path d="M16 4v4h4"/><path d="M8 13h8M8 17h5"/></svg>P��sp�vky</a>
-      <a href="<?= ADMIN_URL ?>media.php"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 16V6a2 2 0 0 1 2-2h8l6 6v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/><circle cx="9" cy="11" r="1.5"/><path d="m4 18 5-5 5 5 3-3 3 3"/></svg>M�dia</a>
+      <a href="<?= ADMIN_URL ?>dashboard.php"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>Přehled</a>
+      <a href="<?= ADMIN_URL ?>posts.php" class="active"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 4h12l4 4v12H4z"/><path d="M16 4v4h4"/><path d="M8 13h8M8 17h5"/></svg>Příspěvky</a>
+      <a href="<?= ADMIN_URL ?>media.php"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 16V6a2 2 0 0 1 2-2h8l6 6v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/><circle cx="9" cy="11" r="1.5"/><path d="m4 18 5-5 5 5 3-3 3 3"/></svg>Média</a>
     </nav></div>
-    <div><div class="nav-label">Nastaven�</div><nav class="nav">
-      <a href="<?= ADMIN_URL ?>settings.php"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M12 2v2M12 20v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M2 12h2M20 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/></svg>Nastaven�</a>
+    <div><div class="nav-label">Nastavení</div><nav class="nav">
+      <a href="<?= ADMIN_URL ?>settings.php"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M12 2v2M12 20v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M2 12h2M20 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/></svg>Nastavení</a>
     </nav></div>
     <div class="side-user"><div class="avatar"><?= $userInitials ?></div><div class="side-user-info"><div class="side-user-name"><?= e($_SESSION['username'] ?? '') ?></div><div class="side-user-role"><?= e($_SESSION['user_role'] ?? 'Editor') ?></div></div></div>
   </aside>
@@ -375,27 +365,27 @@ body.dz-dragging .editor.dz-hover,body.dz-dragging .sp.dz-hover{box-shadow:0 0 0
       <input type="hidden" name="excerpt" id="excerptInput" value="">
       <input type="hidden" name="featured_image_alt" id="featAltInput" value="">
       <div class="topbar">
-        <div class="crumb"><a href="<?= ADMIN_URL ?>dashboard.php" style="color:var(--muted)">Blog Pro</a><span class="sep">/</span><a href="<?= ADMIN_URL ?>posts.php" style="color:var(--muted)">P��sp�vky</a><span class="sep">/</span><span class="here">Nov� p��sp�vek</span></div>
-        <div class="top-actions"><a href="<?= ADMIN_URL ?>posts.php" class="btn btn-ghost btn-sm"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>Zp�t</a></div>
+        <div class="crumb"><a href="<?= ADMIN_URL ?>dashboard.php" style="color:var(--muted)">Blog Pro</a><span class="sep">/</span><a href="<?= ADMIN_URL ?>posts.php" style="color:var(--muted)">Příspěvky</a><span class="sep">/</span><span class="here">Nový příspěvek</span></div>
+        <div class="top-actions"><a href="<?= ADMIN_URL ?>posts.php" class="btn btn-ghost btn-sm"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>Zpět</a></div>
       </div>
       <div class="content">
         <div class="page-head">
           <div>
-            <div class="ph-meta"><div class="eyebrow"><span class="pulse" style="background:var(--warn);box-shadow:0 0 0 3px rgba(146,64,14,.15)"></span>Koncept</div><span class="save-pill" id="savePill"><span class="dot"></span><span id="saveText">Neulo�eno</span></span></div>
-            <h1 class="page-title">Nov� <em>p��sp�vek.</em></h1>
+            <div class="ph-meta"><div class="eyebrow"><span class="pulse" style="background:var(--warn);box-shadow:0 0 0 3px rgba(146,64,14,.15)"></span>Koncept</div><span class="save-pill" id="savePill"><span class="dot"></span><span id="saveText">Neuloženo</span></span></div>
+            <h1 class="page-title">Nový <em>příspěvek.</em></h1>
           </div>
           <div class="ph-actions"><button type="button" class="btn btn-primary btn-sm" id="topPublish"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2 11 13"/><path d="m22 2-7 20-4-9-9-4z"/></svg>Publikovat</button></div>
         </div>
         <div class="ed-grid">
           <div style="display:flex;flex-direction:column;gap:18px">
             <div class="title-field">
-              <div class="title-label"><span>Titulek</span><span class="req">?</span><span class="form-label-sub">povinn� � max. 90 znak�</span></div>
-              <input type="text" name="title" class="title-input" id="titleInput" placeholder="Za�n�te �dern�m titulkem�" autocomplete="off">
+              <div class="title-label"><span>Titulek</span><span class="req">●</span><span class="form-label-sub">povinné · max. 90 znaků</span></div>
+              <input type="text" name="title" class="title-input" id="titleInput" placeholder="Začněte úderným titulkem…" autocomplete="off">
               <div class="title-foot"><div class="slug-field"><span class="pfx"><?= parse_url(BASE_URL, PHP_URL_HOST) ?>/</span><input type="text" class="slug-val" id="slugDisplay" placeholder="automaticky-z-titulku" readonly></div><button type="button" class="slug-regen" id="slugRegen">Auto</button></div>
             </div>
             <div class="editor">
               <div class="ed-toolbar">
-                <button type="button" class="ed-select" onmousedown="saveColorRange()" onclick="formatBlock(this)" title="Styl odstavce"><span id="blockLabel">Norm�ln�</span><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></button>
+                <button type="button" class="ed-select" onmousedown="saveColorRange()" onclick="formatBlock(this)" title="Styl odstavce"><span id="blockLabel">Normální</span><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg></button>
                 <select class="ed-select" style="min-width:100px" onmousedown="saveColorRange()" onchange="applyFont(this.value)" title="Font">
                   <option value="">Font</option>
                   <option value="Arial,sans-serif">Arial</option>
@@ -411,7 +401,7 @@ body.dz-dragging .editor.dz-hover,body.dz-dragging .sp.dz-hover{box-shadow:0 0 0
                   <option value="'IBM Plex Sans',sans-serif" style="font-family:'IBM Plex Sans',sans-serif">IBM Plex Sans</option>
                   <option value="'JetBrains Mono',monospace" style="font-family:'JetBrains Mono',monospace">JetBrains Mono</option>
                 </select>
-                <select class="ed-select" style="min-width:88px" onmousedown="saveColorRange()" onchange="applyFontSize(this.value)" title="Velikost p�sma">
+                <select class="ed-select" style="min-width:88px" onmousedown="saveColorRange()" onchange="applyFontSize(this.value)" title="Velikost písma">
                   <option value="">Velikost</option>
                   <option value="14px">14 px</option>
                   <option value="16px">16 px</option>
@@ -421,148 +411,115 @@ body.dz-dragging .editor.dz-hover,body.dz-dragging .sp.dz-hover{box-shadow:0 0 0
                   <option value="36px">36 px</option>
                 </select>
                 <div class="ed-divider"></div>
-                <button type="button" class="ed-btn" title="Tu�n�" onclick="document.execCommand('bold')"><b>B</b></button>
-                <button type="button" class="ed-btn" title="Kurz�va" onclick="document.execCommand('italic')"><i style="font-family:var(--serif)">I</i></button>
-                <button type="button" class="ed-btn" title="Podtr�en�" onclick="document.execCommand('underline')" style="text-decoration:underline;">U</button>
-                <button type="button" class="ed-btn" title="P�e�krtnut�" onclick="document.execCommand('strikeThrough')" style="text-decoration:line-through;">S</button>
+                <button type="button" class="ed-btn" title="Tučně" onclick="document.execCommand('bold')"><b>B</b></button>
+                <button type="button" class="ed-btn" title="Kurzíva" onclick="document.execCommand('italic')"><i style="font-family:var(--serif)">I</i></button>
+                <button type="button" class="ed-btn" title="Podtržení" onclick="document.execCommand('underline')" style="text-decoration:underline;">U</button>
+                <button type="button" class="ed-btn" title="Přeškrtnutí" onclick="document.execCommand('strikeThrough')" style="text-decoration:line-through;">S</button>
                 <button type="button" class="ed-btn ed-color-btn" title="Barva textu" onmousedown="saveColorRange()">
                   <span style="font-size:12px;font-weight:700;line-height:1;display:block">A</span>
                   <span id="fgBar" style="width:16px;height:3px;background:#000;border-radius:1px;display:block;margin-top:1px"></span>
                   <input type="color" id="fgColorIn" value="#000000" onchange="applyFgColor(this.value)">
                 </button>
-                <button type="button" class="ed-btn ed-color-btn" title="Barva pozad� textu" onmousedown="saveColorRange()">
+                <button type="button" class="ed-btn ed-color-btn" title="Barva pozadí textu" onmousedown="saveColorRange()">
                   <span style="font-size:10px;font-weight:700;line-height:1;display:block;background:#ff0;padding:0 2px">ab</span>
                   <span id="bgBar" style="width:16px;height:3px;background:#ff0;border-radius:1px;display:block;margin-top:1px"></span>
                   <input type="color" id="bgColorIn" value="#ffff00" onchange="applyBgColor(this.value)">
                 </button>
                 <div class="ed-divider"></div>
-                <button type="button" class="ed-btn" title="Doln� index" onclick="document.execCommand('subscript')" style="font-size:11px;">X2</button>
-                <button type="button" class="ed-btn" title="Horn� index" onclick="document.execCommand('superscript')" style="font-size:11px;">X2</button>
+                <button type="button" class="ed-btn" title="Dolní index" onclick="document.execCommand('subscript')" style="font-size:11px;">X₂</button>
+                <button type="button" class="ed-btn" title="Horní index" onclick="document.execCommand('superscript')" style="font-size:11px;">X²</button>
                 <div class="ed-divider"></div>
                 <button type="button" class="ed-btn active" title="Zarovnat vlevo" onclick="document.execCommand('justifyLeft')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="17" y1="10" x2="3" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="14" x2="3" y2="14"/><line x1="17" y1="18" x2="3" y2="18"/></svg></button>
-                <button type="button" class="ed-btn" title="Na st�ed" onclick="document.execCommand('justifyCenter')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="10" x2="6" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="14" x2="3" y2="14"/><line x1="18" y1="18" x2="6" y2="18"/></svg></button>
+                <button type="button" class="ed-btn" title="Na střed" onclick="document.execCommand('justifyCenter')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="10" x2="6" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="14" x2="3" y2="14"/><line x1="18" y1="18" x2="6" y2="18"/></svg></button>
                 <button type="button" class="ed-btn" title="Zarovnat vpravo" onclick="document.execCommand('justifyRight')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="21" y1="10" x2="7" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="14" x2="3" y2="14"/><line x1="21" y1="18" x2="7" y2="18"/></svg></button>
                 <div class="ed-divider"></div>
-                <button type="button" class="ed-btn" title="��slovan� seznam" onclick="document.execCommand('insertOrderedList')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="10" y1="6" x2="21" y2="6"/><line x1="10" y1="12" x2="21" y2="12"/><line x1="10" y1="18" x2="21" y2="18"/><path d="M4 6h1v4M4 10h2M6 18H4c0-1 2-2 2-3s-1-1.5-2-1"/></svg></button>
-                <button type="button" class="ed-btn" title="Odr�ky" onclick="document.execCommand('insertUnorderedList')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="9" y1="6" x2="20" y2="6"/><line x1="9" y1="12" x2="20" y2="12"/><line x1="9" y1="18" x2="20" y2="18"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/></svg></button>
+                <button type="button" class="ed-btn" title="Číslovaný seznam" onclick="document.execCommand('insertOrderedList')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="10" y1="6" x2="21" y2="6"/><line x1="10" y1="12" x2="21" y2="12"/><line x1="10" y1="18" x2="21" y2="18"/><path d="M4 6h1v4M4 10h2M6 18H4c0-1 2-2 2-3s-1-1.5-2-1"/></svg></button>
+                <button type="button" class="ed-btn" title="Odrážky" onclick="document.execCommand('insertUnorderedList')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="9" y1="6" x2="20" y2="6"/><line x1="9" y1="12" x2="20" y2="12"/><line x1="9" y1="18" x2="20" y2="18"/><circle cx="4" cy="6" r="1"/><circle cx="4" cy="12" r="1"/><circle cx="4" cy="18" r="1"/></svg></button>
                 <div class="ed-divider"></div>
                 <button type="button" class="ed-btn" title="Citace" onclick="document.execCommand('formatBlock',false,'blockquote')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 21c3 0 7-1 7-8V5c0-1.25-.75-2-2-2H4c-1.25 0-2 .75-2 2v6c0 1.25.75 2 2 2h2c0 0 1 0 1 1s-1 5-4 5"/><path d="M14 21c3 0 7-1 7-8V5c0-1.25-.75-2-2-2h-4c-1.25 0-2 .75-2 2v6c0 1.25.75 2 2 2h2c0 0 1 0 1 1s-1 5-4 5"/></svg></button>
-                <button type="button" class="ed-btn" title="Vlo�it odkaz" onclick="insertLink()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></button>
-                <button type="button" class="ed-btn" title="Vlo�it obr�zek" onclick="openMediaModal('image')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg></button>
-                <button type="button" class="ed-btn" title="Vlo�it video" onclick="openMediaModal('video')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg></button>
+                <button type="button" class="ed-btn" title="Vložit odkaz" onclick="insertLink()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></button>
+                <button type="button" class="ed-btn" title="Vložit obrázek" onclick="openMediaModal('image')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg></button>
+                <button type="button" class="ed-btn" title="Vložit video" onclick="openMediaModal('video')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg></button>
                 <div style="margin-left:auto;display:flex;gap:4px;">
-                  <button type="button" class="ed-btn" title="Zp�t" onclick="document.execCommand('undo')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg></button>
-                  <button type="button" class="ed-btn" title="Vp�ed" onclick="document.execCommand('redo')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 7v6h-6"/><path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3L21 13"/></svg></button>
-                  <button type="button" class="ed-btn danger" title="Vy�istit form�tov�n�" onclick="document.execCommand('removeFormat')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 3 7 21"/><path d="M21 9H8"/></svg></button>
+                  <button type="button" class="ed-btn" title="Zpět" onclick="document.execCommand('undo')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg></button>
+                  <button type="button" class="ed-btn" title="Vpřed" onclick="document.execCommand('redo')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 7v6h-6"/><path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3L21 13"/></svg></button>
+                  <button type="button" class="ed-btn danger" title="Vyčistit formátování" onclick="document.execCommand('removeFormat')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 3 7 21"/><path d="M21 9H8"/></svg></button>
                 </div>
               </div>
-              <div class="ed-content" id="edContent" contenteditable="true" data-placeholder="Za�n�te ps�t v� obsah�"></div>
+              <div class="ed-content" id="edContent" contenteditable="true" data-placeholder="Začněte psát váš obsah…"></div>
               <div class="ed-stats">
                 <div class="ed-stat"><div class="ed-stat-ico"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="14 3 14 9 20 9"/></svg></div><div><div class="ed-stat-label">Slov</div><div class="ed-stat-val" id="statWords">0</div></div></div>
-                <div class="ed-stat"><div class="ed-stat-ico"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg></div><div><div class="ed-stat-label">Znak�</div><div class="ed-stat-val" id="statChars">0</div></div></div>
-                <div class="ed-stat"><div class="ed-stat-ico"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></div><div><div class="ed-stat-label">�ten�</div><div class="ed-stat-val" id="statRead">0<span class="unit">min</span></div></div></div>
-                <div class="ed-stat"><div class="ed-stat-ico"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg></div><div><div class="ed-stat-label">�itelnost</div><div class="ed-stat-val" id="statReadability">�</div></div></div>
+                <div class="ed-stat"><div class="ed-stat-ico"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" y1="20" x2="15" y2="20"/><line x1="12" y1="4" x2="12" y2="20"/></svg></div><div><div class="ed-stat-label">Znaků</div><div class="ed-stat-val" id="statChars">0</div></div></div>
+                <div class="ed-stat"><div class="ed-stat-ico"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></div><div><div class="ed-stat-label">Čtení</div><div class="ed-stat-val" id="statRead">0<span class="unit">min</span></div></div></div>
+                <div class="ed-stat"><div class="ed-stat-ico"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg></div><div><div class="ed-stat-label">Čitelnost</div><div class="ed-stat-val" id="statReadability">—</div></div></div>
               </div>
             </div>
-            <div class="sp"><div class="sp-head"><div class="sp-title"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="17" y1="10" x2="3" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="14" x2="3" y2="14"/><line x1="17" y1="18" x2="3" y2="18"/></svg>Perex</div><span class="sp-meta" id="excerptCount">0 / 280</span></div><div class="sp-body"><textarea class="field-textarea" id="excerptText" placeholder="Kr�tk� uveden� �l�nku�"></textarea></div></div>
+            <div class="sp"><div class="sp-head"><div class="sp-title"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="17" y1="10" x2="3" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="14" x2="3" y2="14"/><line x1="17" y1="18" x2="3" y2="18"/></svg>Perex</div><span class="sp-meta" id="excerptCount">0 / 280</span></div><div class="sp-body"><textarea class="field-textarea" id="excerptText" placeholder="Krátké uvedení článku…"></textarea></div></div>
           </div>
           <div class="ed-side">
             <div class="sp"><div class="sp-head"><div class="sp-title"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2 11 13"/><path d="m22 2-7 20-4-9-9-4z"/></svg>Publikace</div></div><div class="sp-body">
-              <div class="status-switch" id="statusSwitch"><button type="button" class="on" data-val="published"><span class="dot"></span>Publikovat</button><button type="button" class="scheduled" data-val="scheduled"><span class="dot"></span>Planovat</button></div>
-              <div id="scheduleBox" class="schedule-card" style="display:none">
-                <div class="schedule-head">
-                  <div>
-                    <div class="schedule-title">Naplanovat vydani</div>
-                    <div class="schedule-copy">Vyberte presny termin a clanek se publikuje automaticky.</div>
-                  </div>
-                  <div class="schedule-badge"><span class="dot"></span><span id="schedulePreviewLabel">Ceka na termin</span></div>
+              <div class="status-switch" id="statusSwitch"><button type="button" class="on" data-val="published"><span class="dot"></span>Publikovat</button><button type="button" class="scheduled" data-val="scheduled"><span class="dot"></span>Pl�n</button></div>
+              <div id="scheduleBox" style="display:none;margin-top:14px">
+                <div class="field" style="margin-bottom:0">
+                  <div class="field-label">Datum a �as publikace</div>
+                  <input type="datetime-local" class="field-input" id="scheduledAtInput" min="<?= date('Y-m-d\TH:i') ?>">
+                  <div class="field-foot"><span>Vyberte pouze budouc� term�n.</span><span id="schedulePreviewLabel" class="ok">Napl�nov�no</span></div>
                 </div>
-                <div class="schedule-grid">
-                  <div class="field" style="margin-bottom:0">
-                    <div class="field-label">Datum a cas publikace</div>
-                    <input type="datetime-local" class="field-input" id="scheduledAtInput" min="<?= date('Y-m-d\TH:i') ?>">
-                  </div>
-                  <button type="button" class="btn btn-ghost btn-sm" id="scheduleResetBtn">Nejblizsi termin</button>
-                </div>
-                <div class="schedule-note"><span>Vybirat lze pouze budoucnost.</span><strong id="scheduleHumanLabel">Bez terminu</strong></div>
               </div>
               <div style="margin-top:14px"><div class="sp-row"><div class="sp-row-label">Autor</div><span class="sp-row-val"><?= e($_SESSION['username'] ?? '') ?></span></div><div class="sp-row"><div class="sp-row-label">Publikace</div><span class="sp-row-val" id="publishTimingLabel">Ihned</span></div></div>
             </div></div>
             <div class="sp"><div class="sp-head"><div class="sp-title"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>Kategorie</div><span class="sp-meta"><span id="catCount">0</span> / <?= count($categories) ?></span></div><div class="sp-body">
               <div class="cat-tools">
-                <div class="cat-search-wrap"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input type="text" id="catSearch" placeholder="Hledat nebo p�idat�" oninput="filterCats(this.value)"></div>
-                <button type="button" class="cat-add-btn" onclick="addCatFromSearch()" title="P�idat kategorii"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg></button>
+                <div class="cat-search-wrap"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input type="text" id="catSearch" placeholder="Hledat nebo přidat…" oninput="filterCats(this.value)"></div>
+                <button type="button" class="cat-add-btn" onclick="addCatFromSearch()" title="Přidat kategorii"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg></button>
               </div>
-              <div class="cat-list" id="catList"><?php foreach ($categories as $i => $cat): ?><div class="cat-item" data-id="<?= $cat['id'] ?>" data-name="<?= e($cat['name']) ?>" onclick="selectCat(this)"><div class="cat-check"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div><div class="cat-swatch" style="background:<?= $catColors[$i % count($catColors)] ?>"></div><span class="cat-name"><?= e($cat['name']) ?></span><span class="cat-count"><?= $cat['post_count'] ?? 0 ?></span><button type="button" class="cat-edit-btn" onclick="editCatInline(event,this)" title="P�ejmenovat" style="margin-left:auto;width:20px;height:20px;border-radius:4px;border:1px solid transparent;color:var(--muted);display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .15s"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button></div><?php endforeach; ?></div>
+              <div class="cat-list" id="catList"><?php foreach ($categories as $i => $cat): ?><div class="cat-item" data-id="<?= $cat['id'] ?>" data-name="<?= e($cat['name']) ?>" onclick="selectCat(this)"><div class="cat-check"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div><div class="cat-swatch" style="background:<?= $catColors[$i % count($catColors)] ?>"></div><span class="cat-name"><?= e($cat['name']) ?></span><span class="cat-count"><?= $cat['post_count'] ?? 0 ?></span><button type="button" class="cat-edit-btn" onclick="editCatInline(event,this)" title="Přejmenovat" style="margin-left:auto;width:20px;height:20px;border-radius:4px;border:1px solid transparent;color:var(--muted);display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .15s"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button></div><?php endforeach; ?></div>
             </div></div>
-            <div class="sp"><div class="sp-head"><div class="sp-title"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>Hlavn� obr�zek</div></div><div class="sp-body">
-              <div class="dropzone" id="dropzone" onclick="document.getElementById('featuredInput').click()"><div class="dz-ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div><div class="dz-text">P�et�hn�te obr�zek p��sp�vku</div><div class="dz-sub">JPG, PNG nebo WebP � max. 8 MB</div><button type="button" class="dz-btn primary">Vybrat obr�zek</button></div>
+            <div class="sp"><div class="sp-head"><div class="sp-title"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>Hlavní obrázek</div></div><div class="sp-body">
+              <div class="dropzone" id="dropzone" onclick="document.getElementById('featuredInput').click()"><div class="dz-ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div><div class="dz-text">Přetáhněte obrázek příspěvku</div><div class="dz-sub">JPG, PNG nebo WebP · max. 8 MB</div><button type="button" class="dz-btn primary">Vybrat obrázek</button></div>
               <input type="file" name="featured_image" id="featuredInput" accept="image/*" style="display:none">
               <input type="hidden" name="featured_image_from_gallery" id="galleryImage" value="">
               <div class="field" style="margin-top:10px">
-                <div class="field-label">Alt text <span class="opt">(voliteln�)</span> <span class="help" title="Popis obr�zku pro vyhled�va�e a �te�ky">?</span></div>
-                <input type="text" class="field-input" id="featAltField" placeholder="Popis obr�zku�" maxlength="255" oninput="document.getElementById('featAltInput').value=this.value">
+                <div class="field-label">Alt text <span class="opt">(volitelné)</span> <span class="help" title="Popis obrázku pro vyhledávače a čtečky">?</span></div>
+                <input type="text" class="field-input" id="featAltField" placeholder="Popis obrázku…" maxlength="255" oninput="document.getElementById('featAltInput').value=this.value">
               </div>
             </div></div>
-            <div class="sp"><div class="seo-head"><div class="sp-title"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>SEO &amp; sd�len�</div><button type="button" class="seo-magic" onclick="generateSEO()" title="Automaticky vyplnit SEO z obsahu"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></svg>Auto SEO</button></div><div class="sp-body">
-              <div class="field"><div class="field-label">SEO Title <span class="help" title="Titulek zobrazovan� ve v�sledc�ch vyhled�v�n�">?</span></div><input type="text" class="field-input" id="seoTitle" placeholder="Ponechte pr�zdn� pro titulek�" maxlength="80"><div class="field-foot"><span>Optimum 50�60 znak�</span><span id="seoTitleCount" class="ok">0 / 60</span></div></div>
-              <div class="field"><div class="field-label">Meta Description <span class="help" title="Kr�tk� popis ve v�sledc�ch vyhled�v�n�">?</span></div><textarea class="field-textarea" id="seoDesc" placeholder="Kr�tk� popis pro vyhled�va�e�" maxlength="200"></textarea><div class="field-foot"><span>Optimum 150�160 znak�</span><span id="seoDescCount" class="ok">0 / 160</span></div></div>
-              <div class="field"><div class="field-label">Kl��ov� slova <span class="opt">(voliteln�)</span></div><input type="text" class="field-input" id="seoKeywords" placeholder="slovo 1, slovo 2�"></div>
-              <div class="field-label" style="margin-top:6px">N�hled v Google</div>
-              <div class="serp"><div class="serp-url"><?= parse_url(BASE_URL, PHP_URL_HOST) ?> � <span id="serpSlug">novy-prispevek</span></div><div class="serp-title" id="serpTitle">Nov� p��sp�vek � <?= e(SITE_NAME) ?></div><div class="serp-desc" id="serpDesc">Kr�tk� popis p��sp�vku se zobraz� ve v�sledc�ch vyhled�v�n�.</div></div>
+            <div class="sp"><div class="seo-head"><div class="sp-title"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>SEO &amp; sdílení</div><button type="button" class="seo-magic" onclick="generateSEO()" title="Automaticky vyplnit SEO z obsahu"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z"/></svg>Auto SEO</button></div><div class="sp-body">
+              <div class="field"><div class="field-label">SEO Title <span class="help" title="Titulek zobrazovaný ve výsledcích vyhledávání">?</span></div><input type="text" class="field-input" id="seoTitle" placeholder="Ponechte prázdné pro titulek…" maxlength="80"><div class="field-foot"><span>Optimum 50–60 znaků</span><span id="seoTitleCount" class="ok">0 / 60</span></div></div>
+              <div class="field"><div class="field-label">Meta Description <span class="help" title="Krátký popis ve výsledcích vyhledávání">?</span></div><textarea class="field-textarea" id="seoDesc" placeholder="Krátký popis pro vyhledávače…" maxlength="200"></textarea><div class="field-foot"><span>Optimum 150–160 znaků</span><span id="seoDescCount" class="ok">0 / 160</span></div></div>
+              <div class="field"><div class="field-label">Klíčová slova <span class="opt">(volitelné)</span></div><input type="text" class="field-input" id="seoKeywords" placeholder="slovo 1, slovo 2…"></div>
+              <div class="field-label" style="margin-top:6px">Náhled v Google</div>
+              <div class="serp"><div class="serp-url"><?= parse_url(BASE_URL, PHP_URL_HOST) ?> › <span id="serpSlug">novy-prispevek</span></div><div class="serp-title" id="serpTitle">Nový příspěvek — <?= e(SITE_NAME) ?></div><div class="serp-desc" id="serpDesc">Krátký popis příspěvku se zobrazí ve výsledcích vyhledávání.</div></div>
             </div></div>
           </div>
         </div>
         <div class="savebar">
-          <div class="savebar-info"><span class="save-pill" id="savePill2"><span class="dot"></span><span id="saveText2">Neulo�eno</span></span><span style="color:var(--faint)">�</span><span class="mono" style="font-size:11.5px">Ctrl+S ulo�� koncept</span></div>
-          <div class="savebar-actions"><a href="<?= ADMIN_URL ?>posts.php" class="btn btn-cancel btn-sm">Zru�it</a><button type="button" class="btn btn-ghost btn-sm" id="saveDraftBtn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/></svg>Ulo�it koncept</button><button type="button" class="btn btn-primary btn-sm" id="publishBtn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2 11 13"/><path d="m22 2-7 20-4-9-9-4z"/></svg>Publikovat p��sp�vek</button></div>
+          <div class="savebar-info"><span class="save-pill" id="savePill2"><span class="dot"></span><span id="saveText2">Neuloženo</span></span><span style="color:var(--faint)">·</span><span class="mono" style="font-size:11.5px">Ctrl+S uloží koncept</span></div>
+          <div class="savebar-actions"><a href="<?= ADMIN_URL ?>posts.php" class="btn btn-cancel btn-sm">Zrušit</a><button type="button" class="btn btn-ghost btn-sm" id="saveDraftBtn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/></svg>Uložit koncept</button><button type="button" class="btn btn-primary btn-sm" id="publishBtn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2 11 13"/><path d="m22 2-7 20-4-9-9-4z"/></svg>Publikovat příspěvek</button></div>
         </div>
       </div>
     </form>
   </main>
 </div>
 <script>
-const slugify=s=>s.toLowerCase().normalize('NFD').replace(/[`-?]/g,'').replace(/[^a-z0-9 -]/g,'').trim().replace(/\s+/g,'-').slice(0,80)||'novy-prispevek';
+const slugify=s=>s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9 -]/g,'').trim().replace(/\s+/g,'-').slice(0,80)||'novy-prispevek';
 const titleEl=document.getElementById('titleInput'),slugDisp=document.getElementById('slugDisplay'),serpSlug=document.getElementById('serpSlug'),serpTitle=document.getElementById('serpTitle'),edContent=document.getElementById('edContent');
 let slugDirty=false;
-titleEl.addEventListener('input',()=>{if(!slugDirty){const s=slugify(titleEl.value);slugDisp.value=s;serpSlug.textContent=s;}serpTitle.textContent=(titleEl.value||'Nov� p��sp�vek')+' � <?= e(SITE_NAME) ?>';markUnsaved();});
+titleEl.addEventListener('input',()=>{if(!slugDirty){const s=slugify(titleEl.value);slugDisp.value=s;serpSlug.textContent=s;}serpTitle.textContent=(titleEl.value||'Nový příspěvek')+' — <?= e(SITE_NAME) ?>';markUnsaved();});
 document.getElementById('slugRegen').addEventListener('click',()=>{slugDirty=false;const s=slugify(titleEl.value);slugDisp.value=s;serpSlug.textContent=s;});
-function updateStats(){const txt=(edContent.innerText||'').trim();const words=txt?txt.split(/\s+/).filter(Boolean).length:0;document.getElementById('statWords').textContent=words.toLocaleString('cs-CZ');document.getElementById('statChars').textContent=txt.length.toLocaleString('cs-CZ');document.getElementById('statRead').innerHTML=Math.max(0,Math.round(words/220))+'<span class="unit">min</span>';document.getElementById('statReadability').textContent=words>800?'A':words>300?'B':words>50?'C':'�';}
+function updateStats(){const txt=(edContent.innerText||'').trim();const words=txt?txt.split(/\s+/).filter(Boolean).length:0;document.getElementById('statWords').textContent=words.toLocaleString('cs-CZ');document.getElementById('statChars').textContent=txt.length.toLocaleString('cs-CZ');document.getElementById('statRead').innerHTML=Math.max(0,Math.round(words/220))+'<span class="unit">min</span>';document.getElementById('statReadability').textContent=words>800?'A':words>300?'B':words>50?'C':'—';}
 edContent.addEventListener('input',()=>{updateStats();markUnsaved();});updateStats();
 const excerptEl=document.getElementById('excerptText'),excerptCount=document.getElementById('excerptCount');
 excerptEl?.addEventListener('input',()=>{excerptCount.textContent=excerptEl.value.length+' / 280';});
 const seoTitleEl=document.getElementById('seoTitle'),seoDescEl=document.getElementById('seoDesc'),seoTitleCount=document.getElementById('seoTitleCount'),seoDescCount=document.getElementById('seoDescCount'),serpDescEl=document.getElementById('serpDesc');
 seoTitleEl?.addEventListener('input',()=>{const n=seoTitleEl.value.length;seoTitleCount.textContent=n+' / 60';seoTitleCount.className=n>60?'warn':'ok';});
-seoDescEl?.addEventListener('input',()=>{const n=seoDescEl.value.length;seoDescCount.textContent=n+' / 160';seoDescCount.className=n>160?'warn':'ok';serpDescEl.textContent=seoDescEl.value||'Kr�tk� popis p��sp�vku se zobraz� ve v�sledc�ch vyhled�v�n�.';});
-const statusLabels={published:'Publikovat',scheduled:'Planovano'};
+seoDescEl?.addEventListener('input',()=>{const n=seoDescEl.value.length;seoDescCount.textContent=n+' / 160';seoDescCount.className=n>160?'warn':'ok';serpDescEl.textContent=seoDescEl.value||'Krátký popis příspěvku se zobrazí ve výsledcích vyhledávání.';});
+const statusLabels={published:'Publikovat',scheduled:'Napl�nov�no'};
 const statusColors={published:'var(--ok)',scheduled:'var(--violet)'};
 const scheduleBox=document.getElementById('scheduleBox');
 const scheduledAtInput=document.getElementById('scheduledAtInput');
 const scheduledAtHidden=document.getElementById('scheduledAtHidden');
 const publishTimingLabel=document.getElementById('publishTimingLabel');
-const schedulePreviewLabel=document.getElementById('schedulePreviewLabel');
-const scheduleHumanLabel=document.getElementById('scheduleHumanLabel');
-const topPublishBtn=document.getElementById('topPublish');
-const bottomPublishBtn=document.getElementById('publishBtn');
-function getDefaultScheduledValue(){
-  const next=new Date(Date.now()+30*60*1000);
-  next.setSeconds(0,0);
-  next.setMinutes(Math.ceil(next.getMinutes()/15)*15);
-  const offset=next.getTimezoneOffset();
-  return new Date(next.getTime()-offset*60000).toISOString().slice(0,16);
-}
-function formatScheduledLabel(value){
-  if(!value) return 'Bez terminu';
-  const date=new Date(value);
-  if(Number.isNaN(date.getTime())) return value.replace('T',' ');
-  return new Intl.DateTimeFormat('cs-CZ',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}).format(date);
-}
-function updatePrimaryButtons(status){
-  const topLabel=status==='scheduled'?'Naplanovat':'Publikovat';
-  const bottomLabel=status==='scheduled'?'Naplanovat prispevek':'Publikovat prispevek';
-  if(topPublishBtn) topPublishBtn.innerHTML=`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2 11 13"/><path d="m22 2-7 20-4-9-9-4z"/></svg>${topLabel}`;
-  if(bottomPublishBtn) bottomPublishBtn.innerHTML=`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2 11 13"/><path d="m22 2-7 20-4-9-9-4z"/></svg>${bottomLabel}`;
-}
 function updateScheduleMin(){
   if(!scheduledAtInput)return;
   const now=new Date();
@@ -573,24 +530,17 @@ function updateScheduleMin(){
 function updateScheduleState(){
   const val=document.getElementById('statusInput').value;
   const isScheduled=val==='scheduled';
-  if(isScheduled && scheduledAtInput && !scheduledAtInput.value){
-    scheduledAtInput.value=getDefaultScheduledValue();
-  }
   if(scheduleBox) scheduleBox.style.display=isScheduled?'block':'none';
   if(scheduledAtHidden) scheduledAtHidden.value=isScheduled?(scheduledAtInput?.value||''):'';
-  const humanLabel=isScheduled&&scheduledAtInput?.value?formatScheduledLabel(scheduledAtInput.value):'Ihned';
-  if(publishTimingLabel) publishTimingLabel.textContent=humanLabel;
-  if(schedulePreviewLabel) schedulePreviewLabel.textContent=isScheduled&&scheduledAtInput?.value?'Pripraveno':'Ceka na termin';
-  if(scheduleHumanLabel) scheduleHumanLabel.textContent=humanLabel;
+  if(publishTimingLabel) publishTimingLabel.textContent=isScheduled&&scheduledAtInput?.value?scheduledAtInput.value.replace('T',' '):'Ihned';
   const eyebrow=document.querySelector('.ph-meta .eyebrow');
   if(eyebrow){ eyebrow.innerHTML=`<span class="pulse" style="background:${statusColors[val]??'var(--ok)'};box-shadow:0 0 0 3px rgba(102,126,234,.15)"></span>${statusLabels[val]??val}`; }
-  updatePrimaryButtons(val);
 }
 function validateScheduledAt(){
   if(document.getElementById('statusInput').value!=='scheduled') return true;
-  if(!scheduledAtInput?.value){ alert('Vyberte datum a cas publikace.'); scheduledAtInput?.focus(); return false; }
+  if(!scheduledAtInput?.value){ alert('Vyberte datum a �as publikace.'); scheduledAtInput?.focus(); return false; }
   const selected=new Date(scheduledAtInput.value);
-  if(Number.isNaN(selected.getTime()) || selected.getTime() <= Date.now()){ alert('Naplanovane publikovani musi byt v budoucnu.'); scheduledAtInput?.focus(); return false; }
+  if(Number.isNaN(selected.getTime()) || selected.getTime() <= Date.now()){ alert('Napl�novan� publikov�n� mus� b�t v budoucnu.'); scheduledAtInput?.focus(); return false; }
   return true;
 }
 document.querySelectorAll('#statusSwitch button').forEach(btn=>{btn.addEventListener('click',()=>{
@@ -602,32 +552,24 @@ document.querySelectorAll('#statusSwitch button').forEach(btn=>{btn.addEventList
   markUnsaved();
 });});
 scheduledAtInput?.addEventListener('input',()=>{updateScheduleMin();updateScheduleState();markUnsaved();});
-document.getElementById('scheduleResetBtn')?.addEventListener('click',()=>{
-  if(scheduledAtInput){
-    scheduledAtInput.value=getDefaultScheduledValue();
-    updateScheduleMin();
-    updateScheduleState();
-    markUnsaved();
-  }
-});
 updateScheduleMin();
 updateScheduleState();
 let selectedCatId='';
 function selectCat(el){document.querySelectorAll('.cat-item').forEach(i=>i.classList.remove('on'));el.classList.add('on');selectedCatId=el.dataset.id;document.getElementById('catInput').value=selectedCatId;document.getElementById('catCount').textContent='1';}
 const pill1=document.getElementById('savePill'),pill2=document.getElementById('savePill2'),txt1=document.getElementById('saveText'),txt2=document.getElementById('saveText2');
 let saveTimer=null,draftId='',isSaving=false;
-function markUnsaved(){pill1.classList.remove('saved');pill2.classList.remove('saved');txt1.textContent='Neulo�eno';txt2.textContent='Neulo�eno';clearTimeout(saveTimer);saveTimer=setTimeout(autoSave,3000);}
-async function autoSave(){if(isSaving)return;isSaving=true;syncHiddenInputs();const fd=new FormData();fd.append('ajax_action','autosave_draft');fd.append('title',titleEl.value);fd.append('content',edContent.innerHTML);fd.append('category_id',selectedCatId);fd.append('meta_title',document.getElementById('metaTitleInput').value);fd.append('meta_description',document.getElementById('metaDescInput').value);fd.append('meta_keywords',document.getElementById('metaKwInput').value);fd.append('excerpt',document.getElementById('excerptInput').value);fd.append('featured_image_alt',document.getElementById('featAltInput').value);fd.append('featured_image_from_gallery',document.getElementById('galleryImage')?.value||'');if(draftId)fd.append('draft_id',draftId);try{const r=await fetch(location.href,{method:'POST',body:fd});const data=await r.json();if(data.success){draftId=data.draft_id;document.getElementById('draftId').value=draftId;const t=new Date().toLocaleTimeString('cs-CZ',{hour:'2-digit',minute:'2-digit'});pill1.classList.add('saved');pill2.classList.add('saved');txt1.textContent='Ulo�eno � '+t;txt2.textContent='Koncept ulo�en � '+t;}}catch(e){}finally{isSaving=false;}}
+function markUnsaved(){pill1.classList.remove('saved');pill2.classList.remove('saved');txt1.textContent='Neuloženo';txt2.textContent='Neuloženo';clearTimeout(saveTimer);saveTimer=setTimeout(autoSave,3000);}
+async function autoSave(){if(isSaving)return;isSaving=true;syncHiddenInputs();const fd=new FormData();fd.append('ajax_action','autosave_draft');fd.append('title',titleEl.value);fd.append('content',edContent.innerHTML);fd.append('category_id',selectedCatId);fd.append('meta_title',document.getElementById('metaTitleInput').value);fd.append('meta_description',document.getElementById('metaDescInput').value);fd.append('meta_keywords',document.getElementById('metaKwInput').value);fd.append('excerpt',document.getElementById('excerptInput').value);fd.append('featured_image_alt',document.getElementById('featAltInput').value);fd.append('featured_image_from_gallery',document.getElementById('galleryImage')?.value||'');if(draftId)fd.append('draft_id',draftId);try{const r=await fetch(location.href,{method:'POST',body:fd});const data=await r.json();if(data.success){draftId=data.draft_id;document.getElementById('draftId').value=draftId;const t=new Date().toLocaleTimeString('cs-CZ',{hour:'2-digit',minute:'2-digit'});pill1.classList.add('saved');pill2.classList.add('saved');txt1.textContent='Uloženo · '+t;txt2.textContent='Koncept uložen · '+t;}}catch(e){}finally{isSaving=false;}}
 function syncHiddenInputs(){document.getElementById('contentInput').value=edContent.innerHTML;document.getElementById('metaTitleInput').value=seoTitleEl?.value||'';document.getElementById('metaDescInput').value=seoDescEl?.value||'';document.getElementById('metaKwInput').value=document.getElementById('seoKeywords')?.value||'';document.getElementById('excerptInput').value=excerptEl?.value||'';if(scheduledAtHidden) scheduledAtHidden.value=document.getElementById('statusInput').value==='scheduled'?(scheduledAtInput?.value||''):'';}
-// �� Tags ���������������������������������������������������������������������
+// ── Tags ─────────────────────────────────────────────────────────────────────
 let tags = [];
 function getTags(){return tags;}
 function renderTags(){const wrap=document.getElementById('tagWrap');const field=document.getElementById('tagField');wrap.querySelectorAll('.tagchip').forEach(c=>c.remove());tags.forEach((t,i)=>{const chip=document.createElement('span');chip.className='tagchip';chip.innerHTML=t+`<button type="button" onclick="removeTag(${i})" title="Odebrat"><svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>`;wrap.insertBefore(chip,field);});}
 function addTag(val){val=(val||'').trim().replace(/,/g,'').substring(0,40);if(val&&!tags.includes(val)){tags.push(val);renderTags();}document.getElementById('tagField').value='';}
 function removeTag(i){tags.splice(i,1);renderTags();}
 function handleTagKey(e){if(e.key==='Enter'||e.key===','){e.preventDefault();addTag(e.target.value);}else if(e.key==='Backspace'&&!e.target.value&&tags.length){removeTag(tags.length-1);}}
-// �� Auto-SEO ������������������������������������������������������������������
-function generateSEO(){const title=titleEl.value.trim();const text=(edContent.innerText||'').replace(/\s+/g,' ').trim();if(!title&&!text)return;const seoTitle=title.length>60?title.substring(0,57)+'�':title;const excerpt=text.substring(0,160);const words=text.split(/\s+/).filter(Boolean).slice(0,8).join(', ');if(seoTitleEl){seoTitleEl.value=seoTitle;seoTitleEl.dispatchEvent(new Event('input'));}if(seoDescEl){seoDescEl.value=excerpt;seoDescEl.dispatchEvent(new Event('input'));}const kwEl=document.getElementById('seoKeywords');if(kwEl&&!kwEl.value)kwEl.value=words;}
+// ── Auto-SEO ──────────────────────────────────────────────────────────────────
+function generateSEO(){const title=titleEl.value.trim();const text=(edContent.innerText||'').replace(/\s+/g,' ').trim();if(!title&&!text)return;const seoTitle=title.length>60?title.substring(0,57)+'…':title;const excerpt=text.substring(0,160);const words=text.split(/\s+/).filter(Boolean).slice(0,8).join(', ');if(seoTitleEl){seoTitleEl.value=seoTitle;seoTitleEl.dispatchEvent(new Event('input'));}if(seoDescEl){seoDescEl.value=excerpt;seoDescEl.dispatchEvent(new Event('input'));}const kwEl=document.getElementById('seoKeywords');if(kwEl&&!kwEl.value)kwEl.value=words;}
 function submitForm(status){
   syncHiddenInputs();
   document.getElementById('statusInput').value=status;
@@ -635,7 +577,7 @@ function submitForm(status){
   if(status==='scheduled' && !validateScheduledAt()) return;
   const publishBtn=document.getElementById('publishBtn');
   const saveDraftBtn=document.getElementById('saveDraftBtn');
-  const label=status==='published'?'Publikuji...':status==='scheduled'?'Planuji...':'Ukladam koncept...';
+  const label=status==='published'?'Publikuji�':status==='scheduled'?'Pl�nuji�':'Ukl�d�m koncept�';
   if(publishBtn&&(status==='published'||status==='scheduled')){publishBtn.textContent=label;publishBtn.disabled=true;}
   if(saveDraftBtn&&status==='draft'){saveDraftBtn.textContent=label;saveDraftBtn.disabled=true;}
   document.getElementById('postForm').submit();
@@ -644,7 +586,7 @@ document.getElementById('publishBtn')?.addEventListener('click',()=>submitForm(d
 document.getElementById('topPublish')?.addEventListener('click',()=>submitForm(document.getElementById('statusInput').value));
 document.getElementById('saveDraftBtn')?.addEventListener('click',()=>submitForm('draft'));
 document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key==='s'){e.preventDefault();submitForm('draft');}});
-// �� Category filter + inline edit ������������������������������������������
+// ── Category filter + inline edit ──────────────────────────────────────────
 function filterCats(q) {
   document.querySelectorAll('#catList .cat-item').forEach(el => {
     const name = (el.dataset.name||el.querySelector('.cat-name')?.textContent||'').toLowerCase();
@@ -667,7 +609,7 @@ async function addCatFromSearch() {
       const idx = document.querySelectorAll('#catList .cat-item').length % colors.length;
       const item = document.createElement('div');
       item.className = 'cat-item'; item.dataset.id = data.id; item.dataset.name = data.name;
-      item.innerHTML = `<div class="cat-check"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div><div class="cat-swatch" style="background:${colors[idx]}"></div><span class="cat-name">${data.name}</span><span class="cat-count">0</span><button type="button" class="cat-edit-btn" onclick="editCatInline(event,this)" title="P�ejmenovat" style="margin-left:auto;width:20px;height:20px;border-radius:4px;border:1px solid transparent;color:var(--muted);display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .15s"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>`;
+      item.innerHTML = `<div class="cat-check"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div><div class="cat-swatch" style="background:${colors[idx]}"></div><span class="cat-name">${data.name}</span><span class="cat-count">0</span><button type="button" class="cat-edit-btn" onclick="editCatInline(event,this)" title="Přejmenovat" style="margin-left:auto;width:20px;height:20px;border-radius:4px;border:1px solid transparent;color:var(--muted);display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .15s"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>`;
       item.addEventListener('click', function(e){if(e.target.closest('.cat-edit-btn'))return;selectCat(this);});
       item.addEventListener('mouseenter', ()=>{const b=item.querySelector('.cat-edit-btn');if(b)b.style.opacity='1';});
       item.addEventListener('mouseleave', ()=>{const b=item.querySelector('.cat-edit-btn');if(b)b.style.opacity='0';});
@@ -682,17 +624,17 @@ async function editCatInline(event, btn) {
   const item = btn.closest('.cat-item');
   const nameSpan = item.querySelector('.cat-name');
   const oldName = nameSpan.textContent;
-  const newName = prompt('Nov� n�zev kategorie:', oldName);
+  const newName = prompt('Nový název kategorie:', oldName);
   if (!newName || newName === oldName) return;
   const fd = new FormData(); fd.append('ajax_action','edit_category'); fd.append('category_id',item.dataset.id); fd.append('category_name',newName);
   try {
     const r = await fetch(location.href,{method:'POST',body:fd});
     const data = await r.json();
     if (data.success) { nameSpan.textContent=newName; item.dataset.name=newName; }
-    else alert(data.message||'Chyba p�ejmenov�n�');
+    else alert(data.message||'Chyba přejmenování');
   } catch(e) {}
 }
-// �� Featured image upload (drag & drop + file input) ����������������������
+// ── Featured image upload (drag & drop + file input) ──────────────────────
 async function uploadFeaturedImage(file) {
   if (!file || !file.type.startsWith('image/')) return;
   const fd = new FormData();
@@ -777,7 +719,7 @@ function removeFeaturedAdd() {
   if (wrap) {
     const dz = document.createElement('div');
     dz.className='dropzone'; dz.id='dropzone';
-    dz.innerHTML = document.querySelector('template#dzTemplate')?.innerHTML || '<div class="dz-ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div><div class="dz-text">P�et�hn�te obr�zek p��sp�vku</div><div class="dz-sub">JPG, PNG nebo WebP � max. 8 MB</div><button type="button" class="dz-btn primary">Vybrat obr�zek</button>';
+    dz.innerHTML = document.querySelector('template#dzTemplate')?.innerHTML || '<div class="dz-ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div><div class="dz-text">Přetáhněte obrázek příspěvku</div><div class="dz-sub">JPG, PNG nebo WebP · max. 8 MB</div><button type="button" class="dz-btn primary">Vybrat obrázek</button>';
     dz.onclick = () => document.getElementById('featuredInput').click();
     wrap.replaceWith(dz);
     document.getElementById('galleryImage').value='';
@@ -859,38 +801,38 @@ document.getElementById('featuredInput')?.addEventListener('change',function(){
 <div class="media-modal" id="mediaModal">
   <div class="media-modal-box">
     <div class="media-modal-head">
-      <span style="font-size:14px;font-weight:600;color:var(--ink)" id="mediaModalTitle">Vlo�it obr�zek</span>
+      <span style="font-size:14px;font-weight:600;color:var(--ink)" id="mediaModalTitle">Vložit obrázek</span>
       <button type="button" onclick="closeMediaModal()" style="width:28px;height:28px;border-radius:6px;display:flex;align-items:center;justify-content:center;color:var(--muted);border:1px solid var(--border)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></button>
     </div>
     <div class="media-modal-tabs">
-      <div class="media-modal-tab on" onclick="switchMediaTab('upload',this)">Z po��ta�e</div>
+      <div class="media-modal-tab on" onclick="switchMediaTab('upload',this)">Z počítače</div>
       <div class="media-modal-tab" onclick="switchMediaTab('gallery',this)">Z galerie</div>
     </div>
     <div class="media-modal-body" id="mediaModalBody">
       <div id="mediaTabUpload">
         <div class="media-modal-dz" id="modalDz" onclick="document.getElementById('modalFileInput').click()">
           <div style="margin-bottom:10px;color:var(--accent-2)"><svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>
-          <div style="font-size:13.5px;font-weight:500;color:var(--ink-2);margin-bottom:4px">P�et�hn�te soubor nebo klikn�te pro v�b�r</div>
-          <div style="font-size:11.5px;color:var(--muted)" id="modalAcceptHint">JPG, PNG, WebP, GIF � max. 8 MB</div>
+          <div style="font-size:13.5px;font-weight:500;color:var(--ink-2);margin-bottom:4px">Přetáhněte soubor nebo klikněte pro výběr</div>
+          <div style="font-size:11.5px;color:var(--muted)" id="modalAcceptHint">JPG, PNG, WebP, GIF · max. 8 MB</div>
         </div>
         <input type="file" id="modalFileInput" style="display:none" accept="image/*">
       </div>
       <div id="mediaTabGallery" style="display:none">
-        <input type="text" id="mediaGallerySearch" placeholder="Hledat v galerii�" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:7px;font-size:12.5px;font-family:inherit;color:var(--ink);background:var(--card);margin-bottom:12px;box-sizing:border-box" oninput="filterGallery(this.value)">
-        <div class="media-grid" id="mediaGalleryGrid"><div style="color:var(--muted);font-size:13px;padding:8px">Na��t�m�</div></div>
+        <input type="text" id="mediaGallerySearch" placeholder="Hledat v galerii…" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:7px;font-size:12.5px;font-family:inherit;color:var(--ink);background:var(--card);margin-bottom:12px;box-sizing:border-box" oninput="filterGallery(this.value)">
+        <div class="media-grid" id="mediaGalleryGrid"><div style="color:var(--muted);font-size:13px;padding:8px">Načítám…</div></div>
       </div>
     </div>
     <div style="padding:12px 20px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:8px;flex-shrink:0">
-      <button type="button" class="btn btn-ghost btn-sm" onclick="closeMediaModal()">Zru�it</button>
-      <button type="button" class="btn btn-primary btn-sm" onclick="confirmMediaInsert()" id="mediaInsertBtn" disabled>Vlo�it</button>
+      <button type="button" class="btn btn-ghost btn-sm" onclick="closeMediaModal()">Zrušit</button>
+      <button type="button" class="btn btn-primary btn-sm" onclick="confirmMediaInsert()" id="mediaInsertBtn" disabled>Vložit</button>
     </div>
   </div>
 </div>
 <script>
-// �� Block format dropdown ����������������������������������������������������
+// ── Block format dropdown ────────────────────────────────────────────────────
 const blockCycle = ['p','h2','h3'];
 let blockIdx = 0;
-const blockLabels = {p:'Norm�ln�',h2:'Nadpis 2',h3:'Nadpis 3'};
+const blockLabels = {p:'Normální',h2:'Nadpis 2',h3:'Nadpis 3'};
 function formatBlock(btn) {
   blockIdx = (blockIdx+1) % blockCycle.length;
   const tag = blockCycle[blockIdx];
@@ -901,7 +843,7 @@ function insertLink() {
   const url = prompt('URL odkazu:','https://');
   if (url) document.execCommand('createLink',false,url);
 }
-// �� Font & color ��������������������������������������������������������������
+// ── Font & color ──────────────────────────────────────────────────────────────
 let colorRange = null;
 function saveColorRange() {
   const sel = window.getSelection();
@@ -930,7 +872,7 @@ function applyBgColor(c) {
   document.execCommand('styleWithCSS', false, true);
   document.execCommand('hiliteColor', false, c);
 }
-// �� Media insert modal �������������������������������������������������������
+// ── Media insert modal ───────────────────────────────────────────────────────
 let mediaInsertType = 'image';
 let selectedGalleryUrl = null;
 let savedRange = null;
@@ -938,9 +880,9 @@ function openMediaModal(type) {
   mediaInsertType = type;
   selectedGalleryUrl = null;
   document.getElementById('mediaInsertBtn').disabled = true;
-  document.getElementById('mediaModalTitle').textContent = type==='image'?'Vlo�it obr�zek':'Vlo�it video';
+  document.getElementById('mediaModalTitle').textContent = type==='image'?'Vložit obrázek':'Vložit video';
   document.getElementById('modalFileInput').accept = type==='image'?'image/*':'video/*';
-  document.getElementById('modalAcceptHint').textContent = type==='image'?'JPG, PNG, WebP, GIF � max. 8 MB':'MP4, WebM � max. 50 MB';
+  document.getElementById('modalAcceptHint').textContent = type==='image'?'JPG, PNG, WebP, GIF · max. 8 MB':'MP4, WebM · max. 50 MB';
   // Save cursor position
   const sel = window.getSelection();
   if (sel.rangeCount) savedRange = sel.getRangeAt(0).cloneRange();
@@ -974,17 +916,17 @@ let galleryItems = [];
 async function loadGallery() {
   const grid = document.getElementById('mediaGalleryGrid');
   if (galleryItems.length) { renderGallery(galleryItems); return; }
-  grid.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:8px">Na��t�m�</div>';
+  grid.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:8px">Načítám…</div>';
   try {
     const r = await fetch('get_media_ajax.php?action=list&limit=60');
     const data = await r.json();
     galleryItems = data.items || data || [];
     renderGallery(galleryItems);
-  } catch(e) { grid.innerHTML = '<div style="color:var(--muted);font-size:13px">Chyba na��t�n� galerie.</div>'; }
+  } catch(e) { grid.innerHTML = '<div style="color:var(--muted);font-size:13px">Chyba načítání galerie.</div>'; }
 }
 function renderGallery(items) {
   const grid = document.getElementById('mediaGalleryGrid');
-  if (!items.length) { grid.innerHTML = '<div style="color:var(--muted);font-size:13px">Galerie je pr�zdn�.</div>'; return; }
+  if (!items.length) { grid.innerHTML = '<div style="color:var(--muted);font-size:13px">Galerie je prázdná.</div>'; return; }
   grid.innerHTML = items.filter(it=>it.mime_type&&it.mime_type.startsWith(mediaInsertType==='image'?'image':'video')).map(it=>`
     <div class="media-grid-item" onclick="selectGalleryItem(this,'<?= rtrim(BASE_URL,'/') ?>'+it.path)" data-url="<?= rtrim(BASE_URL,'/') ?>${it.path}">
       <img src="<?= rtrim(BASE_URL,'/') ?>${it.path}" alt="${it.original_name||''}">
@@ -1072,7 +1014,7 @@ async function uploadFeaturedImage(file) {
       url: location.href,
       file,
       target: document.getElementById('dropzone') || document.getElementById('featPreviewAdd')?.parentElement,
-      label: 'Nahr�v�m hlavn� obr�zek',
+      label: 'Nahrávám hlavní obrázek',
       prepareOptions: { maxDimension: 1600, quality: 0.84 }
     });
     showFeaturedPreview(data.url);
@@ -1090,7 +1032,7 @@ async function uploadArticleImage(file, range) {
       url: location.href,
       file,
       target: document.querySelector('.editor'),
-      label: 'Vkl�d�m obr�zek do �l�nku',
+      label: 'Vkládám obrázek do článku',
       prepareOptions: { maxDimension: 2200, quality: 0.82 }
     });
     insertImageIntoEditor(data.url, range);
@@ -1142,7 +1084,7 @@ function confirmMediaInsert() {
         url: location.href,
         file: this.files[0],
         target: document.getElementById('modalDz'),
-        label: 'Nahr�v�m obr�zek z po��ta�e',
+        label: 'Nahrávám obrázek z počítače',
         prepareOptions: { maxDimension: 2200, quality: 0.82 }
       });
       selectedGalleryUrl = data.url;
