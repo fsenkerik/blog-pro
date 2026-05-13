@@ -119,7 +119,7 @@ if (isPost() && !isset($_POST['ajax_action'])) {
                 $data['featured_image'] = null;
             }
             $result = $post->update($id, $data);
-            if ($result['success']) { setFlash('success',$data['status'] === 'scheduled' ? 'Prispevek byl naplanovan!' : 'Prispevek byl aktualizovan!'); redirect(ADMIN_URL.'dashboard.php'); }
+            if ($result['success']) { setFlash('success',$data['status'] === 'scheduled' ? 'Prispevek byl naplanovan.' : 'Prispevek byl aktualizovan.'); redirect(ADMIN_URL.'dashboard.php'); }
             else $error = $result['message'] ?? 'Chyba pri ukladani';
         }
     }
@@ -239,6 +239,16 @@ $currentTags = $postData['tags'] ?? '';
 .status-switch button.on.draft{color:var(--warn)}
 .status-switch button.on.scheduled{color:#7c3aed}
 .status-switch button .dot{width:6px;height:6px;border-radius:50%;background:currentColor;opacity:.75}
+.schedule-card{margin-top:14px;padding:14px;border:1px solid rgba(102,126,234,.14);border-radius:12px;background:linear-gradient(180deg,rgba(102,126,234,.08),rgba(118,75,162,.04))}
+.schedule-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px}
+.schedule-title{font-size:12.5px;font-weight:600;color:var(--ink)}
+.schedule-copy{font-size:11.5px;line-height:1.55;color:var(--muted);margin-top:4px}
+.schedule-badge{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;background:#fff;border:1px solid rgba(102,126,234,.16);font-family:var(--mono);font-size:10.5px;color:var(--accent-2)}
+.schedule-badge .dot{width:6px;height:6px;border-radius:50%;background:currentColor}
+.schedule-grid{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:end}
+.schedule-note{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:10px;font-size:11px;color:var(--muted)}
+.schedule-note strong{color:var(--accent-2);font-weight:600}
+@media(max-width:900px){.schedule-grid{grid-template-columns:1fr}}
 .sp-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;font-size:12.5px;border-bottom:1px solid var(--line)}
 .sp-row:last-child{border-bottom:none}
 .sp-row-label{color:var(--muted)}
@@ -432,13 +442,23 @@ body.dz-dragging .editor.dz-hover,body.dz-dragging .sp.dz-hover{box-shadow:0 0 0
           </div>
           <div class="ed-side">
             <div class="sp"><div class="sp-head"><div class="sp-title"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/></svg>Publikace</div></div><div class="sp-body">
-              <div class="status-switch" id="statusSwitch"><button type="button" class="<?= $currentStatusUi==='published'?'on':'' ?>" data-val="published"><span class="dot"></span>Publikovat</button><button type="button" class="scheduled <?= $currentStatusUi==='scheduled'?'on':'' ?>" data-val="scheduled"><span class="dot"></span>Plán</button></div>
-              <div id="scheduleBox" style="display:<?= $currentStatusUi==='scheduled'?'block':'none' ?>;margin-top:14px">
-                <div class="field" style="margin-bottom:0">
-                  <div class="field-label">Datum a čas publikace</div>
-                  <input type="datetime-local" class="field-input" id="scheduledAtInput" value="<?= e($currentScheduledAt) ?>" min="<?= date('Y-m-d\TH:i') ?>">
-                  <div class="field-foot"><span>Vyberte pouze budoucí termín.</span><span id="schedulePreviewLabel" class="ok">Naplánováno</span></div>
+              <div class="status-switch" id="statusSwitch"><button type="button" class="<?= $currentStatusUi==='published'?'on':'' ?>" data-val="published"><span class="dot"></span>Publikovat</button><button type="button" class="scheduled <?= $currentStatusUi==='scheduled'?'on':'' ?>" data-val="scheduled"><span class="dot"></span>Planovat</button></div>
+              <div id="scheduleBox" class="schedule-card" style="display:<?= $currentStatusUi==='scheduled'?'block':'none' ?>">
+                <div class="schedule-head">
+                  <div>
+                    <div class="schedule-title">Naplanovat vydani</div>
+                    <div class="schedule-copy">Nastavte termin a prispevek se publikuje automaticky bez dalsiho zasahu.</div>
+                  </div>
+                  <div class="schedule-badge"><span class="dot"></span><span id="schedulePreviewLabel"><?= $currentStatusUi==='scheduled' && !empty($currentScheduledAt) ? 'Pripraveno' : 'Ceka na termin' ?></span></div>
                 </div>
+                <div class="schedule-grid">
+                  <div class="field" style="margin-bottom:0">
+                    <div class="field-label">Datum a cas publikace</div>
+                    <input type="datetime-local" class="field-input" id="scheduledAtInput" value="<?= e($currentScheduledAt) ?>" min="<?= date('Y-m-d\TH:i') ?>">
+                  </div>
+                  <button type="button" class="btn btn-ghost btn-sm" id="scheduleResetBtn">Nejblizsi termin</button>
+                </div>
+                <div class="schedule-note"><span>Vybirat lze pouze budoucnost.</span><strong id="scheduleHumanLabel"><?= $currentStatusUi==='scheduled' && !empty($currentScheduledAt) ? e(str_replace('T', ' ', $currentScheduledAt)) : 'Bez terminu' ?></strong></div>
               </div>
               <div style="margin-top:14px"><div class="sp-row"><div class="sp-row-label">Autor</div><span class="sp-row-val"><?= e($postData['author_name'] ?? $_SESSION['username'] ?? '') ?></span></div><div class="sp-row"><div class="sp-row-label">Publikace</div><span class="sp-row-val" id="publishTimingLabel"><?= $currentStatusUi==='scheduled' && !empty($currentScheduledAt) ? e(str_replace('T', ' ', $currentScheduledAt)) : 'Ihned' ?></span></div><div class="sp-row"><div class="sp-row-label">Vytvořeno</div><span class="sp-row-val"><?= date('d.m.Y', strtotime($postData['created_at'] ?? 'now')) ?></span></div><div class="sp-row"><div class="sp-row-label">Upraveno</div><span class="sp-row-val"><?= date('d.m.Y H:i', strtotime($postData['updated_at'] ?? 'now')) ?></span></div></div>
             </div></div>
@@ -495,6 +515,29 @@ const scheduleBox=document.getElementById('scheduleBox');
 const scheduledAtInput=document.getElementById('scheduledAtInput');
 const scheduledAtHidden=document.getElementById('scheduledAtHidden');
 const publishTimingLabel=document.getElementById('publishTimingLabel');
+const schedulePreviewLabel=document.getElementById('schedulePreviewLabel');
+const scheduleHumanLabel=document.getElementById('scheduleHumanLabel');
+const topSaveBtn=document.getElementById('topSave');
+const bottomSaveBtn=document.getElementById('saveBtn');
+function getDefaultScheduledValue(){
+  const next=new Date(Date.now()+30*60*1000);
+  next.setSeconds(0,0);
+  next.setMinutes(Math.ceil(next.getMinutes()/15)*15);
+  const offset=next.getTimezoneOffset();
+  return new Date(next.getTime()-offset*60000).toISOString().slice(0,16);
+}
+function formatScheduledLabel(value){
+  if(!value) return 'Bez terminu';
+  const date=new Date(value);
+  if(Number.isNaN(date.getTime())) return value.replace('T',' ');
+  return new Intl.DateTimeFormat('cs-CZ',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}).format(date);
+}
+function updatePrimaryButtons(status){
+  const topLabel=status==='scheduled'?'Naplanovat':'Ulozit zmeny';
+  const bottomLabel=status==='scheduled'?'Naplanovat zmeny':'Ulozit zmeny';
+  if(topSaveBtn) topSaveBtn.innerHTML=`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/></svg>${topLabel}`;
+  if(bottomSaveBtn) bottomSaveBtn.innerHTML=`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/></svg>${bottomLabel}`;
+}
 function updateScheduleMin(){
   if(!scheduledAtInput)return;
   const now=new Date();
@@ -505,9 +548,16 @@ function updateScheduleMin(){
 function updateScheduleState(){
   const status=document.getElementById('statusInput').value;
   const isScheduled=status==='scheduled';
+  if(isScheduled && !scheduledAtInput?.value){
+    scheduledAtInput.value=getDefaultScheduledValue();
+  }
   if(scheduleBox) scheduleBox.style.display=isScheduled?'block':'none';
   if(scheduledAtHidden) scheduledAtHidden.value=isScheduled?(scheduledAtInput?.value||''):'';
-  if(publishTimingLabel) publishTimingLabel.textContent=isScheduled&&scheduledAtInput?.value?scheduledAtInput.value.replace('T',' '):'Ihned';
+  const humanLabel=isScheduled&&scheduledAtInput?.value?formatScheduledLabel(scheduledAtInput.value):'Ihned';
+  if(publishTimingLabel) publishTimingLabel.textContent=humanLabel;
+  if(schedulePreviewLabel) schedulePreviewLabel.textContent=isScheduled&&scheduledAtInput?.value?'Pripraveno':'Ceka na termin';
+  if(scheduleHumanLabel) scheduleHumanLabel.textContent=humanLabel;
+  updatePrimaryButtons(status);
 }
 function validateScheduledAt(){
   if(document.getElementById('statusInput').value!=='scheduled') return true;
@@ -518,6 +568,7 @@ function validateScheduledAt(){
 }
 document.querySelectorAll('#statusSwitch button').forEach(btn=>{btn.addEventListener('click',()=>{document.querySelectorAll('#statusSwitch button').forEach(b=>b.classList.remove('on'));btn.classList.add('on');document.getElementById('statusInput').value=btn.dataset.val;updateScheduleMin();updateScheduleState();markChanged();});});
 scheduledAtInput?.addEventListener('input',()=>{updateScheduleMin();updateScheduleState();markChanged();});
+document.getElementById('scheduleResetBtn')?.addEventListener('click',()=>{if(scheduledAtInput){scheduledAtInput.value=getDefaultScheduledValue();updateScheduleMin();updateScheduleState();markChanged();}});
 updateScheduleMin();
 updateScheduleState();
 let selectedCatId='<?= $currentCatId ?>';
