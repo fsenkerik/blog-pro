@@ -285,7 +285,30 @@ $baseUrl = rtrim(BASE_URL,'/').'/';
 .schedule-note strong{color:var(--accent-2);font-weight:650;font-family:var(--mono);font-size:11px;text-align:right}
 .schedule-card.is-confirmed{border-color:rgba(16,185,129,.32);background:linear-gradient(180deg,rgba(16,185,129,.08),rgba(255,255,255,.92))}
 .schedule-card.is-confirmed .schedule-badge{color:var(--ok);border-color:rgba(16,185,129,.24)}
-@media(max-width:900px){.schedule-grid{grid-template-columns:1fr}.schedule-confirm{width:100%}}
+.schedule-picker-wrap{position:relative}
+.schedule-picker-button{width:100%;height:42px;padding:0 12px;border:1px solid var(--border);border-radius:8px;background:var(--card);display:flex;align-items:center;justify-content:space-between;gap:10px;font-family:var(--mono);font-size:12px;color:var(--ink);cursor:pointer;transition:border-color .15s,box-shadow .15s,background .15s}
+.schedule-picker-button:hover{border-color:rgba(102,126,234,.45);background:#fff}
+.schedule-picker-button.on{border-color:var(--accent);box-shadow:0 0 0 3px rgba(102,126,234,.13)}
+.schedule-picker-button svg{width:14px;height:14px;color:var(--accent-2);flex-shrink:0}
+.schedule-picker-popover{display:none;position:absolute;left:0;right:0;top:calc(100% + 8px);z-index:80;padding:12px;border:1px solid rgba(102,126,234,.18);border-radius:12px;background:#fff;box-shadow:0 18px 46px rgba(31,41,55,.16)}
+.schedule-picker-popover.on{display:block}
+.schedule-picker-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
+.schedule-picker-month{font-weight:650;font-size:13px;color:var(--ink)}
+.schedule-picker-nav{display:flex;gap:4px}
+.schedule-picker-nav button{width:28px;height:28px;border-radius:7px;border:1px solid var(--border);background:var(--card);color:var(--body);display:inline-flex;align-items:center;justify-content:center}
+.schedule-picker-nav button:hover{border-color:var(--accent);color:var(--accent-2)}
+.schedule-picker-week,.schedule-picker-days{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.schedule-picker-week span{font-family:var(--mono);font-size:10px;color:var(--muted);text-align:center;padding:2px 0 4px}
+.schedule-picker-day{height:30px;border-radius:7px;border:1px solid transparent;background:transparent;font-family:var(--mono);font-size:11.5px;color:var(--ink);cursor:pointer}
+.schedule-picker-day:hover{background:var(--accent-soft);color:var(--accent-2)}
+.schedule-picker-day.muted{color:var(--faint)}
+.schedule-picker-day.selected{background:var(--accent);color:#fff}
+.schedule-picker-day.disabled{color:var(--faint);cursor:not-allowed;background:transparent;opacity:.45}
+.schedule-time-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}
+.schedule-time-row select{height:36px;border:1px solid var(--border);border-radius:8px;background:var(--card);font-family:var(--mono);font-size:12px;color:var(--ink);padding:0 8px}
+.schedule-picker-actions{display:flex;justify-content:space-between;gap:8px;margin-top:10px}
+.schedule-picker-actions button{height:32px;padding:0 10px;border-radius:7px;font-size:11.5px}
+@media(max-width:900px){.schedule-picker-popover{position:relative;top:auto;margin-top:8px}.schedule-grid{grid-template-columns:1fr}.schedule-confirm{width:100%}}
 .sp-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;font-size:12.5px;border-bottom:1px solid var(--line)}
 .sp-row:last-child{border-bottom:none}
 .sp-row-label{color:var(--muted);display:flex;align-items:center;gap:8px}
@@ -488,9 +511,19 @@ body.dz-dragging .editor.dz-hover,body.dz-dragging .sp.dz-hover{box-shadow:0 0 0
                 <div class="schedule-grid">
                   <label class="field schedule-field">
                     <span class="field-label">Datum a &#269;as publikace</span>
-                    <input type="datetime-local" class="field-input" id="scheduledAtInput" min="<?= date('Y-m-d\TH:i') ?>">
+                    <input type="hidden" id="scheduledAtInput" min="<?= date('Y-m-d\TH:i') ?>">
+                    <div class="schedule-picker-wrap">
+                      <button type="button" class="schedule-picker-button" id="schedulePickerBtn"><span id="schedulePickerText">Vybrat datum a &#269;as</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></button>
+                      <div class="schedule-picker-popover" id="schedulePickerPopover">
+                        <div class="schedule-picker-head"><button type="button" class="btn btn-ghost btn-sm" id="scheduleTodayBtn">Nejbli&#382;&#353;&iacute; term&iacute;n</button><div class="schedule-picker-month" id="schedulePickerMonth"></div><div class="schedule-picker-nav"><button type="button" id="schedulePrevMonth">&lsaquo;</button><button type="button" id="scheduleNextMonth">&rsaquo;</button></div></div>
+                        <div class="schedule-picker-week"><span>Po</span><span>&Uacute;t</span><span>St</span><span>&#268;t</span><span>P&aacute;</span><span>So</span><span>Ne</span></div>
+                        <div class="schedule-picker-days" id="schedulePickerDays"></div>
+                        <div class="schedule-time-row"><select id="scheduleHourSelect" aria-label="Hodina"></select><select id="scheduleMinuteSelect" aria-label="Minuta"></select></div>
+                        <div class="schedule-picker-actions"><button type="button" class="btn btn-ghost btn-sm" id="scheduleClearBtn">Vymazat</button><button type="button" class="btn btn-primary btn-sm" id="scheduleApplyBtn">Pou&#382;&iacute;t term&iacute;n</button></div>
+                      </div>
+                    </div>
                   </label>
-                  <button type="button" class="btn btn-ghost btn-sm schedule-confirm" id="scheduleConfirmBtn">Potvrdit term&iacute;n</button>
+                  <button type="button" class="btn btn-ghost btn-sm schedule-confirm" id="scheduleConfirmBtn">Nejbli&#382;&#353;&iacute; term&iacute;n</button>
                 </div>
                 <div class="schedule-note"><span>Vybrat lze pouze budouc&iacute; term&iacute;n.</span><strong id="scheduleHumanLabel">Bez term&iacute;nu</strong></div>
               </div>
@@ -553,56 +586,45 @@ const scheduleHumanLabel=document.getElementById('scheduleHumanLabel');
 const scheduleConfirmBtn=document.getElementById('scheduleConfirmBtn');
 const topPublish=document.getElementById('topPublish');
 const publishBtn=document.getElementById('publishBtn');
+const schedulePickerBtn=document.getElementById('schedulePickerBtn');
+const schedulePickerText=document.getElementById('schedulePickerText');
+const schedulePickerPopover=document.getElementById('schedulePickerPopover');
+const schedulePickerDays=document.getElementById('schedulePickerDays');
+const schedulePickerMonth=document.getElementById('schedulePickerMonth');
+const scheduleHourSelect=document.getElementById('scheduleHourSelect');
+const scheduleMinuteSelect=document.getElementById('scheduleMinuteSelect');
+let scheduleViewDate=new Date();
+let scheduleSelectedDate=null;
+function pad2(n){return String(n).padStart(2,'0');}
+function toLocalValue(date){return `${date.getFullYear()}-${pad2(date.getMonth()+1)}-${pad2(date.getDate())}T${pad2(date.getHours())}:${pad2(date.getMinutes())}`;}
 function setActionLabel(btn,label){const target=btn?.querySelector('.action-label');if(target)target.textContent=label;else if(btn)btn.textContent=label;}
-function updatePrimaryActions(){
-  const scheduled=document.getElementById('statusInput').value==='scheduled';
-  setActionLabel(topPublish,scheduled?'Pl\u00e1novat':'Publikovat');
-  setActionLabel(publishBtn,scheduled?'Pl\u00e1novat p\u0159\u00edsp\u011bvek':'Publikovat p\u0159\u00edsp\u011bvek');
-}
-function formatScheduledLabel(value){
-  if(!value)return 'Bez term\u00ednu';
-  const date=new Date(value);
-  if(Number.isNaN(date.getTime()))return value.replace('T',' ');
-  return date.toLocaleString('cs-CZ',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
-}
-function updateScheduleMin(){
-  if(!scheduledAtInput)return;
-  const now=new Date();
-  now.setSeconds(0,0);
-  const offset=now.getTimezoneOffset();
-  scheduledAtInput.min=new Date(now.getTime()-offset*60000).toISOString().slice(0,16);
-}
-function updateScheduleState(){
-  const val=document.getElementById('statusInput').value;
-  const isScheduled=val==='scheduled';
-  if(scheduleBox) scheduleBox.style.display=isScheduled?'block':'none';
-  if(scheduledAtHidden) scheduledAtHidden.value=isScheduled?(scheduledAtInput?.value||''):'';
-  const humanLabel=isScheduled&&scheduledAtInput?.value?formatScheduledLabel(scheduledAtInput.value):'Ihned';
-  if(publishTimingLabel) publishTimingLabel.textContent=humanLabel;
-  if(scheduleHumanLabel) scheduleHumanLabel.textContent=isScheduled&&scheduledAtInput?.value?humanLabel:'Bez term\u00ednu';
-  if(schedulePreviewLabel) schedulePreviewLabel.textContent=isScheduled&&scheduledAtInput?.value?'Term\u00edn vybr\u00e1n':'\u010cek\u00e1 na term\u00edn';
-  if(scheduleBox) scheduleBox.classList.toggle('is-confirmed',isScheduled&&!!scheduledAtInput?.value);
-  updatePrimaryActions();
-  const eyebrow=document.querySelector('.ph-meta .eyebrow');
-  if(eyebrow){ eyebrow.innerHTML=`<span class="pulse" style="background:${statusColors[val]??'var(--ok)'};box-shadow:0 0 0 3px rgba(102,126,234,.15)"></span>${statusLabels[val]??val}`; }
-}
-function validateScheduledAt(){
-  if(document.getElementById('statusInput').value!=='scheduled') return true;
-  if(!scheduledAtInput?.value){ alert('Vyberte datum a \u010das publikace.'); scheduledAtInput?.focus(); return false; }
-  const selected=new Date(scheduledAtInput.value);
-  if(Number.isNaN(selected.getTime()) || selected.getTime() <= Date.now()){ alert('Napl\u00e1novan\u00e9 publikov\u00e1n\u00ed mus\u00ed b\u00fdt v budoucnu.'); scheduledAtInput?.focus(); return false; }
-  return true;
-}
-document.querySelectorAll('#statusSwitch button').forEach(btn=>{btn.addEventListener('click',()=>{
-  document.querySelectorAll('#statusSwitch button').forEach(b=>b.classList.remove('on'));
-  btn.classList.add('on');
-  document.getElementById('statusInput').value=btn.dataset.val;
-  updateScheduleMin();
-  updateScheduleState();
-  markUnsaved();
-});});
-scheduledAtInput?.addEventListener('input',()=>{updateScheduleMin();updateScheduleState();markUnsaved();});
-scheduleConfirmBtn?.addEventListener('click',()=>{document.getElementById('statusInput').value='scheduled';updateScheduleMin();updateScheduleState();if(validateScheduledAt()){scheduleBox?.classList.add('is-confirmed');schedulePreviewLabel.textContent='Potvrzeno';markUnsaved();}});
+function updatePrimaryActions(){const scheduled=document.getElementById('statusInput').value==='scheduled';setActionLabel(topPublish,scheduled?'Pl\u00e1novat':'Publikovat');setActionLabel(publishBtn,scheduled?'Pl\u00e1novat p\u0159\u00edsp\u011bvek':'Publikovat p\u0159\u00edsp\u011bvek');}
+function formatScheduledLabel(value){if(!value)return 'Bez term\u00ednu';const date=new Date(value);if(Number.isNaN(date.getTime()))return value.replace('T',' ');return date.toLocaleString('cs-CZ',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});}
+function getDefaultScheduledDate(){const next=new Date(Date.now()+30*60*1000);next.setSeconds(0,0);next.setMinutes(Math.ceil(next.getMinutes()/15)*15);return next;}
+function fillScheduleTimeSelects(){if(!scheduleHourSelect||!scheduleMinuteSelect)return;scheduleHourSelect.innerHTML=Array.from({length:24},(_,h)=>`<option value="${pad2(h)}">${pad2(h)} h</option>`).join('');scheduleMinuteSelect.innerHTML=['00','15','30','45'].map(m=>`<option value="${m}">${m} min</option>`).join('');}
+function setScheduledDate(date){scheduleSelectedDate=new Date(date);scheduleSelectedDate.setSeconds(0,0);scheduledAtInput.value=toLocalValue(scheduleSelectedDate);if(scheduleHourSelect)scheduleHourSelect.value=pad2(scheduleSelectedDate.getHours());if(scheduleMinuteSelect){const minute=Math.round(scheduleSelectedDate.getMinutes()/15)*15%60;scheduleSelectedDate.setMinutes(minute);scheduleMinuteSelect.value=pad2(minute);scheduledAtInput.value=toLocalValue(scheduleSelectedDate);}renderSchedulePicker();updateScheduleState();}
+function clearScheduledDate(){scheduleSelectedDate=null;scheduledAtInput.value='';renderSchedulePicker();updateScheduleState();}
+function renderSchedulePicker(){if(!schedulePickerDays||!schedulePickerMonth)return;const monthStart=new Date(scheduleViewDate.getFullYear(),scheduleViewDate.getMonth(),1);const start=new Date(monthStart);start.setDate(start.getDate()-((start.getDay()+6)%7));const today=new Date();today.setHours(0,0,0,0);schedulePickerMonth.textContent=monthStart.toLocaleDateString('cs-CZ',{month:'long',year:'numeric'});let html='';for(let i=0;i<42;i++){const d=new Date(start);d.setDate(start.getDate()+i);const disabled=d<today;const muted=d.getMonth()!==scheduleViewDate.getMonth();const selected=scheduleSelectedDate&&d.toDateString()===scheduleSelectedDate.toDateString();html+=`<button type="button" class="schedule-picker-day${muted?' muted':''}${selected?' selected':''}${disabled?' disabled':''}" data-date="${toLocalValue(d).slice(0,10)}" ${disabled?'disabled':''}>${d.getDate()}</button>`;}schedulePickerDays.innerHTML=html;}
+function applyPickerDate(datePart){const base=scheduleSelectedDate||getDefaultScheduledDate();const [y,m,d]=datePart.split('-').map(Number);base.setFullYear(y,m-1,d);setScheduledDate(base);}
+function applyPickerTime(){const base=scheduleSelectedDate||getDefaultScheduledDate();base.setHours(parseInt(scheduleHourSelect?.value||'0',10),parseInt(scheduleMinuteSelect?.value||'0',10),0,0);setScheduledDate(base);}
+function openSchedulePicker(){schedulePickerPopover?.classList.add('on');schedulePickerBtn?.classList.add('on');renderSchedulePicker();}
+function closeSchedulePicker(){schedulePickerPopover?.classList.remove('on');schedulePickerBtn?.classList.remove('on');}
+function updateScheduleMin(){if(!scheduledAtInput)return;scheduledAtInput.min=toLocalValue(new Date());}
+function updateScheduleState(){const val=document.getElementById('statusInput').value;const isScheduled=val==='scheduled';if(scheduleBox) scheduleBox.style.display=isScheduled?'block':'none';if(scheduledAtHidden) scheduledAtHidden.value=isScheduled?(scheduledAtInput?.value||''):'';const humanLabel=isScheduled&&scheduledAtInput?.value?formatScheduledLabel(scheduledAtInput.value):'Ihned';if(publishTimingLabel) publishTimingLabel.textContent=humanLabel;if(scheduleHumanLabel) scheduleHumanLabel.textContent=isScheduled&&scheduledAtInput?.value?humanLabel:'Bez term\u00ednu';if(schedulePickerText) schedulePickerText.textContent=isScheduled&&scheduledAtInput?.value?humanLabel:'Vybrat datum a \u010das';if(schedulePreviewLabel) schedulePreviewLabel.textContent=isScheduled&&scheduledAtInput?.value?'Term\u00edn vybr\u00e1n':'\u010cek\u00e1 na term\u00edn';if(scheduleBox) scheduleBox.classList.toggle('is-confirmed',isScheduled&&!!scheduledAtInput?.value);updatePrimaryActions();const eyebrow=document.querySelector('.ph-meta .eyebrow');if(eyebrow){ eyebrow.innerHTML=`<span class="pulse" style="background:${statusColors[val]??'var(--ok)'};box-shadow:0 0 0 3px rgba(102,126,234,.15)"></span>${statusLabels[val]??val}`; }}
+function validateScheduledAt(){if(document.getElementById('statusInput').value!=='scheduled') return true;if(!scheduledAtInput?.value){ alert('Vyberte datum a \u010das publikace.'); openSchedulePicker(); return false; }const selected=new Date(scheduledAtInput.value);if(Number.isNaN(selected.getTime()) || selected.getTime() <= Date.now()){ alert('Napl\u00e1novan\u00e9 publikov\u00e1n\u00ed mus\u00ed b\u00fdt v budoucnu.'); openSchedulePicker(); return false; }return true;}
+fillScheduleTimeSelects();
+schedulePickerBtn?.addEventListener('click',openSchedulePicker);
+document.getElementById('schedulePrevMonth')?.addEventListener('click',()=>{scheduleViewDate.setMonth(scheduleViewDate.getMonth()-1);renderSchedulePicker();});
+document.getElementById('scheduleNextMonth')?.addEventListener('click',()=>{scheduleViewDate.setMonth(scheduleViewDate.getMonth()+1);renderSchedulePicker();});
+document.getElementById('scheduleTodayBtn')?.addEventListener('click',()=>{const d=getDefaultScheduledDate();scheduleViewDate=new Date(d);setScheduledDate(d);markUnsaved();});
+schedulePickerDays?.addEventListener('click',e=>{const btn=e.target.closest('.schedule-picker-day');if(!btn||btn.disabled)return;applyPickerDate(btn.dataset.date);markUnsaved();});
+scheduleHourSelect?.addEventListener('change',()=>{applyPickerTime();markUnsaved();});
+scheduleMinuteSelect?.addEventListener('change',()=>{applyPickerTime();markUnsaved();});
+document.getElementById('scheduleClearBtn')?.addEventListener('click',()=>{clearScheduledDate();markUnsaved();});
+document.getElementById('scheduleApplyBtn')?.addEventListener('click',()=>{if(!scheduledAtInput.value)setScheduledDate(getDefaultScheduledDate());closeSchedulePicker();markUnsaved();});
+document.addEventListener('click',e=>{if(schedulePickerPopover?.classList.contains('on')&&!e.target.closest('.schedule-picker-wrap'))closeSchedulePicker();});
+document.querySelectorAll('#statusSwitch button').forEach(btn=>{btn.addEventListener('click',()=>{document.querySelectorAll('#statusSwitch button').forEach(b=>b.classList.remove('on'));btn.classList.add('on');document.getElementById('statusInput').value=btn.dataset.val;if(btn.dataset.val==='scheduled'&&!scheduledAtInput.value)setScheduledDate(getDefaultScheduledDate());updateScheduleMin();updateScheduleState();markUnsaved();});});
+scheduleConfirmBtn?.addEventListener('click',()=>{document.getElementById('statusInput').value='scheduled';const d=getDefaultScheduledDate();scheduleViewDate=new Date(d);setScheduledDate(d);updateScheduleMin();updateScheduleState();if(validateScheduledAt()){scheduleBox?.classList.add('is-confirmed');schedulePreviewLabel.textContent='Potvrzeno';closeSchedulePicker();markUnsaved();}});
 updateScheduleMin();
 updateScheduleState();
 let selectedCatId='';

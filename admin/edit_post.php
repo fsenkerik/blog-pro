@@ -243,16 +243,43 @@ $currentTags = $postData['tags'] ?? '';
 .status-switch button.on.draft{color:var(--warn)}
 .status-switch button.on.scheduled{color:#7c3aed}
 .status-switch button .dot{width:6px;height:6px;border-radius:50%;background:currentColor;opacity:.75}
-.schedule-card{margin-top:14px;padding:14px;border:1px solid rgba(102,126,234,.14);border-radius:12px;background:linear-gradient(180deg,rgba(102,126,234,.08),rgba(118,75,162,.04))}
+.schedule-card{margin-top:14px;padding:14px;border:1px solid rgba(102,126,234,.18);border-radius:12px;background:linear-gradient(180deg,rgba(102,126,234,.08),rgba(255,255,255,.9));box-shadow:inset 0 1px 0 rgba(255,255,255,.75)}
 .schedule-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px}
-.schedule-title{font-size:12.5px;font-weight:600;color:var(--ink)}
-.schedule-copy{font-size:11.5px;line-height:1.55;color:var(--muted);margin-top:4px}
-.schedule-badge{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:999px;background:#fff;border:1px solid rgba(102,126,234,.16);font-family:var(--mono);font-size:10.5px;color:var(--accent-2)}
+.schedule-title{font-size:12.5px;font-weight:650;color:var(--ink)}
+.schedule-copy{font-size:11.5px;line-height:1.55;color:var(--muted);margin-top:3px}
+.schedule-badge{display:inline-flex;align-items:center;gap:6px;padding:5px 9px;border-radius:999px;background:var(--card);border:1px solid rgba(102,126,234,.2);font-family:var(--mono);font-size:10.5px;color:var(--accent-2);white-space:nowrap}
 .schedule-badge .dot{width:6px;height:6px;border-radius:50%;background:currentColor}
 .schedule-grid{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:end}
+.schedule-field{margin:0}
+.schedule-confirm{height:42px;white-space:nowrap}
 .schedule-note{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:10px;font-size:11px;color:var(--muted)}
-.schedule-note strong{color:var(--accent-2);font-weight:600}
-@media(max-width:900px){.schedule-grid{grid-template-columns:1fr}}
+.schedule-note strong{color:var(--accent-2);font-weight:650;font-family:var(--mono);font-size:11px;text-align:right}
+.schedule-card.is-confirmed{border-color:rgba(16,185,129,.32);background:linear-gradient(180deg,rgba(16,185,129,.08),rgba(255,255,255,.92))}
+.schedule-card.is-confirmed .schedule-badge{color:var(--ok);border-color:rgba(16,185,129,.24)}
+.schedule-picker-wrap{position:relative}
+.schedule-picker-button{width:100%;height:42px;padding:0 12px;border:1px solid var(--border);border-radius:8px;background:var(--card);display:flex;align-items:center;justify-content:space-between;gap:10px;font-family:var(--mono);font-size:12px;color:var(--ink);cursor:pointer;transition:border-color .15s,box-shadow .15s,background .15s}
+.schedule-picker-button:hover{border-color:rgba(102,126,234,.45);background:#fff}
+.schedule-picker-button.on{border-color:var(--accent);box-shadow:0 0 0 3px rgba(102,126,234,.13)}
+.schedule-picker-button svg{width:14px;height:14px;color:var(--accent-2);flex-shrink:0}
+.schedule-picker-popover{display:none;position:absolute;left:0;right:0;top:calc(100% + 8px);z-index:80;padding:12px;border:1px solid rgba(102,126,234,.18);border-radius:12px;background:#fff;box-shadow:0 18px 46px rgba(31,41,55,.16)}
+.schedule-picker-popover.on{display:block}
+.schedule-picker-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
+.schedule-picker-month{font-weight:650;font-size:13px;color:var(--ink)}
+.schedule-picker-nav{display:flex;gap:4px}
+.schedule-picker-nav button{width:28px;height:28px;border-radius:7px;border:1px solid var(--border);background:var(--card);color:var(--body);display:inline-flex;align-items:center;justify-content:center}
+.schedule-picker-nav button:hover{border-color:var(--accent);color:var(--accent-2)}
+.schedule-picker-week,.schedule-picker-days{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.schedule-picker-week span{font-family:var(--mono);font-size:10px;color:var(--muted);text-align:center;padding:2px 0 4px}
+.schedule-picker-day{height:30px;border-radius:7px;border:1px solid transparent;background:transparent;font-family:var(--mono);font-size:11.5px;color:var(--ink);cursor:pointer}
+.schedule-picker-day:hover{background:var(--accent-soft);color:var(--accent-2)}
+.schedule-picker-day.muted{color:var(--faint)}
+.schedule-picker-day.selected{background:var(--accent);color:#fff}
+.schedule-picker-day.disabled{color:var(--faint);cursor:not-allowed;background:transparent;opacity:.45}
+.schedule-time-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}
+.schedule-time-row select{height:36px;border:1px solid var(--border);border-radius:8px;background:var(--card);font-family:var(--mono);font-size:12px;color:var(--ink);padding:0 8px}
+.schedule-picker-actions{display:flex;justify-content:space-between;gap:8px;margin-top:10px}
+.schedule-picker-actions button{height:32px;padding:0 10px;border-radius:7px;font-size:11.5px}
+@media(max-width:900px){.schedule-picker-popover{position:relative;top:auto;margin-top:8px}.schedule-grid{grid-template-columns:1fr}.schedule-confirm{width:100%}}
 .sp-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;font-size:12.5px;border-bottom:1px solid var(--line)}
 .sp-row:last-child{border-bottom:none}
 .sp-row-label{color:var(--muted)}
@@ -362,7 +389,7 @@ body.dz-dragging .editor.dz-hover,body.dz-dragging .sp.dz-hover{box-shadow:0 0 0
             <div class="ph-meta"><div class="status-badge <?= $currentStatusUi ?>"><span class="dot"></span><?php $sl=['published'=>'Publikováno','scheduled'=>'Naplánováno']; echo $sl[$currentStatusUi]??ucfirst($currentStatusUi); ?></div><span class="save-pill saved" id="savePill"><span class="dot"></span><span id="saveText">Uloženo</span></span></div>
             <h1 class="page-title">Upravit <em>příspěvek.</em></h1>
           </div>
-          <div class="ph-actions"><button type="button" class="btn btn-primary btn-sm" id="topSave"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/></svg>Uložit změny</button></div>
+          <div class="ph-actions"><button type="button" class="btn btn-primary btn-sm" id="topSave"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2 11 13"/><path d="m22 2-7 20-4-9-9-4z"/></svg><span class="action-label"><?= $currentStatusUi==='scheduled' ? 'Pl&aacute;novat' : 'Publikovat' ?></span></button></div>
         </div>
         <div class="ed-grid">
           <div style="display:flex;flex-direction:column;gap:18px">
@@ -445,24 +472,34 @@ body.dz-dragging .editor.dz-hover,body.dz-dragging .sp.dz-hover{box-shadow:0 0 0
             <div class="sp"><div class="sp-head"><div class="sp-title"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="17" y1="10" x2="3" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="14" x2="3" y2="14"/><line x1="17" y1="18" x2="3" y2="18"/></svg>Perex</div><span class="sp-meta" id="excerptCount"><?= strlen($currentExcerpt) ?> / 280</span></div><div class="sp-body"><textarea class="field-textarea" id="excerptText" placeholder="Krátké uvedení článku…"><?= e($currentExcerpt) ?></textarea></div></div>
           </div>
           <div class="ed-side">
-            <div class="sp"><div class="sp-head"><div class="sp-title"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/></svg>Publikace</div></div><div class="sp-body">
-              <div class="status-switch" id="statusSwitch"><button type="button" class="<?= $currentStatusUi==='published'?'on':'' ?>" data-val="published"><span class="dot"></span>Publikovat</button><button type="button" class="scheduled <?= $currentStatusUi==='scheduled'?'on':'' ?>" data-val="scheduled"><span class="dot"></span>Planovat</button></div>
+            <div class="sp"><div class="sp-head"><div class="sp-title"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2 11 13"/><path d="m22 2-7 20-4-9-9-4z"/></svg>Publikace</div></div><div class="sp-body">
+              <div class="status-switch" id="statusSwitch"><button type="button" class="<?= $currentStatusUi==='published'?'on':'' ?>" data-val="published"><span class="dot"></span>Publikovat</button><button type="button" class="scheduled <?= $currentStatusUi==='scheduled'?'on':'' ?>" data-val="scheduled"><span class="dot"></span>Pl&aacute;n</button></div>
               <div id="scheduleBox" class="schedule-card" style="display:<?= $currentStatusUi==='scheduled'?'block':'none' ?>">
                 <div class="schedule-head">
                   <div>
-                    <div class="schedule-title">Naplanovat vydani</div>
-                    <div class="schedule-copy">Nastavte termin a prispevek se publikuje automaticky bez dalsiho zasahu.</div>
+                    <div class="schedule-title">Napl&aacute;novat vyd&aacute;n&iacute;</div>
+                    <div class="schedule-copy">Vyberte datum a &#269;as, potvr&#271;te term&iacute;n a p&#345;&iacute;sp&#283;vek se vyd&aacute; automaticky.</div>
                   </div>
-                  <div class="schedule-badge"><span class="dot"></span><span id="schedulePreviewLabel"><?= $currentStatusUi==='scheduled' && !empty($currentScheduledAt) ? 'Pripraveno' : 'Ceka na termin' ?></span></div>
+                  <div class="schedule-badge"><span class="dot"></span><span id="schedulePreviewLabel"><?= $currentStatusUi==='scheduled' && !empty($currentScheduledAt) ? 'Term&iacute;n vybr&aacute;n' : '&#268;ek&aacute; na term&iacute;n' ?></span></div>
                 </div>
                 <div class="schedule-grid">
-                  <div class="field" style="margin-bottom:0">
-                    <div class="field-label">Datum a cas publikace</div>
-                    <input type="datetime-local" class="field-input" id="scheduledAtInput" value="<?= e($currentScheduledAt) ?>" min="<?= date('Y-m-d\TH:i') ?>">
-                  </div>
-                  <button type="button" class="btn btn-ghost btn-sm" id="scheduleResetBtn">Nejblizsi termin</button>
+                  <label class="field schedule-field">
+                    <span class="field-label">Datum a &#269;as publikace</span>
+                    <input type="hidden" id="scheduledAtInput" value="<?= e($currentScheduledAt) ?>" min="<?= date('Y-m-d\TH:i') ?>">
+                    <div class="schedule-picker-wrap">
+                      <button type="button" class="schedule-picker-button" id="schedulePickerBtn"><span id="schedulePickerText"><?= $currentStatusUi==='scheduled' && !empty($currentScheduledAt) ? e(date('d.m.Y H:i', strtotime($currentScheduledAt))) : 'Vybrat datum a &#269;as' ?></span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></button>
+                      <div class="schedule-picker-popover" id="schedulePickerPopover">
+                        <div class="schedule-picker-head"><button type="button" class="btn btn-ghost btn-sm" id="scheduleTodayBtn">Nejbli&#382;&#353;&iacute; term&iacute;n</button><div class="schedule-picker-month" id="schedulePickerMonth"></div><div class="schedule-picker-nav"><button type="button" id="schedulePrevMonth">&lsaquo;</button><button type="button" id="scheduleNextMonth">&rsaquo;</button></div></div>
+                        <div class="schedule-picker-week"><span>Po</span><span>&Uacute;t</span><span>St</span><span>&#268;t</span><span>P&aacute;</span><span>So</span><span>Ne</span></div>
+                        <div class="schedule-picker-days" id="schedulePickerDays"></div>
+                        <div class="schedule-time-row"><select id="scheduleHourSelect" aria-label="Hodina"></select><select id="scheduleMinuteSelect" aria-label="Minuta"></select></div>
+                        <div class="schedule-picker-actions"><button type="button" class="btn btn-ghost btn-sm" id="scheduleClearBtn">Vymazat</button><button type="button" class="btn btn-primary btn-sm" id="scheduleApplyBtn">Pou&#382;&iacute;t term&iacute;n</button></div>
+                      </div>
+                    </div>
+                  </label>
+                  <button type="button" class="btn btn-ghost btn-sm schedule-confirm" id="scheduleConfirmBtn">Nejbli&#382;&#353;&iacute; term&iacute;n</button>
                 </div>
-                <div class="schedule-note"><span>Vybirat lze pouze budoucnost.</span><strong id="scheduleHumanLabel"><?= $currentStatusUi==='scheduled' && !empty($currentScheduledAt) ? e(str_replace('T', ' ', $currentScheduledAt)) : 'Bez terminu' ?></strong></div>
+                <div class="schedule-note"><span>Vybrat lze pouze budouc&iacute; term&iacute;n.</span><strong id="scheduleHumanLabel"><?= $currentStatusUi==='scheduled' && !empty($currentScheduledAt) ? e(date('d.m.Y H:i', strtotime($currentScheduledAt))) : 'Bez term&iacute;nu' ?></strong></div>
               </div>
               <div style="margin-top:14px"><div class="sp-row"><div class="sp-row-label">Autor</div><span class="sp-row-val"><?= e($postData['author_name'] ?? $_SESSION['username'] ?? '') ?></span></div><div class="sp-row"><div class="sp-row-label">Publikace</div><span class="sp-row-val" id="publishTimingLabel"><?= $currentStatusUi==='scheduled' && !empty($currentScheduledAt) ? e(str_replace('T', ' ', $currentScheduledAt)) : 'Ihned' ?></span></div><div class="sp-row"><div class="sp-row-label">Vytvořeno</div><span class="sp-row-val"><?= date('d.m.Y', strtotime($postData['created_at'] ?? 'now')) ?></span></div><div class="sp-row"><div class="sp-row-label">Upraveno</div><span class="sp-row-val"><?= date('d.m.Y H:i', strtotime($postData['updated_at'] ?? 'now')) ?></span></div></div>
             </div></div>
@@ -497,7 +534,7 @@ body.dz-dragging .editor.dz-hover,body.dz-dragging .sp.dz-hover{box-shadow:0 0 0
         </div>
         <div class="savebar">
           <div class="savebar-info"><span class="save-pill saved" id="savePill2"><span class="dot"></span><span id="saveText2">Uloženo</span></span><span style="color:var(--faint)">·</span><span class="mono" style="font-size:11.5px">Ctrl+S pro uložení</span></div>
-          <div class="savebar-actions"><a href="<?= ADMIN_URL ?>posts.php" class="btn btn-cancel btn-sm">Zrušit</a><button type="button" class="btn btn-ghost btn-sm" id="saveDraftBtn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/></svg>Uložit jako koncept</button><button type="button" class="btn btn-primary btn-sm" id="saveBtn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/></svg>Uložit změny</button></div>
+          <div class="savebar-actions"><a href="<?= ADMIN_URL ?>posts.php" class="btn btn-cancel btn-sm">Zrušit</a><button type="button" class="btn btn-ghost btn-sm" id="saveDraftBtn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/></svg>Uložit jako koncept</button><button type="button" class="btn btn-primary btn-sm" id="saveBtn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2 11 13"/><path d="m22 2-7 20-4-9-9-4z"/></svg><span class="action-label"><?= $currentStatusUi==='scheduled' ? 'Pl&aacute;novat p&#345;&iacute;sp&#283;vek' : 'Publikovat p&#345;&iacute;sp&#283;vek' ?></span></button></div>
         </div>
       </div>
     </form>
@@ -521,58 +558,49 @@ const scheduledAtHidden=document.getElementById('scheduledAtHidden');
 const publishTimingLabel=document.getElementById('publishTimingLabel');
 const schedulePreviewLabel=document.getElementById('schedulePreviewLabel');
 const scheduleHumanLabel=document.getElementById('scheduleHumanLabel');
+const scheduleConfirmBtn=document.getElementById('scheduleConfirmBtn');
 const topSaveBtn=document.getElementById('topSave');
 const bottomSaveBtn=document.getElementById('saveBtn');
-function getDefaultScheduledValue(){
-  const next=new Date(Date.now()+30*60*1000);
-  next.setSeconds(0,0);
-  next.setMinutes(Math.ceil(next.getMinutes()/15)*15);
-  const offset=next.getTimezoneOffset();
-  return new Date(next.getTime()-offset*60000).toISOString().slice(0,16);
-}
-function formatScheduledLabel(value){
-  if(!value) return 'Bez terminu';
-  const date=new Date(value);
-  if(Number.isNaN(date.getTime())) return value.replace('T',' ');
-  return new Intl.DateTimeFormat('cs-CZ',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}).format(date);
-}
-function updatePrimaryButtons(status){
-  const topLabel=status==='scheduled'?'Naplanovat':'Ulozit zmeny';
-  const bottomLabel=status==='scheduled'?'Naplanovat zmeny':'Ulozit zmeny';
-  if(topSaveBtn) topSaveBtn.innerHTML=`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/></svg>${topLabel}`;
-  if(bottomSaveBtn) bottomSaveBtn.innerHTML=`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/></svg>${bottomLabel}`;
-}
-function updateScheduleMin(){
-  if(!scheduledAtInput)return;
-  const now=new Date();
-  now.setSeconds(0,0);
-  const offset=now.getTimezoneOffset();
-  scheduledAtInput.min=new Date(now.getTime()-offset*60000).toISOString().slice(0,16);
-}
-function updateScheduleState(){
-  const status=document.getElementById('statusInput').value;
-  const isScheduled=status==='scheduled';
-  if(isScheduled && !scheduledAtInput?.value){
-    scheduledAtInput.value=getDefaultScheduledValue();
-  }
-  if(scheduleBox) scheduleBox.style.display=isScheduled?'block':'none';
-  if(scheduledAtHidden) scheduledAtHidden.value=isScheduled?(scheduledAtInput?.value||''):'';
-  const humanLabel=isScheduled&&scheduledAtInput?.value?formatScheduledLabel(scheduledAtInput.value):'Ihned';
-  if(publishTimingLabel) publishTimingLabel.textContent=humanLabel;
-  if(schedulePreviewLabel) schedulePreviewLabel.textContent=isScheduled&&scheduledAtInput?.value?'Pripraveno':'Ceka na termin';
-  if(scheduleHumanLabel) scheduleHumanLabel.textContent=humanLabel;
-  updatePrimaryButtons(status);
-}
-function validateScheduledAt(){
-  if(document.getElementById('statusInput').value!=='scheduled') return true;
-  if(!scheduledAtInput?.value){ alert('Vyberte datum a čas publikace.'); scheduledAtInput?.focus(); return false; }
-  const selected=new Date(scheduledAtInput.value);
-  if(Number.isNaN(selected.getTime()) || selected.getTime() <= Date.now()){ alert('Naplánované publikování musí být v budoucnu.'); scheduledAtInput?.focus(); return false; }
-  return true;
-}
-document.querySelectorAll('#statusSwitch button').forEach(btn=>{btn.addEventListener('click',()=>{document.querySelectorAll('#statusSwitch button').forEach(b=>b.classList.remove('on'));btn.classList.add('on');document.getElementById('statusInput').value=btn.dataset.val;updateScheduleMin();updateScheduleState();markChanged();});});
-scheduledAtInput?.addEventListener('input',()=>{updateScheduleMin();updateScheduleState();markChanged();});
-document.getElementById('scheduleResetBtn')?.addEventListener('click',()=>{if(scheduledAtInput){scheduledAtInput.value=getDefaultScheduledValue();updateScheduleMin();updateScheduleState();markChanged();}});
+const schedulePickerBtn=document.getElementById('schedulePickerBtn');
+const schedulePickerText=document.getElementById('schedulePickerText');
+const schedulePickerPopover=document.getElementById('schedulePickerPopover');
+const schedulePickerDays=document.getElementById('schedulePickerDays');
+const schedulePickerMonth=document.getElementById('schedulePickerMonth');
+const scheduleHourSelect=document.getElementById('scheduleHourSelect');
+const scheduleMinuteSelect=document.getElementById('scheduleMinuteSelect');
+let scheduleViewDate=scheduledAtInput?.value?new Date(scheduledAtInput.value):new Date();
+let scheduleSelectedDate=scheduledAtInput?.value?new Date(scheduledAtInput.value):null;
+function pad2(n){return String(n).padStart(2,'0');}
+function toLocalValue(date){return `${date.getFullYear()}-${pad2(date.getMonth()+1)}-${pad2(date.getDate())}T${pad2(date.getHours())}:${pad2(date.getMinutes())}`;}
+function setActionLabel(btn,label){const target=btn?.querySelector('.action-label');if(target)target.textContent=label;else if(btn)btn.textContent=label;}
+function updatePrimaryButtons(status){const scheduled=status==='scheduled';setActionLabel(topSaveBtn,scheduled?'Pl\u00e1novat':'Publikovat');setActionLabel(bottomSaveBtn,scheduled?'Pl\u00e1novat p\u0159\u00edsp\u011bvek':'Publikovat p\u0159\u00edsp\u011bvek');}
+function formatScheduledLabel(value){if(!value)return 'Bez term\u00ednu';const date=new Date(value);if(Number.isNaN(date.getTime()))return value.replace('T',' ');return date.toLocaleString('cs-CZ',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});}
+function getDefaultScheduledDate(){const next=new Date(Date.now()+30*60*1000);next.setSeconds(0,0);next.setMinutes(Math.ceil(next.getMinutes()/15)*15);return next;}
+function fillScheduleTimeSelects(){if(!scheduleHourSelect||!scheduleMinuteSelect)return;scheduleHourSelect.innerHTML=Array.from({length:24},(_,h)=>`<option value="${pad2(h)}">${pad2(h)} h</option>`).join('');scheduleMinuteSelect.innerHTML=['00','15','30','45'].map(m=>`<option value="${m}">${m} min</option>`).join('');}
+function setScheduledDate(date){scheduleSelectedDate=new Date(date);scheduleSelectedDate.setSeconds(0,0);scheduledAtInput.value=toLocalValue(scheduleSelectedDate);if(scheduleHourSelect)scheduleHourSelect.value=pad2(scheduleSelectedDate.getHours());if(scheduleMinuteSelect){const minute=Math.round(scheduleSelectedDate.getMinutes()/15)*15%60;scheduleSelectedDate.setMinutes(minute);scheduleMinuteSelect.value=pad2(minute);scheduledAtInput.value=toLocalValue(scheduleSelectedDate);}renderSchedulePicker();updateScheduleState();}
+function clearScheduledDate(){scheduleSelectedDate=null;scheduledAtInput.value='';renderSchedulePicker();updateScheduleState();}
+function renderSchedulePicker(){if(!schedulePickerDays||!schedulePickerMonth)return;const monthStart=new Date(scheduleViewDate.getFullYear(),scheduleViewDate.getMonth(),1);const start=new Date(monthStart);start.setDate(start.getDate()-((start.getDay()+6)%7));const today=new Date();today.setHours(0,0,0,0);schedulePickerMonth.textContent=monthStart.toLocaleDateString('cs-CZ',{month:'long',year:'numeric'});let html='';for(let i=0;i<42;i++){const d=new Date(start);d.setDate(start.getDate()+i);const disabled=d<today;const muted=d.getMonth()!==scheduleViewDate.getMonth();const selected=scheduleSelectedDate&&d.toDateString()===scheduleSelectedDate.toDateString();html+=`<button type="button" class="schedule-picker-day${muted?' muted':''}${selected?' selected':''}${disabled?' disabled':''}" data-date="${toLocalValue(d).slice(0,10)}" ${disabled?'disabled':''}>${d.getDate()}</button>`;}schedulePickerDays.innerHTML=html;}
+function applyPickerDate(datePart){const base=scheduleSelectedDate||getDefaultScheduledDate();const [y,m,d]=datePart.split('-').map(Number);base.setFullYear(y,m-1,d);setScheduledDate(base);}
+function applyPickerTime(){const base=scheduleSelectedDate||getDefaultScheduledDate();base.setHours(parseInt(scheduleHourSelect?.value||'0',10),parseInt(scheduleMinuteSelect?.value||'0',10),0,0);setScheduledDate(base);}
+function openSchedulePicker(){schedulePickerPopover?.classList.add('on');schedulePickerBtn?.classList.add('on');renderSchedulePicker();}
+function closeSchedulePicker(){schedulePickerPopover?.classList.remove('on');schedulePickerBtn?.classList.remove('on');}
+function updateScheduleMin(){if(!scheduledAtInput)return;scheduledAtInput.min=toLocalValue(new Date());}
+function updateScheduleState(){const status=document.getElementById('statusInput').value;const isScheduled=status==='scheduled';if(scheduleBox) scheduleBox.style.display=isScheduled?'block':'none';if(scheduledAtHidden) scheduledAtHidden.value=isScheduled?(scheduledAtInput?.value||''):'';const humanLabel=isScheduled&&scheduledAtInput?.value?formatScheduledLabel(scheduledAtInput.value):'Ihned';if(publishTimingLabel) publishTimingLabel.textContent=humanLabel;if(scheduleHumanLabel) scheduleHumanLabel.textContent=isScheduled&&scheduledAtInput?.value?humanLabel:'Bez term\u00ednu';if(schedulePickerText) schedulePickerText.textContent=isScheduled&&scheduledAtInput?.value?humanLabel:'Vybrat datum a \u010das';if(schedulePreviewLabel) schedulePreviewLabel.textContent=isScheduled&&scheduledAtInput?.value?'Term\u00edn vybr\u00e1n':'\u010cek\u00e1 na term\u00edn';if(scheduleBox) scheduleBox.classList.toggle('is-confirmed',isScheduled&&!!scheduledAtInput?.value);updatePrimaryButtons(status);}
+function validateScheduledAt(){if(document.getElementById('statusInput').value!=='scheduled') return true;if(!scheduledAtInput?.value){ alert('Vyberte datum a \u010das publikace.'); openSchedulePicker(); return false; }const selected=new Date(scheduledAtInput.value);if(Number.isNaN(selected.getTime()) || selected.getTime() <= Date.now()){ alert('Napl\u00e1novan\u00e9 publikov\u00e1n\u00ed mus\u00ed b\u00fdt v budoucnu.'); openSchedulePicker(); return false; }return true;}
+fillScheduleTimeSelects();
+if(scheduleSelectedDate){setScheduledDate(scheduleSelectedDate);}else{renderSchedulePicker();}
+schedulePickerBtn?.addEventListener('click',openSchedulePicker);
+document.getElementById('schedulePrevMonth')?.addEventListener('click',()=>{scheduleViewDate.setMonth(scheduleViewDate.getMonth()-1);renderSchedulePicker();});
+document.getElementById('scheduleNextMonth')?.addEventListener('click',()=>{scheduleViewDate.setMonth(scheduleViewDate.getMonth()+1);renderSchedulePicker();});
+document.getElementById('scheduleTodayBtn')?.addEventListener('click',()=>{const d=getDefaultScheduledDate();scheduleViewDate=new Date(d);setScheduledDate(d);markChanged();});
+schedulePickerDays?.addEventListener('click',e=>{const btn=e.target.closest('.schedule-picker-day');if(!btn||btn.disabled)return;applyPickerDate(btn.dataset.date);markChanged();});
+scheduleHourSelect?.addEventListener('change',()=>{applyPickerTime();markChanged();});
+scheduleMinuteSelect?.addEventListener('change',()=>{applyPickerTime();markChanged();});
+document.getElementById('scheduleClearBtn')?.addEventListener('click',()=>{clearScheduledDate();markChanged();});
+document.getElementById('scheduleApplyBtn')?.addEventListener('click',()=>{if(!scheduledAtInput.value)setScheduledDate(getDefaultScheduledDate());closeSchedulePicker();markChanged();});
+document.addEventListener('click',e=>{if(schedulePickerPopover?.classList.contains('on')&&!e.target.closest('.schedule-picker-wrap'))closeSchedulePicker();});
+document.querySelectorAll('#statusSwitch button').forEach(btn=>{btn.addEventListener('click',()=>{document.querySelectorAll('#statusSwitch button').forEach(b=>b.classList.remove('on'));btn.classList.add('on');document.getElementById('statusInput').value=btn.dataset.val;if(btn.dataset.val==='scheduled'&&!scheduledAtInput.value)setScheduledDate(getDefaultScheduledDate());updateScheduleMin();updateScheduleState();markChanged();});});
+scheduleConfirmBtn?.addEventListener('click',()=>{document.getElementById('statusInput').value='scheduled';const d=getDefaultScheduledDate();scheduleViewDate=new Date(d);setScheduledDate(d);updateScheduleMin();updateScheduleState();if(validateScheduledAt()){scheduleBox?.classList.add('is-confirmed');schedulePreviewLabel.textContent='Potvrzeno';closeSchedulePicker();markChanged();}});
 updateScheduleMin();
 updateScheduleState();
 let selectedCatId='<?= $currentCatId ?>';
@@ -590,7 +618,7 @@ function handleTagKeyE(e){if(e.key==='Enter'||e.key===','){e.preventDefault();ad
 document.addEventListener('DOMContentLoaded',()=>renderTagsE());
 // ── Auto-SEO (edit) ───────────────────────────────────────────────────────────
 function generateSEOE(){const title=titleEl?.value.trim()||'';const text=(edContent?.innerText||'').replace(/\s+/g,' ').trim();if(!title&&!text)return;const seoTitle=title.length>60?title.substring(0,57)+'…':title;const excerpt=text.substring(0,160);const words=text.split(/\s+/).filter(Boolean).slice(0,8).join(', ');if(seoTitleEl){seoTitleEl.value=seoTitle;seoTitleEl.dispatchEvent(new Event('input'));}if(seoDescEl){seoDescEl.value=excerpt;seoDescEl.dispatchEvent(new Event('input'));}const kwEl=document.getElementById('seoKeywords');if(kwEl&&!kwEl.value)kwEl.value=words;markChanged();}
-function submitForm(status){syncHiddenInputs();document.getElementById('statusInput').value=status;updateScheduleState();if(status==='scheduled' && !validateScheduledAt()) return;document.getElementById('postForm').submit();}
+function submitForm(status){syncHiddenInputs();document.getElementById('statusInput').value=status;updateScheduleState();if(status==='scheduled' && !validateScheduledAt()) return;const label=status==='scheduled'?'Pl\u00e1nuji\u2026':'Publikuji\u2026';setActionLabel(bottomSaveBtn,label);if(bottomSaveBtn)bottomSaveBtn.disabled=true;document.getElementById('postForm').submit();}
 document.getElementById('saveBtn')?.addEventListener('click',()=>submitForm(document.getElementById('statusInput').value));
 document.getElementById('topSave')?.addEventListener('click',()=>submitForm(document.getElementById('statusInput').value));
 document.getElementById('saveDraftBtn')?.addEventListener('click',()=>submitForm('draft'));
