@@ -113,13 +113,15 @@ class Post {
         if (!empty($data['tags']))               { $xCols .= ', tags';               $xVals .= ', :tags'; }
         if (!empty($data['featured_image_alt'])) { $xCols .= ', featured_image_alt'; $xVals .= ', :image_alt'; }
 
+        $now = date('Y-m-d H:i:s');
+
         $this->db->query(
             "INSERT INTO posts
             (title, slug, content, excerpt, featured_image, category_id, author_id, status,
-             meta_title, meta_description, meta_keywords{$xCols}, published_at, scheduled_at)
+             meta_title, meta_description, meta_keywords{$xCols}, published_at, scheduled_at, created_at, updated_at)
             VALUES
             (:title, :slug, :content, :excerpt, :image, :category, :author, :status,
-             :meta_title, :meta_desc, :meta_keys{$xVals}, :published, :scheduled_at)"
+             :meta_title, :meta_desc, :meta_keys{$xVals}, :published, :scheduled_at, :created_at, :updated_at)"
         );
 
         $this->db->bind(':title', $data['title']);
@@ -137,10 +139,12 @@ class Post {
         if (!empty($data['featured_image_alt'])) $this->db->bind(':image_alt', $data['featured_image_alt']);
         
         $publishedAt = ($data['status'] ?? 'draft') === 'published' 
-            ? date('Y-m-d H:i:s') 
+            ? $now
             : null;
         $this->db->bind(':published', $publishedAt);
         $this->db->bind(':scheduled_at', $data['scheduled_at'] ?? null);
+        $this->db->bind(':created_at', $now);
+        $this->db->bind(':updated_at', $now);
         
         if ($this->db->execute()) {
             $postId = $this->db->lastInsertId();
@@ -186,7 +190,8 @@ class Post {
                 status = :status,
                 meta_title = :meta_title,
                 meta_description = :meta_desc,
-                meta_keywords = :meta_keys";
+                meta_keywords = :meta_keys,
+                updated_at = :updated_at";
 
         // Zahrnout nové sloupce pouze pokud DB sloupce existují (bezpečný fallback)
         if (array_key_exists('tags', $data))               $sql .= ", tags = :tags";
@@ -226,6 +231,7 @@ class Post {
         $this->db->bind(':meta_title', $data['meta_title'] ?? $data['title']);
         $this->db->bind(':meta_desc', $data['meta_description'] ?? $data['excerpt']);
         $this->db->bind(':meta_keys', $data['meta_keywords'] ?? '');
+        $this->db->bind(':updated_at', date('Y-m-d H:i:s'));
         if (array_key_exists('tags', $data))               $this->db->bind(':tags', $data['tags']);
         if (array_key_exists('featured_image_alt', $data)) $this->db->bind(':image_alt', $data['featured_image_alt']);
         if (array_key_exists('scheduled_at', $data))       $this->db->bind(':scheduled_at', $data['scheduled_at']);
@@ -353,7 +359,8 @@ class Post {
             "UPDATE posts
              SET status = 'published',
                  published_at = COALESCE(published_at, scheduled_at, :published_at),
-                 scheduled_at = NULL
+                 scheduled_at = NULL,
+                 updated_at = :published_at
              WHERE status = 'scheduled'
                AND scheduled_at IS NOT NULL
                AND scheduled_at <= :now"

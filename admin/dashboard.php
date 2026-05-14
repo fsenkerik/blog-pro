@@ -18,9 +18,15 @@ $published = $post->getAll('published', 6, 0);
 $drafts    = $post->getAll('draft', 4, 0);
 $scheduled = $post->getAll('scheduled', 4, 0);
 $recent    = array_merge($published, $drafts, $scheduled);
+function dashboardPostTime(array $item): string {
+    if (($item['status'] ?? '') === 'draft') {
+        return $item['updated_at'] ?? $item['created_at'] ?? 'now';
+    }
+    return $item['published_at'] ?? $item['scheduled_at'] ?? $item['updated_at'] ?? $item['created_at'] ?? 'now';
+}
 usort($recent, static fn($a, $b) =>
-    strtotime($b['published_at'] ?? $b['scheduled_at'] ?? $b['created_at']) -
-    strtotime($a['published_at'] ?? $a['scheduled_at'] ?? $a['created_at'])
+    strtotime(dashboardPostTime($b)) -
+    strtotime(dashboardPostTime($a))
 );
 $recent = array_slice($recent, 0, 6);
 
@@ -331,7 +337,7 @@ $catColors = ['#667eea', '#764ba2', '#10b981', '#f59e0b', '#ef4444', '#3b82f6', 
                     <span class="chip chip-outline"><?= htmlspecialchars($item['category_name']) ?></span>
                   <?php endif; ?>
                   <span><?= htmlspecialchars($item['author_name'] ?? '') ?></span>
-                  <span class="mono"><?= relTimeDashboard($item['published_at'] ?? $item['scheduled_at'] ?? $item['created_at']) ?></span>
+                  <span class="mono"><?= relTimeDashboard(dashboardPostTime($item)) ?></span>
                 </div>
               </div>
               <div class="pc-actions-row">
@@ -373,7 +379,7 @@ $catColors = ['#667eea', '#764ba2', '#10b981', '#f59e0b', '#ef4444', '#3b82f6', 
                 <?= $item['status'] === 'published' ? ' publikoval/a ' : ($item['status'] === 'scheduled' ? ' naplanoval/a ' : ' upravil/a ') ?>
                 <span style="color:var(--body);font-size:12px"><?= htmlspecialchars(mb_substr($item['title'], 0, 50)) ?></span>
               </div>
-              <div class="act-time"><?= relTimeDashboard($item['published_at'] ?? $item['scheduled_at'] ?? $item['created_at']) ?></div>
+              <div class="act-time"><?= relTimeDashboard(dashboardPostTime($item)) ?></div>
             </div>
           <?php endforeach; ?>
           <?php if (empty($recent)): ?>
