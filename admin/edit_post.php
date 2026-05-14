@@ -223,6 +223,7 @@ $currentTags = $postData['tags'] ?? '';
 .ed-stat-val{font-family:var(--serif);font-size:22px;line-height:1;color:var(--ink);margin-top:2px}
 .ed-stat-val .unit{font-family:var(--mono);font-size:11px;color:var(--muted);margin-left:3px}
 .sp{background:var(--card);border:1px solid var(--border);border-radius:14px;overflow:hidden;box-shadow:0 1px 2px rgba(31,41,55,.03)}
+.publish-panel{overflow:visible;position:relative;z-index:20}
 .sp-head{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--line)}
 .sp-title{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:600;color:var(--ink)}
 .sp-title .ico{width:14px;height:14px;color:var(--accent-2)}
@@ -475,7 +476,7 @@ body.dz-dragging .editor.dz-hover,body.dz-dragging .sp.dz-hover{box-shadow:0 0 0
             <div class="sp"><div class="sp-head"><div class="sp-title"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="17" y1="10" x2="3" y2="10"/><line x1="21" y1="6" x2="3" y2="6"/><line x1="21" y1="14" x2="3" y2="14"/><line x1="17" y1="18" x2="3" y2="18"/></svg>Perex</div><span class="sp-meta" id="excerptCount"><?= strlen($currentExcerpt) ?> / 280</span></div><div class="sp-body"><textarea class="field-textarea" id="excerptText" placeholder="Krátké uvedení článku…"><?= e($currentExcerpt) ?></textarea></div></div>
           </div>
           <div class="ed-side">
-            <div class="sp"><div class="sp-head"><div class="sp-title"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2 11 13"/><path d="m22 2-7 20-4-9-9-4z"/></svg>Publikace</div></div><div class="sp-body">
+            <div class="sp publish-panel"><div class="sp-head"><div class="sp-title"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2 11 13"/><path d="m22 2-7 20-4-9-9-4z"/></svg>Publikace</div></div><div class="sp-body">
               <div class="status-switch" id="statusSwitch"><button type="button" class="<?= $currentStatusUi==='published'?'on':'' ?>" data-val="published"><span class="dot"></span>Publikovat</button><button type="button" class="scheduled <?= $currentStatusUi==='scheduled'?'on':'' ?>" data-val="scheduled"><span class="dot"></span>Pl&aacute;n</button></div>
               <div id="scheduleBox" class="schedule-card" style="display:<?= $currentStatusUi==='scheduled'?'block':'none' ?>">
                 <div class="schedule-head">
