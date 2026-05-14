@@ -262,7 +262,7 @@ $currentTags = $postData['tags'] ?? '';
 .schedule-picker-button:hover{border-color:rgba(102,126,234,.45);background:#fff}
 .schedule-picker-button.on{border-color:var(--accent);box-shadow:0 0 0 3px rgba(102,126,234,.13)}
 .schedule-picker-button svg{width:14px;height:14px;color:var(--accent-2);flex-shrink:0}
-.schedule-picker-popover{display:none;position:absolute;left:0;right:auto;top:calc(100% + 8px);z-index:120;width:min(440px,calc(100vw - 32px));padding:12px;border:1px solid rgba(102,126,234,.18);border-radius:12px;background:#fff;box-shadow:0 18px 46px rgba(31,41,55,.16)}
+.schedule-picker-popover{display:none;position:absolute;left:-140px;right:auto;top:calc(100% + 8px);z-index:120;width:min(420px,calc(100vw - 32px));padding:12px;border:1px solid rgba(102,126,234,.18);border-radius:12px;background:#fff;box-shadow:0 18px 46px rgba(31,41,55,.16)}
 .schedule-picker-popover.on{display:block}
 .schedule-picker-head{display:grid;grid-template-columns:auto 1fr auto;align-items:center;gap:8px;margin-bottom:10px}
 .schedule-picker-month{font-weight:650;font-size:13px;color:var(--ink);text-align:center}
@@ -283,7 +283,7 @@ $currentTags = $postData['tags'] ?? '';
 .schedule-time-row select{height:36px;border:1px solid var(--border);border-radius:8px;background:var(--card);font-family:var(--mono);font-size:12px;color:var(--ink);padding:0 8px;width:100%}
 .schedule-picker-actions{display:flex;justify-content:space-between;gap:8px;margin-top:10px}
 .schedule-picker-actions button{height:32px;padding:0 10px;border-radius:7px;font-size:11.5px}
-@media(max-width:900px){.schedule-picker-popover{position:relative;top:auto;margin-top:8px;width:100%}.schedule-picker-main{grid-template-columns:1fr}.schedule-time-row{grid-template-columns:1fr 1fr}.schedule-time-row::before{grid-column:1/-1}.schedule-grid{grid-template-columns:1fr}.schedule-confirm{width:100%}}
+@media(max-width:900px){.schedule-picker-popover{position:relative;left:0;top:auto;margin-top:8px;width:100%}.schedule-picker-main{grid-template-columns:1fr}.schedule-time-row{grid-template-columns:1fr 1fr}.schedule-time-row::before{grid-column:1/-1}.schedule-grid{grid-template-columns:1fr}.schedule-confirm{width:100%}}
 .sp-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;font-size:12.5px;border-bottom:1px solid var(--line)}
 .sp-row:last-child{border-bottom:none}
 .sp-row-label{color:var(--muted)}
