@@ -243,11 +243,11 @@ $currentTags = $postData['tags'] ?? '';
 .status-switch button.on.draft{color:var(--warn)}
 .status-switch button.on.scheduled{color:#7c3aed}
 .status-switch button .dot{width:6px;height:6px;border-radius:50%;background:currentColor;opacity:.75}
-.schedule-card{margin-top:14px;padding:14px;border:1px solid rgba(102,126,234,.18);border-radius:12px;background:linear-gradient(180deg,rgba(102,126,234,.08),rgba(255,255,255,.9));box-shadow:inset 0 1px 0 rgba(255,255,255,.75)}
+.schedule-card{margin-top:14px;padding:14px;border:1px solid var(--border);border-radius:12px;background:linear-gradient(180deg,#f8fafc,rgba(255,255,255,.92));box-shadow:inset 0 1px 0 rgba(255,255,255,.75)}
 .schedule-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px}
 .schedule-title{font-size:12.5px;font-weight:650;color:var(--ink)}
 .schedule-copy{font-size:11.5px;line-height:1.55;color:var(--muted);margin-top:3px}
-.schedule-badge{display:inline-flex;align-items:center;gap:6px;padding:5px 9px;border-radius:999px;background:var(--card);border:1px solid rgba(102,126,234,.2);font-family:var(--mono);font-size:10.5px;color:var(--accent-2);white-space:nowrap}
+.schedule-badge{display:inline-flex;align-items:center;gap:6px;padding:5px 9px;border-radius:999px;background:#f8fafc;border:1px solid var(--border);font-family:var(--mono);font-size:10.5px;color:var(--muted);white-space:nowrap}
 .schedule-badge .dot{width:6px;height:6px;border-radius:50%;background:currentColor}
 .schedule-grid{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:end}
 .schedule-field{margin:0}
@@ -255,7 +255,7 @@ $currentTags = $postData['tags'] ?? '';
 .schedule-note{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:10px;font-size:11px;color:var(--muted)}
 .schedule-note strong{color:var(--accent-2);font-weight:650;font-family:var(--mono);font-size:11px;text-align:right}
 .schedule-card.is-confirmed{border-color:rgba(16,185,129,.32);background:linear-gradient(180deg,rgba(16,185,129,.08),rgba(255,255,255,.92))}
-.schedule-card.is-confirmed .schedule-badge{color:var(--ok);border-color:rgba(16,185,129,.24)}
+.schedule-card.is-confirmed .schedule-badge{color:var(--ok);background:rgba(16,185,129,.08);border-color:rgba(16,185,129,.28)}
 .schedule-picker-wrap{position:relative}
 .schedule-picker-button{width:100%;height:42px;padding:0 12px;border:1px solid var(--border);border-radius:8px;background:var(--card);display:flex;align-items:center;justify-content:space-between;gap:10px;font-family:var(--mono);font-size:12px;color:var(--ink);cursor:pointer;transition:border-color .15s,box-shadow .15s,background .15s}
 .schedule-picker-button:hover{border-color:rgba(102,126,234,.45);background:#fff}
@@ -481,9 +481,9 @@ body.dz-dragging .editor.dz-hover,body.dz-dragging .sp.dz-hover{box-shadow:0 0 0
                 <div class="schedule-head">
                   <div>
                     <div class="schedule-title">Napl&aacute;novat vyd&aacute;n&iacute;</div>
-                    <div class="schedule-copy">Vyberte datum a &#269;as, potvr&#271;te term&iacute;n a p&#345;&iacute;sp&#283;vek se vyd&aacute; automaticky.</div>
+                    <div class="schedule-copy">Vyberte datum a &#269;as, p&#345;&iacute;sp&#283;vek se vyd&aacute; automaticky.</div>
                   </div>
-                  <div class="schedule-badge"><span class="dot"></span><span id="schedulePreviewLabel"><?= $currentStatusUi==='scheduled' && !empty($currentScheduledAt) ? 'Term&iacute;n vybr&aacute;n' : '&#268;ek&aacute; na term&iacute;n' ?></span></div>
+                  <div class="schedule-badge"><span class="dot"></span><span id="schedulePreviewLabel"><?= $currentStatusUi==='scheduled' && !empty($currentScheduledAt) ? 'Term&iacute;n vybr&aacute;n' : 'Term&iacute;n nevybr&aacute;n' ?></span></div>
                 </div>
                 <div class="schedule-grid">
                   <label class="field schedule-field">
@@ -588,7 +588,7 @@ function applyPickerTime(){const base=scheduleSelectedDate||getDefaultScheduledD
 function openSchedulePicker(){schedulePickerPopover?.classList.add('on');schedulePickerBtn?.classList.add('on');renderSchedulePicker();}
 function closeSchedulePicker(){schedulePickerPopover?.classList.remove('on');schedulePickerBtn?.classList.remove('on');}
 function updateScheduleMin(){if(!scheduledAtInput)return;scheduledAtInput.min=toLocalValue(new Date());}
-function updateScheduleState(){const status=document.getElementById('statusInput').value;const isScheduled=status==='scheduled';if(scheduleBox) scheduleBox.style.display=isScheduled?'block':'none';if(scheduledAtHidden) scheduledAtHidden.value=isScheduled?(scheduledAtInput?.value||''):'';const humanLabel=isScheduled&&scheduledAtInput?.value?formatScheduledLabel(scheduledAtInput.value):'Ihned';if(publishTimingLabel) publishTimingLabel.textContent=humanLabel;if(scheduleHumanLabel) scheduleHumanLabel.textContent=isScheduled&&scheduledAtInput?.value?humanLabel:'Bez term\u00ednu';if(schedulePickerText) schedulePickerText.textContent=isScheduled&&scheduledAtInput?.value?humanLabel:'Vybrat datum a \u010das';if(schedulePreviewLabel) schedulePreviewLabel.textContent=isScheduled&&scheduledAtInput?.value?'Term\u00edn vybr\u00e1n':'\u010cek\u00e1 na term\u00edn';if(scheduleBox) scheduleBox.classList.toggle('is-confirmed',isScheduled&&!!scheduledAtInput?.value);updatePrimaryButtons(status);}
+function updateScheduleState(){const status=document.getElementById('statusInput').value;const isScheduled=status==='scheduled';if(scheduleBox) scheduleBox.style.display=isScheduled?'block':'none';if(scheduledAtHidden) scheduledAtHidden.value=isScheduled?(scheduledAtInput?.value||''):'';const humanLabel=isScheduled&&scheduledAtInput?.value?formatScheduledLabel(scheduledAtInput.value):'Ihned';if(publishTimingLabel) publishTimingLabel.textContent=humanLabel;if(scheduleHumanLabel) scheduleHumanLabel.textContent=isScheduled&&scheduledAtInput?.value?humanLabel:'Bez term\u00ednu';if(schedulePickerText) schedulePickerText.textContent=isScheduled&&scheduledAtInput?.value?humanLabel:'Vybrat datum a \u010das';if(schedulePreviewLabel) schedulePreviewLabel.textContent=isScheduled&&scheduledAtInput?.value?'Term\u00edn vybr\u00e1n':'Term\u00edn nevybr\u00e1n';if(scheduleBox) scheduleBox.classList.toggle('is-confirmed',isScheduled&&!!scheduledAtInput?.value);updatePrimaryButtons(status);}
 function validateScheduledAt(){if(document.getElementById('statusInput').value!=='scheduled') return true;if(!scheduledAtInput?.value){ alert('Vyberte datum a \u010das publikace.'); openSchedulePicker(); return false; }const selected=new Date(scheduledAtInput.value);if(Number.isNaN(selected.getTime()) || selected.getTime() <= Date.now()){ alert('Napl\u00e1novan\u00e9 publikov\u00e1n\u00ed mus\u00ed b\u00fdt v budoucnu.'); openSchedulePicker(); return false; }return true;}
 fillScheduleTimeSelects();
 if(scheduleSelectedDate){setScheduledDate(scheduleSelectedDate);}else{renderSchedulePicker();}
@@ -603,7 +603,7 @@ document.getElementById('scheduleClearBtn')?.addEventListener('click',()=>{clear
 document.getElementById('scheduleApplyBtn')?.addEventListener('click',()=>{if(!scheduledAtInput.value)setScheduledDate(getDefaultScheduledDate());closeSchedulePicker();markChanged();});
 document.addEventListener('click',e=>{if(schedulePickerPopover?.classList.contains('on')&&!e.target.closest('.schedule-picker-wrap'))closeSchedulePicker();});
 document.querySelectorAll('#statusSwitch button').forEach(btn=>{btn.addEventListener('click',()=>{document.querySelectorAll('#statusSwitch button').forEach(b=>b.classList.remove('on'));btn.classList.add('on');document.getElementById('statusInput').value=btn.dataset.val;if(btn.dataset.val==='scheduled'&&!scheduledAtInput.value)setScheduledDate(getDefaultScheduledDate());updateScheduleMin();updateScheduleState();markChanged();});});
-scheduleConfirmBtn?.addEventListener('click',()=>{document.getElementById('statusInput').value='scheduled';const d=getDefaultScheduledDate();scheduleViewDate=new Date(d);setScheduledDate(d);updateScheduleMin();updateScheduleState();if(validateScheduledAt()){scheduleBox?.classList.add('is-confirmed');schedulePreviewLabel.textContent='Potvrzeno';closeSchedulePicker();markChanged();}});
+scheduleConfirmBtn?.addEventListener('click',()=>{document.getElementById('statusInput').value='scheduled';const d=getDefaultScheduledDate();scheduleViewDate=new Date(d);setScheduledDate(d);updateScheduleMin();updateScheduleState();if(validateScheduledAt()){scheduleBox?.classList.add('is-confirmed');schedulePreviewLabel.textContent='Term\u00edn vybr\u00e1n';closeSchedulePicker();markChanged();}});
 updateScheduleMin();
 updateScheduleState();
 let selectedCatId='<?= $currentCatId ?>';
