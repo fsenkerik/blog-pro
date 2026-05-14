@@ -333,13 +333,16 @@ class Post {
      * Publikovat všechny naplánované příspěvky, kterým už vypršel termín.
      */
     public function publishDueScheduledPosts() {
+        $now = date('Y-m-d H:i:s');
+
         $this->db->query(
             "SELECT id, title
              FROM posts
              WHERE status = 'scheduled'
                AND scheduled_at IS NOT NULL
-               AND scheduled_at <= NOW()"
+               AND scheduled_at <= :now"
         );
+        $this->db->bind(':now', $now);
         $duePosts = $this->db->fetchAll();
 
         if (empty($duePosts)) {
@@ -349,12 +352,14 @@ class Post {
         $this->db->query(
             "UPDATE posts
              SET status = 'published',
-                 published_at = COALESCE(published_at, scheduled_at, NOW()),
+                 published_at = COALESCE(published_at, scheduled_at, :published_at),
                  scheduled_at = NULL
              WHERE status = 'scheduled'
                AND scheduled_at IS NOT NULL
-               AND scheduled_at <= NOW()"
+               AND scheduled_at <= :now"
         );
+        $this->db->bind(':published_at', $now);
+        $this->db->bind(':now', $now);
 
         if (!$this->db->execute()) {
             return 0;

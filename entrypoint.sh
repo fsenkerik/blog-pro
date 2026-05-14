@@ -22,5 +22,13 @@ sed -i "s/:80>/:${PORT}>/" /etc/apache2/sites-enabled/000-default.conf
 # Start DB init in background
 /usr/local/bin/init-db.sh &
 
+# Publish scheduled posts even when nobody is actively loading the site.
+(
+  while true; do
+    php /var/www/html/cron/publish.php >/proc/1/fd/1 2>/proc/1/fd/2 || true
+    sleep "${PUBLISH_CRON_INTERVAL:-30}"
+  done
+) &
+
 # Start Apache in foreground
 exec apache2-foreground
