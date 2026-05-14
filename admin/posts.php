@@ -6,6 +6,7 @@ requireAuth();
 $post      = new Post();
 $category  = new Category();
 $auth      = new Auth();
+$media     = new Media();
 
 $status    = $_GET['status'] ?? 'all';
 $catFilter = isset($_GET['category']) ? intval($_GET['category']) : null;
@@ -16,6 +17,7 @@ $totalPublished = $post->count('published');
 $totalDrafts    = $post->count('draft');
 $totalScheduled = $post->count('scheduled');
 $totalAll       = $totalPublished + $totalDrafts + $totalScheduled;
+$totalMedia     = $media->getCount('');
 $categories     = $category->getAll();
 
 if ($status === 'draft') {
@@ -151,7 +153,7 @@ tr:hover .row-actions{opacity:1}
       </a>
       <a href="media.php">
         <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 16V6a2 2 0 0 1 2-2h8l6 6v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/><circle cx="9" cy="11" r="1.5"/><path d="m4 18 5-5 5 5 3-3 3 3"/></svg>
-        Media
+        Media <span class="count"><?= $totalMedia ?></span>
       </a>
     </nav>
   </div>

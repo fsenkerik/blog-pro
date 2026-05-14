@@ -37,6 +37,7 @@ if (isset($_POST['ajax_action']) && $_POST['ajax_action'] === 'delete_media') {
 requireAuth();
 
 $media = new Media();
+$post = new Post();
 $search = $_GET['search'] ?? '';
 $typeFilter = $_GET['type'] ?? 'all';
 $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
@@ -53,6 +54,11 @@ function mediaType(string $name): string {
 
 $allItems = $media->getAll($search, $page, $perPage);
 $totalCount = $media->getCount($search);
+$totalMedia = $media->getCount('');
+$totalPublished = $post->count('published');
+$totalDrafts = $post->count('draft');
+$totalScheduled = $post->count('scheduled');
+$totalAll = $totalPublished + $totalDrafts + $totalScheduled;
 $totalPages = ceil($totalCount / $perPage);
 $stats = $media->getStats();
 $mediaItems = $allItems;
@@ -147,8 +153,8 @@ $userInitials = strtoupper(substr($_SESSION['username'] ?? 'U', 0, 2));
     <div class="brand"><div class="brand-mark">BP</div><div><div class="brand-name"><?= e(SITE_NAME) ?></div><div class="brand-sub">CMS · Admin</div></div></div>
     <div><div class="nav-label">Workspace</div><nav class="nav">
       <a href="<?= ADMIN_URL ?>dashboard.php"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>Přehled</a>
-      <a href="<?= ADMIN_URL ?>posts.php"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 4h12l4 4v12H4z"/><path d="M16 4v4h4"/><path d="M8 13h8M8 17h5"/></svg>Příspěvky</a>
-      <a href="<?= ADMIN_URL ?>media.php" class="active"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 16V6a2 2 0 0 1 2-2h8l6 6v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/><circle cx="9" cy="11" r="1.5"/><path d="m4 18 5-5 5 5 3-3 3 3"/></svg>Média<span class="count"><?= $totalCount ?></span></a>
+      <a href="<?= ADMIN_URL ?>posts.php"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 4h12l4 4v12H4z"/><path d="M16 4v4h4"/><path d="M8 13h8M8 17h5"/></svg>Příspěvky<span class="count"><?= $totalAll ?></span></a>
+      <a href="<?= ADMIN_URL ?>media.php" class="active"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 16V6a2 2 0 0 1 2-2h8l6 6v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/><circle cx="9" cy="11" r="1.5"/><path d="m4 18 5-5 5 5 3-3 3 3"/></svg>Média<span class="count"><?= $totalMedia ?></span></a>
     </nav></div>
     <div><div class="nav-label">Nastavení</div><nav class="nav">
       <a href="<?= ADMIN_URL ?>settings.php"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M12 2v2M12 20v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M2 12h2M20 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/></svg>Nastavení</a>

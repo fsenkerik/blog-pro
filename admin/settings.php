@@ -5,6 +5,8 @@ requireAuth();
 
 $auth   = new Auth();
 $backup = new Backup();
+$post   = new Post();
+$media  = new Media();
 
 try {
     $db_alter = new Database();
@@ -128,6 +130,11 @@ $flash   = getFlash();
 $username = $_SESSION['username'] ?? 'Admin';
 $initials = strtoupper(substr($username, 0, 2));
 $tab     = $_GET['tab'] ?? 'obecne';
+$totalPublished = $post->count('published');
+$totalDrafts = $post->count('draft');
+$totalScheduled = $post->count('scheduled');
+$totalAll = $totalPublished + $totalDrafts + $totalScheduled;
+$totalMedia = $media->getCount('');
 ?>
 <!DOCTYPE html>
 <html lang="cs">
@@ -217,8 +224,8 @@ $tab     = $_GET['tab'] ?? 'obecne';
     <div class="nav-label">Workspace</div>
     <nav class="nav">
       <a href="dashboard.php"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>Přehled</a>
-      <a href="posts.php"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 4h12l4 4v12H4z"/><path d="M16 4v4h4"/><path d="M8 13h8M8 17h5"/></svg>Příspěvky</a>
-      <a href="media.php"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 16V6a2 2 0 0 1 2-2h8l6 6v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/><circle cx="9" cy="11" r="1.5"/><path d="m4 18 5-5 5 5 3-3 3 3"/></svg>Média</a>
+      <a href="posts.php"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 4h12l4 4v12H4z"/><path d="M16 4v4h4"/><path d="M8 13h8M8 17h5"/></svg>Příspěvky<span class="count"><?= $totalAll ?></span></a>
+      <a href="media.php"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 16V6a2 2 0 0 1 2-2h8l6 6v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/><circle cx="9" cy="11" r="1.5"/><path d="m4 18 5-5 5 5 3-3 3 3"/></svg>Média<span class="count"><?= $totalMedia ?></span></a>
     </nav>
   </div>
   <div>
