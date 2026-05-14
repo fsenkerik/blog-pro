@@ -12,6 +12,7 @@ requireAuth();
 
 $post = new Post();
 $category = new Category();
+$media = new Media();
 $upload = new Upload();
 $categories = $category->getAll();
 $totalPublished = $post->count('published');
