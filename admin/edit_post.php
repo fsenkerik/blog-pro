@@ -134,7 +134,13 @@ $catColors = ['#667eea','#764ba2','#5b21b6','#10b981','#f59e0b','#ef4444','#3b82
 $currentCatId = $postData['category_id'] ?? '';
 $currentStatus = $postData['status'] ?? 'published';
 $currentScheduledAt = !empty($postData['scheduled_at']) ? date('Y-m-d\TH:i', strtotime($postData['scheduled_at'])) : '';
-$currentStatusUi = ($currentStatus === 'scheduled' && !empty($currentScheduledAt)) ? 'scheduled' : 'published';
+if ($currentStatus === 'scheduled' && !empty($currentScheduledAt)) {
+    $currentStatusUi = 'scheduled';
+} elseif ($currentStatus === 'draft') {
+    $currentStatusUi = 'draft';
+} else {
+    $currentStatusUi = 'published';
+}
 $currentContent = $postData['content'] ?? '';
 $currentExcerpt = $postData['excerpt'] ?? '';
 $currentMetaTitle = $postData['meta_title'] ?? '';
@@ -390,7 +396,7 @@ body.dz-dragging .editor.dz-hover,body.dz-dragging .sp.dz-hover{box-shadow:0 0 0
       <div class="content">
         <div class="page-head">
           <div>
-            <div class="ph-meta"><div class="status-badge <?= $currentStatusUi ?>"><span class="dot"></span><?php $sl=['published'=>'Publikováno','scheduled'=>'Naplánováno']; echo $sl[$currentStatusUi]??ucfirst($currentStatusUi); ?></div><span class="save-pill saved" id="savePill"><span class="dot"></span><span id="saveText">Uloženo</span></span></div>
+            <div class="ph-meta"><div class="status-badge <?= $currentStatusUi ?>"><span class="dot"></span><?php $sl=['published'=>'Publikováno','scheduled'=>'Naplánováno','draft'=>'Koncept']; echo $sl[$currentStatusUi]??ucfirst($currentStatusUi); ?></div><span class="save-pill saved" id="savePill"><span class="dot"></span><span id="saveText">Uloženo</span></span></div>
             <h1 class="page-title">Upravit <em>příspěvek.</em></h1>
           </div>
           <div class="ph-actions"><button type="button" class="btn btn-primary btn-sm" id="topSave"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2 11 13"/><path d="m22 2-7 20-4-9-9-4z"/></svg><span class="action-label"><?= $currentStatusUi==='scheduled' ? 'Pl&aacute;novat' : 'Publikovat' ?></span></button></div>
@@ -507,7 +513,6 @@ body.dz-dragging .editor.dz-hover,body.dz-dragging .sp.dz-hover{box-shadow:0 0 0
               </div>
               <div style="margin-top:14px"><div class="sp-row"><div class="sp-row-label">Autor</div><span class="sp-row-val"><?= e($postData['author_name'] ?? $_SESSION['username'] ?? '') ?></span></div><div class="sp-row"><div class="sp-row-label">Publikace</div><span class="sp-row-val" id="publishTimingLabel"><?= $currentStatusUi==='scheduled' && !empty($currentScheduledAt) ? e(str_replace('T', ' ', $currentScheduledAt)) : 'Ihned' ?></span></div><div class="sp-row"><div class="sp-row-label">Vytvořeno</div><span class="sp-row-val"><?= date('d.m.Y', strtotime($postData['created_at'] ?? 'now')) ?></span></div><div class="sp-row"><div class="sp-row-label">Upraveno</div><span class="sp-row-val"><?= date('d.m.Y H:i', strtotime($postData['updated_at'] ?? 'now')) ?></span></div></div>
             </div></div>
-            </div></div>
             <div class="sp"><div class="sp-head"><div class="sp-title"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>Kategorie</div><span class="sp-meta"><span id="catCount"><?= $currentCatId?1:0 ?></span> / <?= count($categories) ?></span></div><div class="sp-body">
               <div class="cat-tools">
                 <div class="cat-search-wrap"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input type="text" id="catSearchE" placeholder="Hledat nebo přidat…" oninput="filterCatsE(this.value)"></div>
@@ -622,9 +627,10 @@ function handleTagKeyE(e){if(e.key==='Enter'||e.key===','){e.preventDefault();ad
 document.addEventListener('DOMContentLoaded',()=>renderTagsE());
 // ── Auto-SEO (edit) ───────────────────────────────────────────────────────────
 function generateSEOE(){const title=titleEl?.value.trim()||'';const text=(edContent?.innerText||'').replace(/\s+/g,' ').trim();if(!title&&!text)return;const seoTitle=title.length>60?title.substring(0,57)+'…':title;const excerpt=text.substring(0,160);const words=text.split(/\s+/).filter(Boolean).slice(0,8).join(', ');if(seoTitleEl){seoTitleEl.value=seoTitle;seoTitleEl.dispatchEvent(new Event('input'));}if(seoDescEl){seoDescEl.value=excerpt;seoDescEl.dispatchEvent(new Event('input'));}const kwEl=document.getElementById('seoKeywords');if(kwEl&&!kwEl.value)kwEl.value=words;markChanged();}
-function submitForm(status){syncHiddenInputs();document.getElementById('statusInput').value=status;updateScheduleState();if(status==='scheduled' && !validateScheduledAt()) return;const label=status==='scheduled'?'Pl\u00e1nuji\u2026':'Publikuji\u2026';setActionLabel(bottomSaveBtn,label);if(bottomSaveBtn)bottomSaveBtn.disabled=true;document.getElementById('postForm').submit();}
-document.getElementById('saveBtn')?.addEventListener('click',()=>submitForm(document.getElementById('statusInput').value));
-document.getElementById('topSave')?.addEventListener('click',()=>submitForm(document.getElementById('statusInput').value));
+function primarySubmitStatus(){return document.getElementById('statusInput').value==='scheduled'?'scheduled':'published';}
+function submitForm(status){syncHiddenInputs();document.getElementById('statusInput').value=status;updateScheduleState();if(status==='scheduled' && !validateScheduledAt()) return;const label=status==='scheduled'?'Pl\u00e1nuji\u2026':status==='draft'?'Ukl\u00e1d\u00e1m koncept\u2026':'Publikuji\u2026';if(status==='draft'){const draftBtn=document.getElementById('saveDraftBtn');if(draftBtn){draftBtn.textContent=label;draftBtn.disabled=true;}}else{setActionLabel(bottomSaveBtn,label);if(bottomSaveBtn)bottomSaveBtn.disabled=true;}document.getElementById('postForm').submit();}
+document.getElementById('saveBtn')?.addEventListener('click',()=>submitForm(primarySubmitStatus()));
+document.getElementById('topSave')?.addEventListener('click',()=>submitForm(primarySubmitStatus()));
 document.getElementById('saveDraftBtn')?.addEventListener('click',()=>submitForm('draft'));
 document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key==='s'){e.preventDefault();submitForm(document.getElementById('statusInput').value);}});
 function removeFeatured(){const p=document.getElementById('featPreview');const body=p?.closest('.sp-body')||document.getElementById('featuredInput')?.closest('.sp-body');if(p)p.remove();document.getElementById('featuredImageId').value='';const dz=document.createElement('div');dz.className='dropzone';dz.id='dropzone';dz.onclick=()=>document.getElementById('featuredInput').click();dz.innerHTML='<div class="dz-ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div><div class="dz-text">Přetáhněte obrázek příspěvku</div><div class="dz-sub">JPG, PNG nebo WebP · max. 8 MB</div><button type="button" class="dz-btn primary">Vybrat obrázek</button>';body?.prepend(dz);markChanged();}
