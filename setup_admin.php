@@ -67,6 +67,7 @@ try {
             FOREIGN KEY (author_id) REFERENCES users(id) ON DELETE CASCADE,
             INDEX idx_slug (slug),
             INDEX idx_status (status),
+            INDEX idx_scheduled_at (scheduled_at),
             FULLTEXT INDEX idx_search (title, content, excerpt)
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci",
 

@@ -52,6 +52,7 @@ CREATE TABLE IF NOT EXISTS posts (
     INDEX idx_category (category_id),
     INDEX idx_author (author_id),
     INDEX idx_published (published_at),
+    INDEX idx_scheduled_at (scheduled_at),
     FULLTEXT INDEX idx_search (title, content, excerpt)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 

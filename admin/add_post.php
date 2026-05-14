@@ -135,10 +135,11 @@ if (isPost() && !isset($_POST['ajax_action'])) {
             'tags' => post('tags') ?: null,
             'featured_image_alt' => post('featured_image_alt') ?: null,
         ];
-        if (($data['status'] ?? 'published') === 'scheduled') {
+        $requestedStatus = $data['status'] ?? 'published';
+        if ($requestedStatus === 'scheduled') {
             $scheduledAtInput = trim((string) post('scheduled_at'));
             if ($scheduledAtInput === '') {
-                $error = 'Vyberte datum a èas publikace.';
+                $error = 'Vyberte datum a cas publikace.';
             } else {
                 $scheduledAt = strtotime($scheduledAtInput);
                 if ($scheduledAt === false || $scheduledAt <= time()) {
@@ -148,6 +149,9 @@ if (isPost() && !isset($_POST['ajax_action'])) {
                     $data['status'] = 'scheduled';
                 }
             }
+        } elseif ($requestedStatus === 'draft') {
+            $data['scheduled_at'] = null;
+            $data['status'] = 'draft';
         } else {
             $data['scheduled_at'] = null;
             $data['status'] = 'published';

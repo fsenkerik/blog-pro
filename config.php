@@ -153,6 +153,46 @@ if (!isset($_SESSION['db_migrated_v5'])) {
     }
 }
 
+if (!isset($_SESSION['db_migrated_v6'])) {
+    try {
+        $columnExists = function (string $table, string $column) use ($db): bool {
+            $db->query("SELECT COUNT(*) as c FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=:table AND COLUMN_NAME=:column");
+            $db->bind(':table', $table);
+            $db->bind(':column', $column);
+            $row = $db->fetch();
+            return $row && (int)$row['c'] > 0;
+        };
+
+        $indexExists = function (string $table, string $index) use ($db): bool {
+            $db->query("SELECT COUNT(*) as c FROM INFORMATION_SCHEMA.STATISTICS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=:table AND INDEX_NAME=:idx");
+            $db->bind(':table', $table);
+            $db->bind(':idx', $index);
+            $row = $db->fetch();
+            return $row && (int)$row['c'] > 0;
+        };
+
+        if ($columnExists('posts', 'status')) {
+            $db->query("ALTER TABLE posts MODIFY status ENUM('draft','published','scheduled') DEFAULT 'draft'");
+            $db->execute();
+        }
+        if (!$columnExists('posts', 'published_at')) {
+            $db->query("ALTER TABLE posts ADD COLUMN published_at TIMESTAMP NULL AFTER meta_keywords");
+            $db->execute();
+        }
+        if (!$columnExists('posts', 'scheduled_at')) {
+            $db->query("ALTER TABLE posts ADD COLUMN scheduled_at TIMESTAMP NULL AFTER published_at");
+            $db->execute();
+        }
+        if (!$indexExists('posts', 'idx_scheduled_at')) {
+            $db->query("ALTER TABLE posts ADD INDEX idx_scheduled_at (scheduled_at)");
+            $db->execute();
+        }
+
+        $_SESSION['db_migrated_v6'] = true;
+    } catch (\Throwable $e) {
+        error_log(date('Y-m-d H:i:s') . " - Migration v6: " . $e->getMessage() . "\n", 3, ROOT_PATH . 'error.log');
+    }
+}
 require_once INCLUDES_PATH . 'helpers.php';
 
 require_once INCLUDES_PATH . 'sessionTracker.class.php';
@@ -162,11 +202,13 @@ $sessionTracker = new SessionTracker();
 $auditLog = new AuditLog();
 
 // Průběžně publikuj naplánované články při běžném provozu aplikace.
-try {
-    $scheduledPublisher = new Post();
-    $scheduledPublisher->publishDueScheduledPosts();
-} catch (\Throwable $e) {
-    error_log(date('Y-m-d H:i:s') . " - Scheduled publish: " . $e->getMessage() . "\n", 3, ROOT_PATH . 'error.log');
+if (!defined('SKIP_SCHEDULED_PUBLISH')) {
+    try {
+        $scheduledPublisher = new Post();
+        $scheduledPublisher->publishDueScheduledPosts();
+    } catch (\Throwable $e) {
+        error_log(date('Y-m-d H:i:s') . " - Scheduled publish: " . $e->getMessage() . "\n", 3, ROOT_PATH . 'error.log');
+    }
 }
 
 if (isset($_SESSION['logged_in']) && $_SESSION['logged_in'] === true) {

@@ -27,7 +27,13 @@ class Post {
             $sql .= " AND p.category_id = :category_id";
         }
         
-        $sql .= " ORDER BY p.menu_order ASC, p.published_at DESC, p.created_at DESC";
+        if ($status === 'scheduled') {
+            $sql .= " ORDER BY p.menu_order ASC, p.scheduled_at ASC, p.created_at DESC";
+        } elseif ($status === 'draft') {
+            $sql .= " ORDER BY p.menu_order ASC, p.updated_at DESC, p.created_at DESC";
+        } else {
+            $sql .= " ORDER BY p.menu_order ASC, p.published_at DESC, p.created_at DESC";
+        }
         
         // OPRAVA: LIMIT přímo v query (ne jako placeholder)
         if ($limit) {
@@ -203,6 +209,8 @@ class Post {
             }
         } elseif (isset($data['status']) && $data['status'] === 'scheduled') {
             $sql .= ", published_at = NULL";
+        } elseif (isset($data['status']) && $data['status'] === 'draft') {
+            $sql .= ", published_at = NULL";
         }
         
         $sql .= " WHERE id = :id";
@@ -341,7 +349,7 @@ class Post {
         $this->db->query(
             "UPDATE posts
              SET status = 'published',
-                 published_at = COALESCE(published_at, NOW()),
+                 published_at = COALESCE(published_at, scheduled_at, NOW()),
                  scheduled_at = NULL
              WHERE status = 'scheduled'
                AND scheduled_at IS NOT NULL
