@@ -143,7 +143,7 @@ if (isPost() && !isset($_POST['ajax_action'])) {
             } else {
                 $scheduledAt = strtotime($scheduledAtInput);
                 if ($scheduledAt === false || $scheduledAt <= time()) {
-                    $error = 'Napl·novanÈ publikov·nÌ musÌ b˝t v budoucnu.';
+                    $error = 'Naplanovane publikovani musi byt v budoucnu.';
                 } else {
                     $data['scheduled_at'] = date('Y-m-d H:i:s', $scheduledAt);
                     $data['status'] = 'scheduled';
@@ -272,6 +272,20 @@ $baseUrl = rtrim(BASE_URL,'/').'/';
 .status-switch button.on.draft{color:var(--warn)}
 .status-switch button.on.scheduled{color:var(--violet)}
 .status-switch button .dot{width:6px;height:6px;border-radius:50%;background:currentColor;opacity:.75}
+.schedule-card{margin-top:14px;padding:14px;border:1px solid rgba(102,126,234,.18);border-radius:12px;background:linear-gradient(180deg,rgba(102,126,234,.08),rgba(255,255,255,.9));box-shadow:inset 0 1px 0 rgba(255,255,255,.75)}
+.schedule-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px}
+.schedule-title{font-size:12.5px;font-weight:650;color:var(--ink)}
+.schedule-copy{font-size:11.5px;line-height:1.55;color:var(--muted);margin-top:3px}
+.schedule-badge{display:inline-flex;align-items:center;gap:6px;padding:5px 9px;border-radius:999px;background:var(--card);border:1px solid rgba(102,126,234,.2);font-family:var(--mono);font-size:10.5px;color:var(--accent-2);white-space:nowrap}
+.schedule-badge .dot{width:6px;height:6px;border-radius:50%;background:currentColor}
+.schedule-grid{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:end}
+.schedule-field{margin:0}
+.schedule-confirm{height:42px;white-space:nowrap}
+.schedule-note{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-top:10px;font-size:11px;color:var(--muted)}
+.schedule-note strong{color:var(--accent-2);font-weight:650;font-family:var(--mono);font-size:11px;text-align:right}
+.schedule-card.is-confirmed{border-color:rgba(16,185,129,.32);background:linear-gradient(180deg,rgba(16,185,129,.08),rgba(255,255,255,.92))}
+.schedule-card.is-confirmed .schedule-badge{color:var(--ok);border-color:rgba(16,185,129,.24)}
+@media(max-width:900px){.schedule-grid{grid-template-columns:1fr}.schedule-confirm{width:100%}}
 .sp-row{display:flex;justify-content:space-between;align-items:center;padding:8px 0;font-size:12.5px;border-bottom:1px solid var(--line)}
 .sp-row:last-child{border-bottom:none}
 .sp-row-label{color:var(--muted);display:flex;align-items:center;gap:8px}
@@ -378,7 +392,7 @@ body.dz-dragging .editor.dz-hover,body.dz-dragging .sp.dz-hover{box-shadow:0 0 0
             <div class="ph-meta"><div class="eyebrow"><span class="pulse" style="background:var(--warn);box-shadow:0 0 0 3px rgba(146,64,14,.15)"></span>Koncept</div><span class="save-pill" id="savePill"><span class="dot"></span><span id="saveText">Neulo≈æeno</span></span></div>
             <h1 class="page-title">Nov√Ω <em>p≈ô√≠spƒõvek.</em></h1>
           </div>
-          <div class="ph-actions"><button type="button" class="btn btn-primary btn-sm" id="topPublish"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2 11 13"/><path d="m22 2-7 20-4-9-9-4z"/></svg>Publikovat</button></div>
+          <div class="ph-actions"><button type="button" class="btn btn-primary btn-sm" id="topPublish"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2 11 13"/><path d="m22 2-7 20-4-9-9-4z"/></svg><span class="action-label">Publikovat</span></button></div>
         </div>
         <div class="ed-grid">
           <div style="display:flex;flex-direction:column;gap:18px">
@@ -462,13 +476,23 @@ body.dz-dragging .editor.dz-hover,body.dz-dragging .sp.dz-hover{box-shadow:0 0 0
           </div>
           <div class="ed-side">
             <div class="sp"><div class="sp-head"><div class="sp-title"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2 11 13"/><path d="m22 2-7 20-4-9-9-4z"/></svg>Publikace</div></div><div class="sp-body">
-              <div class="status-switch" id="statusSwitch"><button type="button" class="on" data-val="published"><span class="dot"></span>Publikovat</button><button type="button" class="scheduled" data-val="scheduled"><span class="dot"></span>Pl·n</button></div>
-              <div id="scheduleBox" style="display:none;margin-top:14px">
-                <div class="field" style="margin-bottom:0">
-                  <div class="field-label">Datum a Ëas publikace</div>
-                  <input type="datetime-local" class="field-input" id="scheduledAtInput" min="<?= date('Y-m-d\TH:i') ?>">
-                  <div class="field-foot"><span>Vyberte pouze budoucÌ termÌn.</span><span id="schedulePreviewLabel" class="ok">Napl·nov·no</span></div>
+              <div class="status-switch" id="statusSwitch"><button type="button" class="on" data-val="published"><span class="dot"></span>Publikovat</button><button type="button" class="scheduled" data-val="scheduled"><span class="dot"></span>Pl&aacute;n</button></div>
+              <div id="scheduleBox" class="schedule-card" style="display:none">
+                <div class="schedule-head">
+                  <div>
+                    <div class="schedule-title">Napl&aacute;novat vyd&aacute;n&iacute;</div>
+                    <div class="schedule-copy">Vyberte datum a &#269;as, potvr&#271;te term&iacute;n a p&#345;&iacute;sp&#283;vek se vyd&aacute; automaticky.</div>
+                  </div>
+                  <div class="schedule-badge"><span class="dot"></span><span id="schedulePreviewLabel">&#268;ek&aacute; na term&iacute;n</span></div>
                 </div>
+                <div class="schedule-grid">
+                  <label class="field schedule-field">
+                    <span class="field-label">Datum a &#269;as publikace</span>
+                    <input type="datetime-local" class="field-input" id="scheduledAtInput" min="<?= date('Y-m-d\TH:i') ?>">
+                  </label>
+                  <button type="button" class="btn btn-ghost btn-sm schedule-confirm" id="scheduleConfirmBtn">Potvrdit term&iacute;n</button>
+                </div>
+                <div class="schedule-note"><span>Vybrat lze pouze budouc&iacute; term&iacute;n.</span><strong id="scheduleHumanLabel">Bez term&iacute;nu</strong></div>
               </div>
               <div style="margin-top:14px"><div class="sp-row"><div class="sp-row-label">Autor</div><span class="sp-row-val"><?= e($_SESSION['username'] ?? '') ?></span></div><div class="sp-row"><div class="sp-row-label">Publikace</div><span class="sp-row-val" id="publishTimingLabel">Ihned</span></div></div>
             </div></div>
@@ -499,7 +523,7 @@ body.dz-dragging .editor.dz-hover,body.dz-dragging .sp.dz-hover{box-shadow:0 0 0
         </div>
         <div class="savebar">
           <div class="savebar-info"><span class="save-pill" id="savePill2"><span class="dot"></span><span id="saveText2">Neulo≈æeno</span></span><span style="color:var(--faint)">¬∑</span><span class="mono" style="font-size:11.5px">Ctrl+S ulo≈æ√≠ koncept</span></div>
-          <div class="savebar-actions"><a href="<?= ADMIN_URL ?>posts.php" class="btn btn-cancel btn-sm">Zru≈°it</a><button type="button" class="btn btn-ghost btn-sm" id="saveDraftBtn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/></svg>Ulo≈æit koncept</button><button type="button" class="btn btn-primary btn-sm" id="publishBtn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2 11 13"/><path d="m22 2-7 20-4-9-9-4z"/></svg>Publikovat p≈ô√≠spƒõvek</button></div>
+          <div class="savebar-actions"><a href="<?= ADMIN_URL ?>posts.php" class="btn btn-cancel btn-sm">Zru≈°it</a><button type="button" class="btn btn-ghost btn-sm" id="saveDraftBtn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/></svg>Ulo≈æit koncept</button><button type="button" class="btn btn-primary btn-sm" id="publishBtn"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2 11 13"/><path d="m22 2-7 20-4-9-9-4z"/></svg><span class="action-label">Publikovat p&#345;&iacute;sp&#283;vek</span></button></div>
         </div>
       </div>
     </form>
@@ -518,12 +542,29 @@ excerptEl?.addEventListener('input',()=>{excerptCount.textContent=excerptEl.valu
 const seoTitleEl=document.getElementById('seoTitle'),seoDescEl=document.getElementById('seoDesc'),seoTitleCount=document.getElementById('seoTitleCount'),seoDescCount=document.getElementById('seoDescCount'),serpDescEl=document.getElementById('serpDesc');
 seoTitleEl?.addEventListener('input',()=>{const n=seoTitleEl.value.length;seoTitleCount.textContent=n+' / 60';seoTitleCount.className=n>60?'warn':'ok';});
 seoDescEl?.addEventListener('input',()=>{const n=seoDescEl.value.length;seoDescCount.textContent=n+' / 160';seoDescCount.className=n>160?'warn':'ok';serpDescEl.textContent=seoDescEl.value||'Kr√°tk√Ω popis p≈ô√≠spƒõvku se zobraz√≠ ve v√Ωsledc√≠ch vyhled√°v√°n√≠.';});
-const statusLabels={published:'Publikovat',scheduled:'Napl·nov·no'};
+const statusLabels={published:'Publikovat',scheduled:'Napl\u00e1nov\u00e1no'};
 const statusColors={published:'var(--ok)',scheduled:'var(--violet)'};
 const scheduleBox=document.getElementById('scheduleBox');
 const scheduledAtInput=document.getElementById('scheduledAtInput');
 const scheduledAtHidden=document.getElementById('scheduledAtHidden');
 const publishTimingLabel=document.getElementById('publishTimingLabel');
+const schedulePreviewLabel=document.getElementById('schedulePreviewLabel');
+const scheduleHumanLabel=document.getElementById('scheduleHumanLabel');
+const scheduleConfirmBtn=document.getElementById('scheduleConfirmBtn');
+const topPublish=document.getElementById('topPublish');
+const publishBtn=document.getElementById('publishBtn');
+function setActionLabel(btn,label){const target=btn?.querySelector('.action-label');if(target)target.textContent=label;else if(btn)btn.textContent=label;}
+function updatePrimaryActions(){
+  const scheduled=document.getElementById('statusInput').value==='scheduled';
+  setActionLabel(topPublish,scheduled?'Pl\u00e1novat':'Publikovat');
+  setActionLabel(publishBtn,scheduled?'Pl\u00e1novat p\u0159\u00edsp\u011bvek':'Publikovat p\u0159\u00edsp\u011bvek');
+}
+function formatScheduledLabel(value){
+  if(!value)return 'Bez term\u00ednu';
+  const date=new Date(value);
+  if(Number.isNaN(date.getTime()))return value.replace('T',' ');
+  return date.toLocaleString('cs-CZ',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
+}
 function updateScheduleMin(){
   if(!scheduledAtInput)return;
   const now=new Date();
@@ -536,15 +577,20 @@ function updateScheduleState(){
   const isScheduled=val==='scheduled';
   if(scheduleBox) scheduleBox.style.display=isScheduled?'block':'none';
   if(scheduledAtHidden) scheduledAtHidden.value=isScheduled?(scheduledAtInput?.value||''):'';
-  if(publishTimingLabel) publishTimingLabel.textContent=isScheduled&&scheduledAtInput?.value?scheduledAtInput.value.replace('T',' '):'Ihned';
+  const humanLabel=isScheduled&&scheduledAtInput?.value?formatScheduledLabel(scheduledAtInput.value):'Ihned';
+  if(publishTimingLabel) publishTimingLabel.textContent=humanLabel;
+  if(scheduleHumanLabel) scheduleHumanLabel.textContent=isScheduled&&scheduledAtInput?.value?humanLabel:'Bez term\u00ednu';
+  if(schedulePreviewLabel) schedulePreviewLabel.textContent=isScheduled&&scheduledAtInput?.value?'Term\u00edn vybr\u00e1n':'\u010cek\u00e1 na term\u00edn';
+  if(scheduleBox) scheduleBox.classList.toggle('is-confirmed',isScheduled&&!!scheduledAtInput?.value);
+  updatePrimaryActions();
   const eyebrow=document.querySelector('.ph-meta .eyebrow');
   if(eyebrow){ eyebrow.innerHTML=`<span class="pulse" style="background:${statusColors[val]??'var(--ok)'};box-shadow:0 0 0 3px rgba(102,126,234,.15)"></span>${statusLabels[val]??val}`; }
 }
 function validateScheduledAt(){
   if(document.getElementById('statusInput').value!=='scheduled') return true;
-  if(!scheduledAtInput?.value){ alert('Vyberte datum a Ëas publikace.'); scheduledAtInput?.focus(); return false; }
+  if(!scheduledAtInput?.value){ alert('Vyberte datum a \u010das publikace.'); scheduledAtInput?.focus(); return false; }
   const selected=new Date(scheduledAtInput.value);
-  if(Number.isNaN(selected.getTime()) || selected.getTime() <= Date.now()){ alert('Napl·novanÈ publikov·nÌ musÌ b˝t v budoucnu.'); scheduledAtInput?.focus(); return false; }
+  if(Number.isNaN(selected.getTime()) || selected.getTime() <= Date.now()){ alert('Napl\u00e1novan\u00e9 publikov\u00e1n\u00ed mus\u00ed b\u00fdt v budoucnu.'); scheduledAtInput?.focus(); return false; }
   return true;
 }
 document.querySelectorAll('#statusSwitch button').forEach(btn=>{btn.addEventListener('click',()=>{
@@ -556,6 +602,7 @@ document.querySelectorAll('#statusSwitch button').forEach(btn=>{btn.addEventList
   markUnsaved();
 });});
 scheduledAtInput?.addEventListener('input',()=>{updateScheduleMin();updateScheduleState();markUnsaved();});
+scheduleConfirmBtn?.addEventListener('click',()=>{document.getElementById('statusInput').value='scheduled';updateScheduleMin();updateScheduleState();if(validateScheduledAt()){scheduleBox?.classList.add('is-confirmed');schedulePreviewLabel.textContent='Potvrzeno';markUnsaved();}});
 updateScheduleMin();
 updateScheduleState();
 let selectedCatId='';
@@ -581,8 +628,8 @@ function submitForm(status){
   if(status==='scheduled' && !validateScheduledAt()) return;
   const publishBtn=document.getElementById('publishBtn');
   const saveDraftBtn=document.getElementById('saveDraftBtn');
-  const label=status==='published'?'PublikujiÖ':status==='scheduled'?'Pl·nujiÖ':'Ukl·d·m konceptÖ';
-  if(publishBtn&&(status==='published'||status==='scheduled')){publishBtn.textContent=label;publishBtn.disabled=true;}
+  const label=status==='published'?'Publikuji\u2026':status==='scheduled'?'Pl\u00e1nuji\u2026':'Ukl\u00e1d\u00e1m koncept\u2026';
+  if(publishBtn&&(status==='published'||status==='scheduled')){setActionLabel(publishBtn,label);publishBtn.disabled=true;}
   if(saveDraftBtn&&status==='draft'){saveDraftBtn.textContent=label;saveDraftBtn.disabled=true;}
   document.getElementById('postForm').submit();
 }
