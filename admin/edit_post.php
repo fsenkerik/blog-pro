@@ -100,11 +100,12 @@ if (isPost() && !isset($_POST['ajax_action'])) {
             if ($scheduledAtInput === '') {
                 $error = 'Vyberte datum a cas publikace.';
             } else {
-                $scheduledAt = strtotime($scheduledAtInput);
-                if ($scheduledAt === false || $scheduledAt <= time()) {
+                $scheduledAt = parseLocalDateTimeInput($scheduledAtInput);
+                $now = new DateTimeImmutable('now', appTimezone());
+                if (!$scheduledAt || $scheduledAt <= $now) {
                     $error = 'Naplanovane publikovani musi byt v budoucnu.';
                 } else {
-                    $data['scheduled_at'] = date('Y-m-d H:i:s', $scheduledAt);
+                    $data['scheduled_at'] = $scheduledAt->format('Y-m-d H:i:s');
                     $data['status'] = 'scheduled';
                 }
             }

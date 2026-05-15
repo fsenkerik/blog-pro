@@ -113,7 +113,7 @@ class Post {
         if (!empty($data['tags']))               { $xCols .= ', tags';               $xVals .= ', :tags'; }
         if (!empty($data['featured_image_alt'])) { $xCols .= ', featured_image_alt'; $xVals .= ', :image_alt'; }
 
-        $now = date('Y-m-d H:i:s');
+        $now = function_exists('currentLocalDateTimeString') ? currentLocalDateTimeString() : date('Y-m-d H:i:s');
 
         $this->db->query(
             "INSERT INTO posts
@@ -231,7 +231,8 @@ class Post {
         $this->db->bind(':meta_title', $data['meta_title'] ?? $data['title']);
         $this->db->bind(':meta_desc', $data['meta_description'] ?? $data['excerpt']);
         $this->db->bind(':meta_keys', $data['meta_keywords'] ?? '');
-        $this->db->bind(':updated_at', date('Y-m-d H:i:s'));
+        $now = function_exists('currentLocalDateTimeString') ? currentLocalDateTimeString() : date('Y-m-d H:i:s');
+        $this->db->bind(':updated_at', $now);
         if (array_key_exists('tags', $data))               $this->db->bind(':tags', $data['tags']);
         if (array_key_exists('featured_image_alt', $data)) $this->db->bind(':image_alt', $data['featured_image_alt']);
         if (array_key_exists('scheduled_at', $data))       $this->db->bind(':scheduled_at', $data['scheduled_at']);
@@ -241,7 +242,7 @@ class Post {
         }
 
         if (isset($data['status']) && $data['status'] === 'published' && strpos($sql, ':published_at') !== false) {
-            $this->db->bind(':published_at', date('Y-m-d H:i:s'));
+            $this->db->bind(':published_at', $now);
         }
 
         if ($this->db->execute()) {
@@ -339,7 +340,7 @@ class Post {
      * Publikovat všechny naplánované příspěvky, kterým už vypršel termín.
      */
     public function publishDueScheduledPosts() {
-        $now = date('Y-m-d H:i:s');
+        $now = function_exists('currentLocalDateTimeString') ? currentLocalDateTimeString() : date('Y-m-d H:i:s');
 
         $this->db->query(
             "SELECT id, title

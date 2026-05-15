@@ -15,7 +15,7 @@ try {
     echo json_encode([
         'success' => true,
         'published' => $publishedCount,
-        'checked_at' => date('Y-m-d H:i:s'),
+        'checked_at' => currentLocalDateTimeString(),
     ], JSON_UNESCAPED_UNICODE) . PHP_EOL;
 } catch (Throwable $e) {
     if (PHP_SAPI !== 'cli') {

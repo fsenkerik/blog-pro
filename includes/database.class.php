@@ -18,6 +18,8 @@ class Database {
 
         try {
             $this->connection = new PDO($dsn, DB_USER, DB_PASS, $options);
+            $offset = (new DateTimeImmutable('now', new DateTimeZone('Europe/Prague')))->format('P');
+            $this->connection->exec("SET time_zone = " . $this->connection->quote($offset));
         } catch (PDOException $e) {
             error_log(date('Y-m-d H:i:s') . " - DB Connection: " . $e->getMessage() . "\n", 3, ROOT_PATH . 'error.log');
             die('Chyba připojení k databázi.');

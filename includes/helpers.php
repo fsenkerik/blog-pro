@@ -56,6 +56,31 @@ function formatBytes($bytes, $precision = 2) {
     return round($bytes, $precision) . ' ' . $units[$i];
 }
 
+function appTimezone() {
+    return new DateTimeZone('Europe/Prague');
+}
+
+function currentLocalDateTimeString() {
+    return (new DateTimeImmutable('now', appTimezone()))->format('Y-m-d H:i:s');
+}
+
+function parseLocalDateTimeInput($value) {
+    $value = trim((string)$value);
+    if ($value === '') return null;
+
+    foreach (['!Y-m-d\TH:i', '!Y-m-d H:i:s', '!Y-m-d H:i'] as $format) {
+        $date = DateTimeImmutable::createFromFormat($format, $value, appTimezone());
+        $errors = DateTimeImmutable::getLastErrors();
+        $hasErrors = is_array($errors) && ($errors['warning_count'] > 0 || $errors['error_count'] > 0);
+
+        if ($date instanceof DateTimeImmutable && !$hasErrors) {
+            return $date;
+        }
+    }
+
+    return null;
+}
+
 function isPost() { return $_SERVER['REQUEST_METHOD'] === 'POST'; }
 function isGet()  { return $_SERVER['REQUEST_METHOD'] === 'GET'; }
 

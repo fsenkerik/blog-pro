@@ -176,11 +176,11 @@ if (!isset($_SESSION['db_migrated_v6'])) {
             $db->execute();
         }
         if (!$columnExists('posts', 'published_at')) {
-            $db->query("ALTER TABLE posts ADD COLUMN published_at TIMESTAMP NULL AFTER meta_keywords");
+            $db->query("ALTER TABLE posts ADD COLUMN published_at DATETIME NULL AFTER meta_keywords");
             $db->execute();
         }
         if (!$columnExists('posts', 'scheduled_at')) {
-            $db->query("ALTER TABLE posts ADD COLUMN scheduled_at TIMESTAMP NULL AFTER published_at");
+            $db->query("ALTER TABLE posts ADD COLUMN scheduled_at DATETIME NULL AFTER published_at");
             $db->execute();
         }
         if (!$indexExists('posts', 'idx_scheduled_at')) {
@@ -191,6 +191,47 @@ if (!isset($_SESSION['db_migrated_v6'])) {
         $_SESSION['db_migrated_v6'] = true;
     } catch (\Throwable $e) {
         error_log(date('Y-m-d H:i:s') . " - Migration v6: " . $e->getMessage() . "\n", 3, ROOT_PATH . 'error.log');
+    }
+}
+
+if (!isset($_SESSION['db_migrated_v7'])) {
+    try {
+        $columnExists = function (string $table, string $column) use ($db): bool {
+            $db->query("SELECT COUNT(*) as c FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=:table AND COLUMN_NAME=:column");
+            $db->bind(':table', $table);
+            $db->bind(':column', $column);
+            $row = $db->fetch();
+            return $row && (int)$row['c'] > 0;
+        };
+
+        $columnType = function (string $table, string $column) use ($db): ?string {
+            $db->query("SELECT DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=:table AND COLUMN_NAME=:column");
+            $db->bind(':table', $table);
+            $db->bind(':column', $column);
+            $row = $db->fetch();
+            return $row['DATA_TYPE'] ?? null;
+        };
+
+        if ($columnExists('posts', 'published_at') && $columnType('posts', 'published_at') !== 'datetime') {
+            $db->query("ALTER TABLE posts MODIFY published_at DATETIME NULL");
+            $db->execute();
+        }
+        if ($columnExists('posts', 'scheduled_at') && $columnType('posts', 'scheduled_at') !== 'datetime') {
+            $db->query("ALTER TABLE posts MODIFY scheduled_at DATETIME NULL");
+            $db->execute();
+        }
+        if ($columnExists('posts', 'created_at') && $columnType('posts', 'created_at') !== 'datetime') {
+            $db->query("ALTER TABLE posts MODIFY created_at DATETIME DEFAULT CURRENT_TIMESTAMP");
+            $db->execute();
+        }
+        if ($columnExists('posts', 'updated_at') && $columnType('posts', 'updated_at') !== 'datetime') {
+            $db->query("ALTER TABLE posts MODIFY updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP");
+            $db->execute();
+        }
+
+        $_SESSION['db_migrated_v7'] = true;
+    } catch (\Throwable $e) {
+        error_log(date('Y-m-d H:i:s') . " - Migration v7: " . $e->getMessage() . "\n", 3, ROOT_PATH . 'error.log');
     }
 }
 require_once INCLUDES_PATH . 'helpers.php';
