@@ -438,17 +438,6 @@ document.getElementById('delModal').addEventListener('click', e => {
   }
 });
 
-async function checkScheduledPublishing() {
-  try {
-    const response = await fetch('../cron/publish.php', { cache: 'no-store' });
-    const data = await response.json();
-    if (data && Number(data.published) > 0) {
-      window.location.reload();
-    }
-  } catch (error) {}
-}
-setTimeout(checkScheduledPublishing, 5000);
-setInterval(checkScheduledPublishing, 30000);
 </script>
 </body>
 </html>
