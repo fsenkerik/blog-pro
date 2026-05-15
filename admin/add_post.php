@@ -343,6 +343,12 @@ $baseUrl = rtrim(BASE_URL,'/').'/';
 .cat-swatch{width:10px;height:10px;border-radius:3px;flex-shrink:0}
 .cat-name{flex:1;font-size:13px;color:var(--ink-2)}
 .cat-count{font-family:var(--mono);font-size:10.5px;color:var(--muted)}
+.cat-actions{margin-left:auto;display:flex;align-items:center;gap:4px;opacity:0;transition:opacity .15s}
+.cat-item:hover .cat-actions{opacity:1}
+.cat-action-btn{width:20px;height:20px;border-radius:4px;border:1px solid transparent;color:var(--muted);display:flex;align-items:center;justify-content:center;transition:background .15s,color .15s}
+.cat-action-btn:hover{background:var(--paper-2);color:var(--ink)}
+.cat-delete-btn{color:var(--danger)}
+.cat-delete-btn:hover{background:var(--danger-soft);color:var(--danger)}
 .dropzone{border:1.5px dashed var(--border);border-radius:12px;padding:24px 16px;text-align:center;background:var(--card-2);transition:border-color .15s,background .15s;cursor:pointer}
 .dropzone:hover{border-color:var(--accent);background:var(--accent-soft)}
 .dz-ico{width:44px;height:44px;border-radius:10px;margin:0 auto 10px;background:var(--accent-soft);color:var(--accent-2);display:flex;align-items:center;justify-content:center}
@@ -540,12 +546,12 @@ body.dz-dragging .editor.dz-hover,body.dz-dragging .sp.dz-hover{box-shadow:0 0 0
               </div>
               <div style="margin-top:14px"><div class="sp-row"><div class="sp-row-label">Autor</div><span class="sp-row-val"><?= e($_SESSION['username'] ?? '') ?></span></div><div class="sp-row"><div class="sp-row-label">Publikace</div><span class="sp-row-val" id="publishTimingLabel">Ihned</span></div></div>
             </div></div>
-            <div class="sp"><div class="sp-head"><div class="sp-title"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>Kategorie</div><span class="sp-meta"><span id="catCount">0</span> / <?= count($categories) ?></span></div><div class="sp-body">
+            <div class="sp"><div class="sp-head"><div class="sp-title"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>Kategorie</div><span class="sp-meta"><span id="catCount">0</span> / <span id="catTotal"><?= count($categories) ?></span></span></div><div class="sp-body">
               <div class="cat-tools">
                 <div class="cat-search-wrap"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input type="text" id="catSearch" placeholder="Hledat nebo přidat…" oninput="filterCats(this.value)"></div>
                 <button type="button" class="cat-add-btn" onclick="addCatFromSearch()" title="Přidat kategorii"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg></button>
               </div>
-              <div class="cat-list" id="catList"><?php foreach ($categories as $i => $cat): ?><div class="cat-item" data-id="<?= $cat['id'] ?>" data-name="<?= e($cat['name']) ?>" onclick="selectCat(this)"><div class="cat-check"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div><div class="cat-swatch" style="background:<?= $catColors[$i % count($catColors)] ?>"></div><span class="cat-name"><?= e($cat['name']) ?></span><span class="cat-count"><?= $cat['post_count'] ?? 0 ?></span><button type="button" class="cat-edit-btn" onclick="editCatInline(event,this)" title="Přejmenovat" style="margin-left:auto;width:20px;height:20px;border-radius:4px;border:1px solid transparent;color:var(--muted);display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .15s"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button></div><?php endforeach; ?></div>
+              <div class="cat-list" id="catList"><?php foreach ($categories as $i => $cat): ?><div class="cat-item" data-id="<?= $cat['id'] ?>" data-name="<?= e($cat['name']) ?>" onclick="selectCat(this)"><div class="cat-check"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div><div class="cat-swatch" style="background:<?= $catColors[$i % count($catColors)] ?>"></div><span class="cat-name"><?= e($cat['name']) ?></span><span class="cat-count"><?= $cat['post_count'] ?? 0 ?></span><span class="cat-actions"><button type="button" class="cat-action-btn cat-edit-btn" onclick="editCatInline(event,this)" title="Přejmenovat"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button><button type="button" class="cat-action-btn cat-delete-btn" onclick="deleteCatInline(event,this)" title="Smazat kategorii"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></button></span></div><?php endforeach; ?></div>
             </div></div>
             <div class="sp"><div class="sp-head"><div class="sp-title"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>Hlavní obrázek</div></div><div class="sp-body">
               <div class="dropzone" id="dropzone" onclick="document.getElementById('featuredInput').click()"><div class="dz-ico"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div><div class="dz-text">Přetáhněte obrázek příspěvku</div><div class="dz-sub">JPG, PNG nebo WebP · max. 8 MB</div><button type="button" class="dz-btn primary">Vybrat obrázek</button></div>
@@ -697,12 +703,12 @@ async function addCatFromSearch() {
       const idx = document.querySelectorAll('#catList .cat-item').length % colors.length;
       const item = document.createElement('div');
       item.className = 'cat-item'; item.dataset.id = data.id; item.dataset.name = data.name;
-      item.innerHTML = `<div class="cat-check"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div><div class="cat-swatch" style="background:${colors[idx]}"></div><span class="cat-name">${data.name}</span><span class="cat-count">0</span><button type="button" class="cat-edit-btn" onclick="editCatInline(event,this)" title="Přejmenovat" style="margin-left:auto;width:20px;height:20px;border-radius:4px;border:1px solid transparent;color:var(--muted);display:flex;align-items:center;justify-content:center;opacity:0;transition:opacity .15s"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button>`;
-      item.addEventListener('click', function(e){if(e.target.closest('.cat-edit-btn'))return;selectCat(this);});
-      item.addEventListener('mouseenter', ()=>{const b=item.querySelector('.cat-edit-btn');if(b)b.style.opacity='1';});
-      item.addEventListener('mouseleave', ()=>{const b=item.querySelector('.cat-edit-btn');if(b)b.style.opacity='0';});
+      item.innerHTML = `<div class="cat-check"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg></div><div class="cat-swatch" style="background:${colors[idx]}"></div><span class="cat-name">${data.name}</span><span class="cat-count">0</span><span class="cat-actions"><button type="button" class="cat-action-btn cat-edit-btn" onclick="editCatInline(event,this)" title="Přejmenovat"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></button><button type="button" class="cat-action-btn cat-delete-btn" onclick="deleteCatInline(event,this)" title="Smazat kategorii"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4h6v2"/></svg></button></span>`;
+      item.addEventListener('click', function(e){if(e.target.closest('.cat-action-btn'))return;selectCat(this);});
       document.getElementById('catList').appendChild(item);
       document.getElementById('catSearch').value='';
+      const totalEl = document.getElementById('catTotal');
+      if (totalEl) totalEl.textContent = String(parseInt(totalEl.textContent || '0', 10) + 1);
       filterCats('');
     } else { alert(data.message||'Chyba'); }
   } catch(e) {}
@@ -720,6 +726,36 @@ async function editCatInline(event, btn) {
     const data = await r.json();
     if (data.success) { nameSpan.textContent=newName; item.dataset.name=newName; }
     else alert(data.message||'Chyba přejmenování');
+  } catch(e) {}
+}
+async function deleteCatInline(event, btn) {
+  event.stopPropagation();
+  const item = btn.closest('.cat-item');
+  const name = item.querySelector('.cat-name')?.textContent || 'kategorii';
+  const count = parseInt(item.querySelector('.cat-count')?.textContent || '0', 10);
+  if (count > 0) {
+    alert('Kategorii nelze smazat, protoze obsahuje prispevky.');
+    return;
+  }
+  if (!confirm('Opravdu chcete smazat kategorii "' + name + '"?')) return;
+  const fd = new FormData();
+  fd.append('ajax_action', 'delete_category');
+  fd.append('category_id', item.dataset.id);
+  try {
+    const r = await fetch(location.href, {method: 'POST', body: fd});
+    const data = await r.json();
+    if (data.success) {
+      if (selectedCatId === item.dataset.id) {
+        selectedCatId = '';
+        document.getElementById('catInput').value = '';
+        document.getElementById('catCount').textContent = '0';
+      }
+      item.remove();
+      const totalEl = document.getElementById('catTotal');
+      if (totalEl) totalEl.textContent = String(Math.max(0, parseInt(totalEl.textContent || '0', 10) - 1));
+    } else {
+      alert(data.message || 'Chyba pri mazani kategorie');
+    }
   } catch(e) {}
 }
 // ── Featured image upload (drag & drop + file input) ──────────────────────
