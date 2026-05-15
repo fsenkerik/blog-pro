@@ -3,42 +3,59 @@ define('BLOG_PRO', true);
 require_once '../config.php';
 requireAuth();
 
-$action  = $_GET['action'] ?? '';
-$ids     = explode(',', $_GET['ids'] ?? '');
-$return  = $_GET['return'] ?? '';
+$auth = new Auth();
+$post = new Post();
 
-$post    = new Post();
+$action = $_GET['action'] ?? '';
+$ids = array_filter(array_map('intval', explode(',', $_GET['ids'] ?? '')));
+$return = $_GET['return'] ?? '';
 $success = 0;
 
 foreach ($ids as $id) {
-    $id = intval($id);
-    if ($id <= 0) continue;
+    if ($id <= 0) {
+        continue;
+    }
+
+    $existing = $post->getById($id);
+    if (!$existing || !$auth->canEdit($existing['author_id'])) {
+        continue;
+    }
 
     if ($action === 'delete') {
         $result = $post->delete($id);
-        if ($result['success']) $success++;
-    } elseif ($action === 'publish' || $action === 'draft') {
-        $existing = $post->getById($id);
-        if ($existing) {
-            $updateData = [
-                'title'            => $existing['title'],
-                'slug'             => $existing['slug'],
-                'content'          => $existing['content'],
-                'excerpt'          => $existing['excerpt'],
-                'category_id'      => $existing['category_id'],
-                'status'           => $action === 'publish' ? 'published' : 'draft',
-                'meta_title'       => $existing['meta_title'],
-                'meta_description' => $existing['meta_description'],
-                'meta_keywords'    => $existing['meta_keywords'],
-            ];
-            if (!empty($existing['featured_image'])) {
-                $updateData['featured_image'] = $existing['featured_image'];
-            }
-            $result = $post->update($id, $updateData);
-            if ($result['success']) $success++;
+        if ($result['success']) {
+            $success++;
+        }
+        continue;
+    }
+
+    if ($action === 'publish' || $action === 'draft') {
+        $updateData = [
+            'title' => $existing['title'],
+            'slug' => $existing['slug'],
+            'content' => $existing['content'],
+            'excerpt' => $existing['excerpt'],
+            'category_id' => $existing['category_id'],
+            'status' => $action === 'publish' ? 'published' : 'draft',
+            'meta_title' => $existing['meta_title'],
+            'meta_description' => $existing['meta_description'],
+            'meta_keywords' => $existing['meta_keywords'],
+        ];
+
+        if (!empty($existing['featured_image'])) {
+            $updateData['featured_image'] = $existing['featured_image'];
+        }
+
+        $result = $post->update($id, $updateData);
+        if ($result['success']) {
+            $success++;
         }
     }
 }
 
-setFlash('success', "$success příspěvků aktualizováno");
+$message = $action === 'delete'
+    ? "$success prispevku smazano"
+    : "$success prispevku aktualizovano";
+
+setFlash($success > 0 ? 'success' : 'error', $success > 0 ? $message : 'Nebyl vybran zadny platny prispevek');
 redirect(ADMIN_URL . 'posts.php' . $return);

@@ -366,8 +366,32 @@ function bulkPublish() {
   alert('Hromadne publikovani zatim neni napojene.');
 }
 
+function selectedPostIds() {
+  return Array.from(document.querySelectorAll('#postsBody input[type=checkbox]:checked')).map(cb => cb.value);
+}
+
+function currentReturnQuery() {
+  const params = new URLSearchParams();
+  params.set('status', '<?= $status ?>');
+  params.set('page', '<?= $page ?>');
+  <?php if ($catFilter): ?>
+  params.set('category', '<?= $catFilter ?>');
+  <?php endif; ?>
+  return '?' + params.toString();
+}
+
 function bulkDelete() {
-  alert('Hromadne mazani zatim neni napojene.');
+  const ids = selectedPostIds();
+  if (!ids.length) return;
+  if (!confirm('Opravdu chcete smazat ' + ids.length + ' vybranych prispevku? Tato akce je nevratna.')) {
+    return;
+  }
+  const params = new URLSearchParams({
+    action: 'delete',
+    ids: ids.join(','),
+    return: currentReturnQuery()
+  });
+  window.location.href = 'bulk_action.php?' + params.toString();
 }
 
 let delId = null;
