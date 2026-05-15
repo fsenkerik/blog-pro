@@ -30,6 +30,22 @@ usort($recent, static fn($a, $b) =>
 );
 $recent = array_slice($recent, 0, 6);
 
+$autoPublishByPostId = [];
+$db->query(
+    "SELECT entity_id, created_at
+     FROM audit_log
+     WHERE action = 'publish'
+       AND entity_type = 'post'
+     ORDER BY created_at DESC
+     LIMIT 20"
+);
+foreach ($db->fetchAll() as $logRow) {
+    $postId = (int)($logRow['entity_id'] ?? 0);
+    if ($postId > 0 && !isset($autoPublishByPostId[$postId])) {
+        $autoPublishByPostId[$postId] = $logRow;
+    }
+}
+
 $heroArr = $post->getAll('published', 1, 0);
 $hero    = $heroArr[0] ?? null;
 
@@ -364,6 +380,10 @@ $catColors = ['#667eea', '#764ba2', '#10b981', '#f59e0b', '#ef4444', '#3b82f6', 
         <div class="panel-head"><span class="panel-title">Aktivita</span></div>
         <div class="activity">
           <?php foreach (array_slice($recent, 0, 6) as $item): ?>
+            <?php
+              $autoPublishLog = $autoPublishByPostId[(int)$item['id']] ?? null;
+              $isAutoPublished = ($item['status'] ?? '') === 'published' && $autoPublishLog;
+            ?>
             <div class="act">
               <div class="act-dot <?= $item['status'] === 'published' ? 'ok' : ($item['status'] === 'scheduled' ? 'violet' : 'accent') ?>">
                 <?php if ($item['status'] === 'published'): ?>
@@ -375,11 +395,15 @@ $catColors = ['#667eea', '#764ba2', '#10b981', '#f59e0b', '#ef4444', '#3b82f6', 
                 <?php endif; ?>
               </div>
               <div class="act-body">
-                <b><?= htmlspecialchars($item['author_name'] ?? $username) ?></b>
-                <?= $item['status'] === 'published' ? ' publikoval/a ' : ($item['status'] === 'scheduled' ? ' naplanoval/a ' : ' upravil/a ') ?>
+                <?php if ($isAutoPublished): ?>
+                  <b>System</b> automaticky publikoval
+                <?php else: ?>
+                  <b><?= htmlspecialchars($item['author_name'] ?? $username) ?></b>
+                  <?= $item['status'] === 'published' ? ' publikoval/a ' : ($item['status'] === 'scheduled' ? ' naplanoval/a ' : ' upravil/a ') ?>
+                <?php endif; ?>
                 <span style="color:var(--body);font-size:12px"><?= htmlspecialchars(mb_substr($item['title'], 0, 50)) ?></span>
               </div>
-              <div class="act-time"><?= relTimeDashboard(dashboardPostTime($item)) ?></div>
+              <div class="act-time"><?= relTimeDashboard($isAutoPublished ? $autoPublishLog['created_at'] : dashboardPostTime($item)) ?></div>
             </div>
           <?php endforeach; ?>
           <?php if (empty($recent)): ?>
@@ -486,6 +510,18 @@ document.getElementById('delModal').addEventListener('click', e => {
     closeDel();
   }
 });
+
+async function checkScheduledPublishing() {
+  try {
+    const response = await fetch('../cron/publish.php', { cache: 'no-store' });
+    const data = await response.json();
+    if (data && Number(data.published) > 0) {
+      window.location.reload();
+    }
+  } catch (error) {}
+}
+setTimeout(checkScheduledPublishing, 5000);
+setInterval(checkScheduledPublishing, 30000);
 </script>
 </body>
 </html>

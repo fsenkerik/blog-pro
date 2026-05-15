@@ -347,7 +347,7 @@ class Post {
              FROM posts
              WHERE status = 'scheduled'
                AND scheduled_at IS NOT NULL
-               AND scheduled_at <= :now"
+               AND (scheduled_at <= :now OR scheduled_at <= NOW())"
         );
         $this->db->bind(':now', $now);
         $duePosts = $this->db->fetchAll();
@@ -364,7 +364,7 @@ class Post {
                  updated_at = :published_at
              WHERE status = 'scheduled'
                AND scheduled_at IS NOT NULL
-               AND scheduled_at <= :now"
+               AND (scheduled_at <= :now OR scheduled_at <= NOW())"
         );
         $this->db->bind(':published_at', $now);
         $this->db->bind(':now', $now);

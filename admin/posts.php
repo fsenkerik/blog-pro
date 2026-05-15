@@ -127,9 +127,12 @@ tr:hover .row-actions{opacity:1}
 .chip-violet .bullet{width:6px;height:6px;border-radius:50%;background:currentColor}
 .del-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:999;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
 .del-modal.on{display:flex}
-.del-modal-box{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:32px;max-width:420px;width:90%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.15)}
+.del-modal-box{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:30px;max-width:440px;width:90%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.15)}
+.del-modal-icon{width:50px;height:50px;margin:0 auto 14px;border-radius:14px;display:flex;align-items:center;justify-content:center;background:var(--danger-soft);color:var(--danger)}
 .del-modal-title{font-size:18px;font-weight:600;margin-bottom:8px;color:var(--ink)}
-.del-modal-text{font-size:13.5px;color:var(--body);margin-bottom:24px}
+.del-modal-text{font-size:13.5px;line-height:1.55;color:var(--body);margin-bottom:18px}
+.del-modal-note{display:none;margin:0 0 22px;padding:10px 12px;border-radius:8px;background:var(--paper-2);border:1px solid var(--border);font-family:var(--mono);font-size:11.5px;color:var(--muted)}
+.del-modal.bulk .del-modal-note{display:block}
 .del-modal-actions{display:flex;gap:10px;justify-content:center}
 </style>
 </head>
@@ -310,11 +313,15 @@ tr:hover .row-actions{opacity:1}
 </div>
 
 <div class="del-modal" id="delModal">
-  <div class="del-modal-box">
-    <div class="del-modal-title">Smazat prispevek?</div>
+  <div class="del-modal-box" role="dialog" aria-modal="true" aria-labelledby="delModalTitle">
+    <div class="del-modal-icon">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
+    </div>
+    <div class="del-modal-title" id="delModalTitle">Smazat prispevek?</div>
     <div class="del-modal-text" id="delModalText"></div>
+    <div class="del-modal-note" id="delModalNote"></div>
     <div class="del-modal-actions">
-      <button class="btn btn-danger" onclick="execDel()">Ano, smazat</button>
+      <button class="btn btn-danger" id="delConfirmBtn" onclick="execDel()">Ano, smazat</button>
       <button class="btn btn-ghost" onclick="closeDel()">Zrusit</button>
     </div>
   </div>
@@ -383,28 +390,44 @@ function currentReturnQuery() {
 function bulkDelete() {
   const ids = selectedPostIds();
   if (!ids.length) return;
-  if (!confirm('Opravdu chcete smazat ' + ids.length + ' vybranych prispevku? Tato akce je nevratna.')) {
-    return;
-  }
-  const params = new URLSearchParams({
-    action: 'delete',
-    ids: ids.join(','),
-    return: currentReturnQuery()
-  });
-  window.location.href = 'bulk_action.php?' + params.toString();
+  delId = null;
+  bulkDeleteIds = ids;
+  const modal = document.getElementById('delModal');
+  document.getElementById('delModalTitle').textContent = 'Smazat vybrane prispevky?';
+  document.getElementById('delModalText').textContent = 'Chystate se trvale smazat ' + ids.length + ' vybranych prispevku. Tato akce je nevratna.';
+  document.getElementById('delModalNote').textContent = 'Vybrano: ' + ids.length + ' prispevku';
+  document.getElementById('delConfirmBtn').textContent = 'Ano, smazat vsechny';
+  modal.classList.add('bulk', 'on');
 }
 
 let delId = null;
+let bulkDeleteIds = [];
 function confirmDel(id, title) {
   delId = id;
+  bulkDeleteIds = [];
+  const modal = document.getElementById('delModal');
+  modal.classList.remove('bulk');
+  document.getElementById('delModalTitle').textContent = 'Smazat prispevek?';
   document.getElementById('delModalText').textContent = 'Opravdu chcete smazat "' + title + '"? Tato akce je nevratna.';
-  document.getElementById('delModal').classList.add('on');
+  document.getElementById('delModalNote').textContent = '';
+  document.getElementById('delConfirmBtn').textContent = 'Ano, smazat';
+  modal.classList.add('on');
 }
 function closeDel() {
-  document.getElementById('delModal').classList.remove('on');
+  document.getElementById('delModal').classList.remove('on', 'bulk');
   delId = null;
+  bulkDeleteIds = [];
 }
 function execDel() {
+  if (bulkDeleteIds.length) {
+    const params = new URLSearchParams({
+      action: 'delete',
+      ids: bulkDeleteIds.join(','),
+      return: currentReturnQuery()
+    });
+    window.location.href = 'bulk_action.php?' + params.toString();
+    return;
+  }
   if (delId) {
     window.location.href = 'delete_post.php?id=' + delId;
   }
@@ -414,6 +437,18 @@ document.getElementById('delModal').addEventListener('click', e => {
     closeDel();
   }
 });
+
+async function checkScheduledPublishing() {
+  try {
+    const response = await fetch('../cron/publish.php', { cache: 'no-store' });
+    const data = await response.json();
+    if (data && Number(data.published) > 0) {
+      window.location.reload();
+    }
+  } catch (error) {}
+}
+setTimeout(checkScheduledPublishing, 5000);
+setInterval(checkScheduledPublishing, 30000);
 </script>
 </body>
 </html>

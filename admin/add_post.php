@@ -641,9 +641,9 @@ updateScheduleState();
 let selectedCatId='';
 function selectCat(el){document.querySelectorAll('.cat-item').forEach(i=>i.classList.remove('on'));el.classList.add('on');selectedCatId=el.dataset.id;document.getElementById('catInput').value=selectedCatId;document.getElementById('catCount').textContent='1';}
 const pill1=document.getElementById('savePill'),pill2=document.getElementById('savePill2'),txt1=document.getElementById('saveText'),txt2=document.getElementById('saveText2');
-let saveTimer=null,draftId='',isSaving=false;
-function markUnsaved(){pill1.classList.remove('saved');pill2.classList.remove('saved');txt1.textContent='Neuloženo';txt2.textContent='Neuloženo';clearTimeout(saveTimer);saveTimer=setTimeout(autoSave,3000);}
-async function autoSave(){if(isSaving)return;isSaving=true;syncHiddenInputs();const fd=new FormData();fd.append('ajax_action','autosave_draft');fd.append('title',titleEl.value);fd.append('content',edContent.innerHTML);fd.append('category_id',selectedCatId);fd.append('meta_title',document.getElementById('metaTitleInput').value);fd.append('meta_description',document.getElementById('metaDescInput').value);fd.append('meta_keywords',document.getElementById('metaKwInput').value);fd.append('excerpt',document.getElementById('excerptInput').value);fd.append('featured_image_alt',document.getElementById('featAltInput').value);fd.append('featured_image_from_gallery',document.getElementById('galleryImage')?.value||'');if(draftId)fd.append('draft_id',draftId);try{const r=await fetch(location.href,{method:'POST',body:fd});const data=await r.json();if(data.success){draftId=data.draft_id;document.getElementById('draftId').value=draftId;const t=new Date().toLocaleTimeString('cs-CZ',{hour:'2-digit',minute:'2-digit'});pill1.classList.add('saved');pill2.classList.add('saved');txt1.textContent='Uloženo · '+t;txt2.textContent='Koncept uložen · '+t;}}catch(e){}finally{isSaving=false;}}
+let saveTimer=null,draftId='',isSaving=false,isSubmitting=false,autoSaveRequest=null;
+function markUnsaved(){pill1.classList.remove('saved');pill2.classList.remove('saved');txt1.textContent='Neuloženo';txt2.textContent='Neuloženo';clearTimeout(saveTimer);if(document.getElementById('statusInput').value!=='scheduled'&&!isSubmitting)saveTimer=setTimeout(autoSave,3000);}
+async function autoSave(){if(isSaving||isSubmitting||document.getElementById('statusInput').value==='scheduled')return autoSaveRequest;isSaving=true;syncHiddenInputs();const fd=new FormData();fd.append('ajax_action','autosave_draft');fd.append('title',titleEl.value);fd.append('content',edContent.innerHTML);fd.append('category_id',selectedCatId);fd.append('meta_title',document.getElementById('metaTitleInput').value);fd.append('meta_description',document.getElementById('metaDescInput').value);fd.append('meta_keywords',document.getElementById('metaKwInput').value);fd.append('excerpt',document.getElementById('excerptInput').value);fd.append('featured_image_alt',document.getElementById('featAltInput').value);fd.append('featured_image_from_gallery',document.getElementById('galleryImage')?.value||'');if(draftId)fd.append('draft_id',draftId);autoSaveRequest=(async()=>{try{const r=await fetch(location.href,{method:'POST',body:fd});const data=await r.json();if(data.success){draftId=data.draft_id;document.getElementById('draftId').value=draftId;const t=new Date().toLocaleTimeString('cs-CZ',{hour:'2-digit',minute:'2-digit'});pill1.classList.add('saved');pill2.classList.add('saved');txt1.textContent='Uloženo · '+t;txt2.textContent='Koncept uložen · '+t;}}catch(e){}finally{isSaving=false;autoSaveRequest=null;}})();return autoSaveRequest;}
 function syncHiddenInputs(){document.getElementById('contentInput').value=edContent.innerHTML;document.getElementById('metaTitleInput').value=seoTitleEl?.value||'';document.getElementById('metaDescInput').value=seoDescEl?.value||'';document.getElementById('metaKwInput').value=document.getElementById('seoKeywords')?.value||'';document.getElementById('excerptInput').value=excerptEl?.value||'';if(scheduledAtHidden) scheduledAtHidden.value=document.getElementById('statusInput').value==='scheduled'?(scheduledAtInput?.value||''):'';}
 // ── Tags ─────────────────────────────────────────────────────────────────────
 let tags = [];
@@ -654,11 +654,15 @@ function removeTag(i){tags.splice(i,1);renderTags();}
 function handleTagKey(e){if(e.key==='Enter'||e.key===','){e.preventDefault();addTag(e.target.value);}else if(e.key==='Backspace'&&!e.target.value&&tags.length){removeTag(tags.length-1);}}
 // ── Auto-SEO ──────────────────────────────────────────────────────────────────
 function generateSEO(){const title=titleEl.value.trim();const text=(edContent.innerText||'').replace(/\s+/g,' ').trim();if(!title&&!text)return;const seoTitle=title.length>60?title.substring(0,57)+'…':title;const excerpt=text.substring(0,160);const words=text.split(/\s+/).filter(Boolean).slice(0,8).join(', ');if(seoTitleEl){seoTitleEl.value=seoTitle;seoTitleEl.dispatchEvent(new Event('input'));}if(seoDescEl){seoDescEl.value=excerpt;seoDescEl.dispatchEvent(new Event('input'));}const kwEl=document.getElementById('seoKeywords');if(kwEl&&!kwEl.value)kwEl.value=words;}
-function submitForm(status){
+async function submitForm(status){
   syncHiddenInputs();
   document.getElementById('statusInput').value=status;
   updateScheduleState();
   if(status==='scheduled' && !validateScheduledAt()) return;
+  clearTimeout(saveTimer);
+  isSubmitting=true;
+  if(autoSaveRequest) await autoSaveRequest;
+  syncHiddenInputs();
   const publishBtn=document.getElementById('publishBtn');
   const saveDraftBtn=document.getElementById('saveDraftBtn');
   const label=status==='published'?'Publikuji\u2026':status==='scheduled'?'Pl\u00e1nuji\u2026':'Ukl\u00e1d\u00e1m koncept\u2026';

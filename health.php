@@ -1,5 +1,6 @@
 <?php
 define('BLOG_PRO', true);
+define('SKIP_DB_MIGRATIONS', true);
 require_once __DIR__ . '/config.php';
 
 http_response_code(200);

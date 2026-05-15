@@ -93,7 +93,7 @@ require_once INCLUDES_PATH . 'media.class.php';
 $db = new Database();
 
 // Auto-migrate lightweight schema drift from older installs.
-if (!isset($_SESSION['db_migrated_v5'])) {
+if (!defined('SKIP_DB_MIGRATIONS') && !isset($_SESSION['db_migrated_v5'])) {
     try {
         $columnExists = function (string $table, string $column) use ($db): bool {
             $db->query("SELECT COUNT(*) as c FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=:table AND COLUMN_NAME=:column");
@@ -153,7 +153,7 @@ if (!isset($_SESSION['db_migrated_v5'])) {
     }
 }
 
-if (!isset($_SESSION['db_migrated_v6'])) {
+if (!defined('SKIP_DB_MIGRATIONS') && !isset($_SESSION['db_migrated_v6'])) {
     try {
         $columnExists = function (string $table, string $column) use ($db): bool {
             $db->query("SELECT COUNT(*) as c FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=:table AND COLUMN_NAME=:column");
@@ -194,7 +194,7 @@ if (!isset($_SESSION['db_migrated_v6'])) {
     }
 }
 
-if (!isset($_SESSION['db_migrated_v7'])) {
+if (!defined('SKIP_DB_MIGRATIONS') && !isset($_SESSION['db_migrated_v7'])) {
     try {
         $columnExists = function (string $table, string $column) use ($db): bool {
             $db->query("SELECT COUNT(*) as c FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA=DATABASE() AND TABLE_NAME=:table AND COLUMN_NAME=:column");

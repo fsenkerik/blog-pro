@@ -1,6 +1,7 @@
 ﻿<?php
 define('BLOG_PRO', true);
 define('SKIP_SCHEDULED_PUBLISH', true);
+define('SKIP_DB_MIGRATIONS', true);
 
 require_once dirname(__DIR__) . '/config.php';
 
