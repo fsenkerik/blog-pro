@@ -1,10 +1,14 @@
 #!/bin/bash
+DB_HOST=${DB_HOST:-$MYSQLHOST}
+DB_PORT=${DB_PORT:-${MYSQLPORT:-3306}}
+DB_NAME=${DB_NAME:-$MYSQLDATABASE}
+DB_USER=${DB_USER:-$MYSQLUSER}
+DB_PASS=${DB_PASS:-$MYSQLPASSWORD}
+
 if [ -z "$DB_HOST" ] || [ -z "$DB_NAME" ] || [ -z "$DB_USER" ] || [ -z "$DB_PASS" ]; then
     echo "DB env vars not set, skipping import."
     exit 0
 fi
-
-DB_PORT=${DB_PORT:-3306}
 
 echo "Waiting for MySQL at $DB_HOST:$DB_PORT..."
 for i in $(seq 1 60); do

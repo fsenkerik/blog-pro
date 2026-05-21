@@ -27,7 +27,7 @@ $sql = "SELECT p.id, p.title, p.status, p.created_at,
             p.created_at DESC
         LIMIT 10";
 
-$searchParam = '%' . $query . '%';
+$searchParam = '%' . str_replace(['%', '_'], ['\%', '\_'], $query) . '%';
 
 $db->query($sql);
 $db->bind(':query1', $searchParam, PDO::PARAM_STR);

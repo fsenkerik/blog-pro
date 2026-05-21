@@ -63,3 +63,146 @@
 
   idleTimer = setTimeout(showWarning, IDLE_MS);
 })();
+
+// Topbar article search used by dashboard and post list pages.
+(function() {
+  const input = document.getElementById('topSearch');
+  if (!input) return;
+
+  const wrap = input.closest('.search') || input.parentElement;
+  if (!wrap) return;
+
+  let timer = null;
+  let activeIndex = -1;
+  let results = [];
+
+  const box = document.createElement('div');
+  box.className = 'top-search-results';
+  box.style.cssText = 'display:none;position:absolute;left:0;right:0;top:calc(100% + 8px);z-index:1000;background:var(--card);border:1px solid var(--border);border-radius:12px;box-shadow:0 18px 45px rgba(31,41,55,.16);overflow:hidden;';
+  wrap.appendChild(box);
+
+  function escapeHtml(value) {
+    return String(value || '').replace(/[&<>"']/g, char => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#039;'
+    }[char]));
+  }
+
+  function statusLabel(status) {
+    return {
+      published: 'Publikovano',
+      draft: 'Koncept',
+      scheduled: 'Planovano'
+    }[status] || status || '';
+  }
+
+  function hideResults() {
+    box.style.display = 'none';
+    box.innerHTML = '';
+    activeIndex = -1;
+  }
+
+  function setActive(index) {
+    const items = box.querySelectorAll('[data-search-index]');
+    if (!items.length) return;
+    activeIndex = Math.max(0, Math.min(index, items.length - 1));
+    items.forEach((item, i) => {
+      item.style.background = i === activeIndex ? 'var(--paper-2)' : 'transparent';
+    });
+  }
+
+  function openResult(index) {
+    const item = results[index];
+    if (!item) return;
+    window.location.href = 'edit_post.php?id=' + encodeURIComponent(item.id);
+  }
+
+  function render(data, query) {
+    results = data.results || [];
+    if (!results.length) {
+      box.innerHTML = '<div style="padding:14px 16px;color:var(--muted);font-size:13px">Zadne vysledky pro "' + escapeHtml(query) + '".</div>';
+      box.style.display = 'block';
+      activeIndex = -1;
+      return;
+    }
+
+    box.innerHTML = results.map((item, index) => `
+      <button type="button" data-search-index="${index}" style="width:100%;display:block;text-align:left;padding:12px 14px;border:0;border-bottom:1px solid var(--line);background:transparent;cursor:pointer;font:inherit">
+        <div style="display:flex;align-items:center;gap:10px;justify-content:space-between">
+          <span style="min-width:0;font-size:13px;font-weight:500;color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${escapeHtml(item.title)}</span>
+          <span style="font-size:10.5px;color:var(--muted);font-family:var(--mono);white-space:nowrap">${escapeHtml(statusLabel(item.status))}</span>
+        </div>
+        <div style="margin-top:3px;font-size:11.5px;color:var(--muted);display:flex;gap:8px">
+          <span>${escapeHtml(item.category_name)}</span>
+          <span>${escapeHtml(item.created_at)}</span>
+        </div>
+      </button>
+    `).join('');
+    box.style.display = 'block';
+    box.querySelectorAll('[data-search-index]').forEach(item => {
+      item.addEventListener('mouseenter', () => setActive(Number(item.dataset.searchIndex)));
+      item.addEventListener('click', () => openResult(Number(item.dataset.searchIndex)));
+    });
+    setActive(0);
+  }
+
+  async function search() {
+    const query = input.value.trim();
+    if (query.length < 2) {
+      hideResults();
+      return;
+    }
+
+    box.innerHTML = '<div style="padding:14px 16px;color:var(--muted);font-size:13px">Hledam...</div>';
+    box.style.display = 'block';
+
+    try {
+      const response = await fetch('search_posts.php?q=' + encodeURIComponent(query), {
+        headers: { 'Accept': 'application/json' }
+      });
+      const data = await response.json();
+      render(data, query);
+    } catch (error) {
+      box.innerHTML = '<div style="padding:14px 16px;color:var(--danger);font-size:13px">Vyhledavani se nepodarilo.</div>';
+      box.style.display = 'block';
+    }
+  }
+
+  input.addEventListener('input', () => {
+    clearTimeout(timer);
+    timer = setTimeout(search, 180);
+  });
+
+  input.addEventListener('keydown', event => {
+    if (box.style.display === 'none') return;
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      setActive(activeIndex + 1);
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      setActive(activeIndex - 1);
+    } else if (event.key === 'Enter') {
+      event.preventDefault();
+      openResult(activeIndex >= 0 ? activeIndex : 0);
+    } else if (event.key === 'Escape') {
+      hideResults();
+    }
+  });
+
+  document.addEventListener('keydown', event => {
+    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+      event.preventDefault();
+      input.focus();
+      input.select();
+    }
+  });
+
+  document.addEventListener('click', event => {
+    if (!wrap.contains(event.target)) {
+      hideResults();
+    }
+  });
+})();

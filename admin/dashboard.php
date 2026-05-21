@@ -80,6 +80,17 @@ function chipDashboard(string $status): string {
     };
 }
 
+function dashboardImageUrl(?string $path): ?string {
+    $path = trim((string)$path);
+    if ($path === '') {
+        return null;
+    }
+    if (preg_match('#^https?://#i', $path)) {
+        return $path;
+    }
+    return rtrim(BASE_URL, '/') . '/' . ltrim($path, '/');
+}
+
 $hour = (int) date('H');
 $greeting = $hour < 12 ? 'Dobre rano' : ($hour < 18 ? 'Dobre odpoledne' : 'Dobry vecer');
 $username = $_SESSION['username'] ?? 'uzivateli';
@@ -117,6 +128,7 @@ $catColors = ['#667eea', '#764ba2', '#10b981', '#f59e0b', '#ef4444', '#3b82f6', 
 .pc-thumb.t-3{background:linear-gradient(135deg,#fcd34d,#f59e0b)}
 .pc-thumb.t-4{background:linear-gradient(135deg,#fca5a5,#ef4444)}
 .pc-thumb.t-5{background:linear-gradient(135deg,#93c5fd,#3b82f6)}
+.pc-thumb img{width:100%;height:100%;object-fit:cover;display:block}
 .pc-body{min-width:0;display:flex;flex-direction:column;gap:6px}
 .pc-title{font-size:14px;font-weight:500;color:var(--ink);line-height:1.35;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical}
 .pc-excerpt{font-size:12.5px;color:var(--body);line-height:1.5;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;margin-top:2px}
@@ -160,6 +172,9 @@ $catColors = ['#667eea', '#764ba2', '#10b981', '#f59e0b', '#ef4444', '#3b82f6', 
 .hero-art{background:radial-gradient(circle at 70% 30%,rgba(252,211,77,.35) 0%,transparent 55%),radial-gradient(circle at 20% 80%,rgba(255,255,255,.18) 0%,transparent 50%),linear-gradient(135deg,#764ba2,#667eea);position:relative;overflow:hidden}
 .hero-art::before{content:'';position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.08) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.08) 1px,transparent 1px);background-size:32px 32px}
 .hero-art-letter{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-family:var(--serif);font-size:160px;color:rgba(255,255,255,.18);font-style:italic}
+.hero-art-img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+.hero-art.has-image::before{background:linear-gradient(90deg,rgba(102,126,234,.18),rgba(20,24,38,.16))}
+.hero-art.has-image .hero-art-letter{display:none}
 .strip{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
 .strip-item{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px 16px;display:flex;align-items:center;gap:12px;transition:border-color .15s,background .15s}
 .strip-item:hover{border-color:var(--ink-2);background:var(--card-2)}
@@ -281,6 +296,7 @@ $catColors = ['#667eea', '#764ba2', '#10b981', '#f59e0b', '#ef4444', '#3b82f6', 
     </div>
 
     <?php if ($hero): ?>
+    <?php $heroImageUrl = dashboardImageUrl($hero['featured_image'] ?? null); ?>
     <div class="hero">
       <div class="hero-body">
         <div>
@@ -305,7 +321,12 @@ $catColors = ['#667eea', '#764ba2', '#10b981', '#f59e0b', '#ef4444', '#3b82f6', 
           </div>
         </div>
       </div>
-      <div class="hero-art"><div class="hero-art-letter"><?= mb_strtoupper(mb_substr($hero['title'], 0, 1)) ?></div></div>
+      <div class="hero-art <?= $heroImageUrl ? 'has-image' : '' ?>">
+        <?php if ($heroImageUrl): ?>
+          <img class="hero-art-img" src="<?= htmlspecialchars($heroImageUrl) ?>" alt="<?= htmlspecialchars($hero['featured_image_alt'] ?? $hero['title']) ?>">
+        <?php endif; ?>
+        <div class="hero-art-letter"><?= mb_strtoupper(mb_substr($hero['title'], 0, 1)) ?></div>
+      </div>
     </div>
     <?php endif; ?>
 
@@ -339,9 +360,18 @@ $catColors = ['#667eea', '#764ba2', '#10b981', '#f59e0b', '#ef4444', '#3b82f6', 
         </div>
         <div class="post-cards">
           <?php foreach ($recent as $i => $item): ?>
-            <?php $tc = $tClasses[$i % count($tClasses)]; ?>
+            <?php
+              $tc = $tClasses[$i % count($tClasses)];
+              $thumbUrl = dashboardImageUrl($item['featured_image'] ?? null);
+            ?>
             <div class="post-card">
-              <div class="pc-thumb <?= $tc ?>"><?= htmlspecialchars(mb_strtoupper(mb_substr($item['title'], 0, 1))) ?></div>
+              <div class="pc-thumb <?= $tc ?>">
+                <?php if ($thumbUrl): ?>
+                  <img src="<?= htmlspecialchars($thumbUrl) ?>" alt="<?= htmlspecialchars($item['featured_image_alt'] ?? $item['title']) ?>" loading="lazy">
+                <?php else: ?>
+                  <?= htmlspecialchars(mb_strtoupper(mb_substr($item['title'], 0, 1))) ?>
+                <?php endif; ?>
+              </div>
               <div class="pc-body">
                 <div class="pc-title"><?= htmlspecialchars($item['title']) ?></div>
                 <?php if (!empty($item['excerpt'])): ?>

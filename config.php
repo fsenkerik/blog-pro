@@ -18,11 +18,23 @@ if ($isLocal) {
 
 date_default_timezone_set('Europe/Prague');
 
-define('DB_HOST',    getenv('DB_HOST')    ?: 'localhost');
-define('DB_PORT',    getenv('DB_PORT')    ?: '3306');
-define('DB_NAME',    getenv('DB_NAME')    ?: 'blog_pro');
-define('DB_USER',    getenv('DB_USER')    ?: 'root');
-define('DB_PASS',    getenv('DB_PASS')    ?: 'root');
+if (!function_exists('env_first')) {
+    function env_first(array $names, string $default = ''): string {
+        foreach ($names as $name) {
+            $value = getenv($name);
+            if ($value !== false && $value !== '') {
+                return $value;
+            }
+        }
+        return $default;
+    }
+}
+
+define('DB_HOST',    env_first(['DB_HOST', 'MYSQLHOST'], 'localhost'));
+define('DB_PORT',    env_first(['DB_PORT', 'MYSQLPORT'], '3306'));
+define('DB_NAME',    env_first(['DB_NAME', 'MYSQLDATABASE'], 'blog_pro'));
+define('DB_USER',    env_first(['DB_USER', 'MYSQLUSER'], 'root'));
+define('DB_PASS',    env_first(['DB_PASS', 'MYSQLPASSWORD'], 'root'));
 define('DB_CHARSET', 'utf8mb4');
 
 define('ROOT_PATH',    dirname(__FILE__) . '/');
