@@ -45,10 +45,18 @@
       .editor-image-tools button[hidden]{display:none}
       .editor-image-tools button:hover{background:rgba(255,255,255,.18)}
       .editor-alert{position:fixed;inset:0;z-index:1600;display:flex;align-items:center;justify-content:center;background:rgba(17,24,39,.42);backdrop-filter:blur(4px)}
-      .editor-alert-box{width:min(420px,calc(100vw - 32px));padding:24px;border-radius:16px;background:var(--card);border:1px solid var(--border);box-shadow:0 24px 70px rgba(15,23,42,.22)}
-      .editor-alert-title{font-size:17px;font-weight:700;color:var(--ink);margin-bottom:8px}
-      .editor-alert-body{font-size:13px;line-height:1.55;color:var(--body);margin-bottom:18px}
-      .editor-alert-btn{width:100%;padding:10px 14px;border:0;border-radius:9px;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;font-size:13px;font-weight:600;cursor:pointer}
+      .editor-alert-box{width:min(560px,calc(100vw - 32px));padding:26px;border-radius:18px;background:linear-gradient(180deg,#fff,#fbfcff);border:1px solid rgba(148,163,184,.28);box-shadow:0 28px 80px rgba(15,23,42,.24)}
+      .editor-alert-kicker{display:inline-flex;align-items:center;gap:7px;margin-bottom:10px;padding:5px 9px;border-radius:999px;background:rgba(102,126,234,.1);color:var(--accent-2);font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+      .editor-alert-title{font-size:20px;font-weight:750;color:var(--ink);margin-bottom:8px}
+      .editor-alert-body{font-size:14px;line-height:1.55;color:var(--body);margin-bottom:18px}
+      .editor-alert-formats{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:16px 0 20px}
+      .editor-alert-format{padding:12px;border:1px solid rgba(148,163,184,.24);border-radius:13px;background:#fff}
+      .editor-alert-format-title{font-size:12px;font-weight:700;color:var(--ink);margin-bottom:8px}
+      .editor-alert-chips{display:flex;flex-wrap:wrap;gap:6px}
+      .editor-alert-chip{padding:4px 7px;border-radius:7px;background:var(--accent-soft);color:var(--accent-2);font-family:var(--mono);font-size:10.5px;font-weight:700;text-transform:uppercase}
+      .editor-alert-note{margin-top:-4px;margin-bottom:18px;font-size:12px;color:var(--muted)}
+      .editor-alert-btn{width:100%;padding:11px 14px;border:0;border-radius:10px;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;font-size:13px;font-weight:700;cursor:pointer;box-shadow:0 10px 24px rgba(102,126,234,.22)}
+      @media (max-width: 620px){.editor-alert-formats{grid-template-columns:1fr}.editor-alert-box{padding:22px}}
       @media (max-width: 980px){
         .ed-toolbar{gap:7px 8px}
         .ed-toolbar .toolbar-actions{width:100%;margin-left:0;justify-content:flex-end}
@@ -220,6 +228,12 @@
   }
 
   const ALLOWED_MEDIA_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'csv', 'mp4', 'webm', 'mov', 'mp3', 'wav', 'ogg', 'm4a'];
+  const ALLOWED_MEDIA_GROUPS = [
+    { title: 'Obrázky', formats: ['JPG', 'PNG', 'GIF', 'WebP'] },
+    { title: 'Dokumenty', formats: ['PDF', 'DOC', 'DOCX', 'XLS', 'XLSX', 'PPT', 'PPTX', 'TXT', 'CSV'] },
+    { title: 'Video', formats: ['MP4', 'WebM', 'MOV'] },
+    { title: 'Zvuk', formats: ['MP3', 'WAV', 'OGG', 'M4A'] }
+  ];
 
   function getFileExtension(name) {
     return String(name || '').split('.').pop().toLowerCase();
@@ -248,7 +262,8 @@
     if (!file || !ALLOWED_MEDIA_EXTENSIONS.includes(ext)) {
       return {
         ok: false,
-        message: 'Tento formát není povolený. Povolené jsou obrázky JPG, PNG, GIF, WebP, dokumenty PDF, DOC/DOCX, XLS/XLSX, PPT/PPTX, TXT, CSV, videa MP4/WebM/MOV a zvuk MP3/WAV/OGG/M4A.'
+        code: 'unsupported-format',
+        message: 'Tento formát není povolený.'
       };
     }
     if (file.size > 50 * 1024 * 1024) {
@@ -262,8 +277,35 @@
     alert.className = 'editor-alert';
     alert.innerHTML = `
       <div class="editor-alert-box">
+        <div class="editor-alert-kicker">Upload</div>
         <div class="editor-alert-title">${escapeHtml(title)}</div>
         <div class="editor-alert-body">${escapeHtml(message)}</div>
+        <button type="button" class="editor-alert-btn">Rozumím</button>
+      </div>
+    `;
+    alert.querySelector('button').addEventListener('click', () => alert.remove());
+    alert.addEventListener('click', event => {
+      if (event.target === alert) alert.remove();
+    });
+    document.body.appendChild(alert);
+  }
+
+  function showAllowedFormatAlert() {
+    const alert = document.createElement('div');
+    alert.className = 'editor-alert';
+    const groups = ALLOWED_MEDIA_GROUPS.map((group) => `
+      <div class="editor-alert-format">
+        <div class="editor-alert-format-title">${escapeHtml(group.title)}</div>
+        <div class="editor-alert-chips">${group.formats.map((format) => `<span class="editor-alert-chip">${escapeHtml(format)}</span>`).join('')}</div>
+      </div>
+    `).join('');
+    alert.innerHTML = `
+      <div class="editor-alert-box">
+        <div class="editor-alert-kicker">Nepovolený formát</div>
+        <div class="editor-alert-title">Soubor nelze nahrát</div>
+        <div class="editor-alert-body">Vybraný typ souboru zatím není v systému povolený. Nahrajte prosím jeden z těchto formátů:</div>
+        <div class="editor-alert-formats">${groups}</div>
+        <div class="editor-alert-note">Maximální velikost jednoho souboru je 50 MB.</div>
         <button type="button" class="editor-alert-btn">Rozumím</button>
       </div>
     `;
@@ -482,7 +524,11 @@
   async function uploadMediaWithProgress({ url, file, target, label, prepareOptions }) {
     const validation = validateMediaFile(file);
     if (!validation.ok) {
-      showUploadAlert(validation.message);
+      if (validation.code === 'unsupported-format') {
+        showAllowedFormatAlert();
+      } else {
+        showUploadAlert(validation.message);
+      }
       throw new Error(validation.message);
     }
 
@@ -916,6 +962,7 @@
     buildMediaHtml,
     getMediaKind,
     validateMediaFile,
-    showUploadAlert
+    showUploadAlert,
+    showAllowedFormatAlert
   };
 })();
