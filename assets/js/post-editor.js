@@ -29,7 +29,6 @@
       .ed-content .editor-file-icon{width:42px;height:42px;border-radius:10px;background:var(--accent-soft);color:var(--accent-2);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:11px;font-weight:700;text-transform:uppercase;flex-shrink:0}
       .ed-content .editor-file-body{min-width:0;flex:1}
       .ed-content .editor-file-name{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-      .ed-content .editor-file-meta{font-size:11.5px;color:var(--muted);margin-top:2px}
       .ed-content .editor-media.is-selected,.ed-content .editor-file-block.is-selected{outline:2px solid rgba(102,126,234,.45);outline-offset:4px}
       .ed-stats{clear:both}
       .editor-upload-progress{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:18px;background:rgba(255,255,255,.9);backdrop-filter:blur(6px);border:1px solid rgba(102,126,234,.16);border-radius:14px;z-index:35}
@@ -291,7 +290,7 @@
     if (kind === 'image') return buildResponsiveImageHtml(url);
     if (kind === 'video') return `<figure class="editor-media" data-editor-media="video" contenteditable="false" draggable="false" style="width:100%;max-width:100%;margin:12px auto;clear:both;"><video src="${url}" controls draggable="false" style="width:100%;max-width:100%;border-radius:10px;display:block;"></video></figure><p><br></p>`;
     if (kind === 'audio') return `<figure class="editor-media" data-editor-media="audio" contenteditable="false" draggable="false" style="width:100%;max-width:100%;margin:12px auto;clear:both;"><audio src="${url}" controls draggable="false" style="width:100%;display:block;"></audio></figure><p><br></p>`;
-    return `<div class="editor-file-block" data-editor-media="file" contenteditable="false" draggable="false"><a class="editor-file" href="${url}" target="_blank" rel="noopener" draggable="false"><span class="editor-file-icon">${ext}</span><span class="editor-file-body"><span class="editor-file-name">${name}</span><span class="editor-file-meta">Kliknutím otevřít nebo stáhnout soubor</span></span></a></div><p><br></p>`;
+    return `<div class="editor-file-block" data-editor-media="file" contenteditable="false" draggable="false"><a class="editor-file" href="${url}" target="_blank" rel="noopener" draggable="false"><span class="editor-file-icon">${ext}</span><span class="editor-file-body"><span class="editor-file-name">${name}</span></span></a></div><p><br></p>`;
   }
 
   async function loadImage(file) {
