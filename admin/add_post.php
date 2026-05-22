@@ -2,6 +2,19 @@
 define('BLOG_PRO', true);
 require_once '../config.php';
 
+if (
+    $_SERVER['REQUEST_METHOD'] === 'POST' &&
+    empty($_POST) &&
+    !empty($_SERVER['CONTENT_LENGTH']) &&
+    (int) $_SERVER['CONTENT_LENGTH'] > 0
+) {
+    error_reporting(0);
+    ini_set('display_errors', 0);
+    header('Content-Type: application/json');
+    echo json_encode(['success'=>false,'message'=>'Soubor je větší než serverový limit pro upload. Zkuste menší soubor nebo upravte PHP post_max_size.']);
+    exit;
+}
+
 if (isset($_POST['ajax_action'])) {
     error_reporting(0);
     ini_set('display_errors', 0);

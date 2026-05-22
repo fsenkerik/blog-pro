@@ -14,6 +14,7 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 COPY . /var/www/html/
+COPY docker-php-upload.ini /usr/local/etc/php/conf.d/uploads.ini
 
 RUN mkdir -p /var/www/html/uploads /var/www/html/backups \
     && chown -R www-data:www-data /var/www/html \
