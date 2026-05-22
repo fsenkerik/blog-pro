@@ -166,11 +166,8 @@ class Media {
         $this->db->query("SELECT COUNT(*) as count FROM media");
         $count = $this->db->fetch()['count'];
         
-        // Celková velikost podle souborů na disku, s DB fallbackem.
-        $this->db->query("SELECT SUM(size) as total_size FROM media");
-        $dbTotalSize = (int)($this->db->fetch()['total_size'] ?? 0);
-        $diskTotalSize = $this->getUploadsDiskUsage();
-        $totalSize = $diskTotalSize > 0 ? $diskTotalSize : $dbTotalSize;
+        // Celková velikost podle reálných mediálních souborů.
+        $totalSize = $this->getMediaStorageUsage();
         
         return [
             'count' => $count,
@@ -195,24 +192,27 @@ class Media {
         }
     }
 
-    private function getUploadsDiskUsage() {
-        if (!is_dir(UPLOADS_PATH)) {
-            return 0;
-        }
-
+    private function getMediaStorageUsage() {
         $total = 0;
-        try {
-            $iterator = new RecursiveIteratorIterator(
-                new RecursiveDirectoryIterator(UPLOADS_PATH, RecursiveDirectoryIterator::SKIP_DOTS)
-            );
+        $this->db->query("SELECT path, size FROM media");
+        $items = $this->db->fetchAll();
 
-            foreach ($iterator as $file) {
-                if ($file->isFile()) {
-                    $total += $file->getSize();
-                }
+        foreach ($items as $item) {
+            $path = trim((string)($item['path'] ?? ''));
+            $dbSize = (int)($item['size'] ?? 0);
+
+            if ($path === '') {
+                $total += $dbSize;
+                continue;
             }
-        } catch (Throwable $e) {
-            return 0;
+
+            $filePath = ROOT_PATH . ltrim($path, '/');
+            if (is_file($filePath)) {
+                $total += filesize($filePath);
+                continue;
+            }
+
+            $total += $dbSize;
         }
 
         return $total;
