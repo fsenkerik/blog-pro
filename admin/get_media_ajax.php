@@ -8,7 +8,8 @@ header('Content-Type: application/json');
 $media = new Media();
 $search = $_GET['search'] ?? '';
 $page = isset($_GET['page']) ? max(1, intval($_GET['page'])) : 1;
-$perPage = isset($_GET['per_page']) ? intval($_GET['per_page']) : 9;
+$perPage = isset($_GET['limit']) ? intval($_GET['limit']) : (isset($_GET['per_page']) ? intval($_GET['per_page']) : 9);
+$perPage = max(1, min(100, $perPage));
 
 // DEBUG info
 $debugInfo = [

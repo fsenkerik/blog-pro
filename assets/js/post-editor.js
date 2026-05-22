@@ -24,6 +24,11 @@
       .ed-btn.is-active{background:var(--accent-soft)!important;color:var(--accent-2)!important;border-color:var(--accent)!important}
       .ed-content .editor-media{position:relative;max-width:100%;margin:12px auto;clear:both}
       .ed-content .editor-media img{display:block;width:100%;max-width:100%;height:auto;border-radius:10px}
+      .ed-content .editor-file{display:flex;align-items:center;gap:14px;margin:14px 0;padding:14px 16px;border:1px solid var(--border);border-radius:12px;background:var(--card-2);text-decoration:none;color:var(--ink)}
+      .ed-content .editor-file-icon{width:42px;height:42px;border-radius:10px;background:var(--accent-soft);color:var(--accent-2);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:11px;font-weight:700;text-transform:uppercase;flex-shrink:0}
+      .ed-content .editor-file-body{min-width:0;flex:1}
+      .ed-content .editor-file-name{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+      .ed-content .editor-file-meta{font-size:11.5px;color:var(--muted);margin-top:2px}
       .ed-content .editor-media.is-selected{outline:2px solid rgba(102,126,234,.45);outline-offset:4px}
       .ed-stats{clear:both}
       .editor-upload-progress{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:18px;background:rgba(255,255,255,.9);backdrop-filter:blur(6px);border:1px solid rgba(102,126,234,.16);border-radius:14px;z-index:35}
@@ -38,6 +43,11 @@
       .editor-image-tools.is-visible{display:flex}
       .editor-image-tools button{border:none;border-radius:8px;padding:6px 8px;background:rgba(255,255,255,.08);color:#fff;font-size:11px;line-height:1;cursor:pointer;transition:background .15s ease}
       .editor-image-tools button:hover{background:rgba(255,255,255,.18)}
+      .editor-alert{position:fixed;inset:0;z-index:1600;display:flex;align-items:center;justify-content:center;background:rgba(17,24,39,.42);backdrop-filter:blur(4px)}
+      .editor-alert-box{width:min(420px,calc(100vw - 32px));padding:24px;border-radius:16px;background:var(--card);border:1px solid var(--border);box-shadow:0 24px 70px rgba(15,23,42,.22)}
+      .editor-alert-title{font-size:17px;font-weight:700;color:var(--ink);margin-bottom:8px}
+      .editor-alert-body{font-size:13px;line-height:1.55;color:var(--body);margin-bottom:18px}
+      .editor-alert-btn{width:100%;padding:10px 14px;border:0;border-radius:9px;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;font-size:13px;font-weight:600;cursor:pointer}
       @media (max-width: 980px){
         .ed-toolbar{gap:7px 8px}
         .ed-toolbar .toolbar-actions{width:100%;margin-left:0;justify-content:flex-end}
@@ -166,6 +176,80 @@
       .replace(/>/g, '&gt;');
 
     return `<figure class="editor-media" data-editor-media="image" data-size="50" contenteditable="false" draggable="false" style="width:50%;max-width:100%;margin:12px auto;clear:both;"><img src="${safeUrl}" alt="" draggable="false" style="width:100%;max-width:100%;height:auto;display:block;border-radius:10px;"></figure><p><br></p>`;
+  }
+
+  const ALLOWED_MEDIA_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'csv', 'mp4', 'webm', 'mov', 'mp3', 'wav', 'ogg', 'm4a'];
+
+  function getFileExtension(name) {
+    return String(name || '').split('.').pop().toLowerCase();
+  }
+
+  function getMediaKind(fileOrData) {
+    const mime = String(fileOrData?.type || fileOrData?.mime_type || '').toLowerCase();
+    const ext = getFileExtension(fileOrData?.name || fileOrData?.original_name || fileOrData?.filename);
+    if (mime.startsWith('image/') || ['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) return 'image';
+    if (mime.startsWith('video/') || ['mp4', 'webm', 'mov'].includes(ext)) return 'video';
+    if (mime.startsWith('audio/') || ['mp3', 'wav', 'ogg', 'm4a'].includes(ext)) return 'audio';
+    return 'document';
+  }
+
+  function escapeHtml(value) {
+    return String(value || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
+  function validateMediaFile(file) {
+    const ext = getFileExtension(file?.name);
+    if (!file || !ALLOWED_MEDIA_EXTENSIONS.includes(ext)) {
+      return {
+        ok: false,
+        message: 'Tento formát není povolený. Povolené jsou obrázky JPG, PNG, GIF, WebP, dokumenty PDF, DOC/DOCX, XLS/XLSX, PPT/PPTX, TXT, CSV, videa MP4/WebM/MOV a zvuk MP3/WAV/OGG/M4A.'
+      };
+    }
+    if (file.size > 50 * 1024 * 1024) {
+      return { ok: false, message: 'Soubor je příliš velký. Maximální velikost je 50 MB.' };
+    }
+    return { ok: true };
+  }
+
+  function showUploadAlert(message, title = 'Soubor nelze nahrát') {
+    const alert = document.createElement('div');
+    alert.className = 'editor-alert';
+    alert.innerHTML = `
+      <div class="editor-alert-box">
+        <div class="editor-alert-title">${escapeHtml(title)}</div>
+        <div class="editor-alert-body">${escapeHtml(message)}</div>
+        <button type="button" class="editor-alert-btn">Rozumím</button>
+      </div>
+    `;
+    alert.querySelector('button').addEventListener('click', () => alert.remove());
+    alert.addEventListener('click', event => {
+      if (event.target === alert) alert.remove();
+    });
+    document.body.appendChild(alert);
+  }
+
+  function buildMediaHtml(data) {
+    const url = String(data.url || '')
+      .replace(/&/g, '&amp;')
+      .replace(/"/g, '&quot;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+    const name = String(data.original_name || data.filename || 'soubor')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;');
+    const ext = getFileExtension(name).toUpperCase() || 'FILE';
+    const kind = getMediaKind(data);
+
+    if (kind === 'image') return buildResponsiveImageHtml(url);
+    if (kind === 'video') return `<video src="${url}" controls style="max-width:100%;border-radius:10px;margin:12px 0;display:block;"></video><p><br></p>`;
+    if (kind === 'audio') return `<audio src="${url}" controls style="width:100%;margin:12px 0;display:block;"></audio><p><br></p>`;
+    return `<a class="editor-file" href="${url}" target="_blank" rel="noopener" contenteditable="false"><span class="editor-file-icon">${ext}</span><span class="editor-file-body"><span class="editor-file-name">${name}</span><span class="editor-file-meta">Kliknutím otevřít nebo stáhnout soubor</span></span></a><p><br></p>`;
   }
 
   async function loadImage(file) {
@@ -344,6 +428,50 @@
       return data;
     } catch (error) {
       progress.fail(error.message || 'Chyba uploadu');
+      showUploadAlert(error.message || 'Upload se nepodařil. Zkuste to prosím znovu.');
+      throw error;
+    }
+  }
+
+  async function uploadMediaWithProgress({ url, file, target, label, prepareOptions }) {
+    const validation = validateMediaFile(file);
+    if (!validation.ok) {
+      showUploadAlert(validation.message);
+      throw new Error(validation.message);
+    }
+
+    const kind = getMediaKind(file);
+    if (kind === 'image') {
+      return uploadImageWithProgress({ url, file, target, label, prepareOptions });
+    }
+
+    const progress = createUploadProgress(target, label || 'Nahrávám soubor');
+    try {
+      progress.setProgress(8, 'Připravuji soubor…', `${Math.round(file.size / 1024)} KB`);
+      const formData = new FormData();
+      formData.append('ajax_action', 'upload_media');
+      formData.append('media', file);
+
+      const data = await uploadFormDataWithProgress({
+        url,
+        formData,
+        onProgress: (loaded, total) => {
+          const percent = total > 0 ? 8 + ((loaded / total) * 92) : 8;
+          const loadedKb = Math.round(loaded / 1024);
+          const totalKb = Math.round(total / 1024);
+          progress.setProgress(percent, 'Nahrávám soubor…', `${loadedKb} / ${totalKb} KB`);
+        }
+      });
+
+      if (!data.success) {
+        throw new Error(data.message || 'Chyba uploadu');
+      }
+
+      progress.finish('Soubor nahrán');
+      return data;
+    } catch (error) {
+      progress.fail(error.message || 'Chyba uploadu');
+      showUploadAlert(error.message || 'Upload se nepodařil. Zkuste to prosím znovu.');
       throw error;
     }
   }
@@ -733,6 +861,11 @@
     mountImageToolbar,
     normalizeEditorMarkup,
     prepareImageForUpload,
-    uploadImageWithProgress
+    uploadImageWithProgress,
+    uploadMediaWithProgress,
+    buildMediaHtml,
+    getMediaKind,
+    validateMediaFile,
+    showUploadAlert
   };
 })();

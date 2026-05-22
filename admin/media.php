@@ -9,7 +9,7 @@ if (isset($_POST['ajax_action']) && $_POST['ajax_action'] === 'upload_media') {
     requireAuth();
     if (!isset($_FILES['file'])) { echo json_encode(['success'=>false,'message'=>'Žádný soubor']); exit; }
     $upload = new Upload();
-    $result = $upload->uploadImage($_FILES['file'], true, true);
+    $result = $upload->uploadMedia($_FILES['file'], true, true);
     if ($result['success']) {
         $media = new Media();
         $stats = $media->getStats();
@@ -225,10 +225,10 @@ $userInitials = strtoupper(substr($_SESSION['username'] ?? 'U', 0, 2));
 
           <div class="upload-strip" id="uploadStrip">
             <div class="upload-ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>
-            <div><div class="upload-text">Přetáhněte soubory sem nebo klikněte pro výběr</div><div class="upload-sub">JPG, PNG, WebP, PDF · max. 50 MB / soubor</div></div>
+            <div><div class="upload-text">Přetáhněte soubory sem nebo klikněte pro výběr</div><div class="upload-sub">Obrázky, dokumenty, video a zvuk · max. 50 MB / soubor</div></div>
             <button class="btn btn-ghost btn-sm" type="button" onclick="document.getElementById('uploadInput').click()">Vybrat</button>
           </div>
-          <input type="file" id="uploadInput" multiple accept="image/*,.pdf,.doc,.docx" style="display:none">
+          <input type="file" id="uploadInput" multiple accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.mp4,.webm,.mov,.mp3,.wav,.ogg,.m4a" style="display:none">
 
           <?php if (empty($mediaItems)): ?>
             <div style="text-align:center;padding:60px 20px;color:var(--muted)"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="opacity:.3;display:block;margin:0 auto 16px"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg><p>Žádná média<?= $search ? ' pro &ldquo;'.e($search).'&rdquo;' : '' ?>.</p></div>
@@ -302,7 +302,36 @@ uploadStrip?.addEventListener('dragover',e=>{e.preventDefault();uploadStrip.styl
 uploadStrip?.addEventListener('dragleave',()=>{uploadStrip.style.borderColor='';});
 uploadStrip?.addEventListener('drop',e=>{e.preventDefault();uploadStrip.style.borderColor='';handleFiles(e.dataTransfer.files);});
 uploadInput?.addEventListener('change',e=>handleFiles(e.target.files));
-async function handleFiles(files){const arr=[...files];if(!arr.length)return;for(const file of arr){const fd=new FormData();fd.append('ajax_action','upload_media');fd.append('file',file);try{await fetch(location.href,{method:'POST',body:fd});}catch(e){}}location.reload();}
+const allowedMediaExt=['jpg','jpeg','png','gif','webp','pdf','doc','docx','xls','xlsx','ppt','pptx','txt','csv','mp4','webm','mov','mp3','wav','ogg','m4a'];
+function escapeMediaAlert(value){return String(value||'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));}
+function showMediaUploadAlert(message){
+  const modal=document.createElement('div');
+  modal.style.cssText='position:fixed;inset:0;z-index:1600;display:flex;align-items:center;justify-content:center;background:rgba(17,24,39,.42);backdrop-filter:blur(4px)';
+  modal.innerHTML='<div style="width:min(420px,calc(100vw - 32px));padding:24px;border-radius:16px;background:var(--card);border:1px solid var(--border);box-shadow:0 24px 70px rgba(15,23,42,.22)"><div style="font-size:17px;font-weight:700;color:var(--ink);margin-bottom:8px">Soubor nelze nahrát</div><div style="font-size:13px;line-height:1.55;color:var(--body);margin-bottom:18px">'+escapeMediaAlert(message)+'</div><button type="button" style="width:100%;padding:10px 14px;border:0;border-radius:9px;background:linear-gradient(135deg,#667eea,#764ba2);color:#fff;font-size:13px;font-weight:600;cursor:pointer">Rozumím</button></div>';
+  modal.querySelector('button').addEventListener('click',()=>modal.remove());
+  modal.addEventListener('click',e=>{if(e.target===modal)modal.remove();});
+  document.body.appendChild(modal);
+}
+async function handleFiles(files){
+  const arr=[...files];
+  if(!arr.length)return;
+  for(const file of arr){
+    const ext=(file.name||'').split('.').pop().toLowerCase();
+    if(!allowedMediaExt.includes(ext)){
+      showMediaUploadAlert('Formát .'+ext+' není povolený. Povolené jsou JPG, PNG, GIF, WebP, PDF, Word, Excel, PowerPoint, TXT, CSV, MP4, WebM, MOV, MP3, WAV, OGG a M4A.');
+      return;
+    }
+    const fd=new FormData();
+    fd.append('ajax_action','upload_media');
+    fd.append('file',file);
+    try{
+      const r=await fetch(location.href,{method:'POST',body:fd});
+      const data=await r.json();
+      if(!data.success){showMediaUploadAlert(data.message||'Upload se nepodařil.');return;}
+    }catch(e){showMediaUploadAlert('Upload se nepodařil. Zkuste to prosím znovu.');return;}
+  }
+  location.reload();
+}
 </script>
 <script src="<?= ASSETS_URL ?>js/admin.js"></script>
 </body>

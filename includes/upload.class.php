@@ -7,16 +7,79 @@
 class Upload {
     private $uploadDir;
     private $allowedTypes;
+    private $allowedMediaTypes;
     private $maxSize;
     
     public function __construct() {
         $this->uploadDir = UPLOADS_PATH;
         $this->allowedTypes = ALLOWED_IMAGE_TYPES;
+        $this->allowedMediaTypes = [
+            'jpg', 'jpeg', 'png', 'gif', 'webp',
+            'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'txt', 'csv',
+            'mp4', 'webm', 'mov',
+            'mp3', 'wav', 'ogg', 'm4a'
+        ];
         $this->maxSize = 50 * 1024 * 1024; // Zvýšeno na 50MB pro velké obrázky
         
         if (!is_dir($this->uploadDir)) {
             mkdir($this->uploadDir, 0755, true);
         }
+    }
+
+    public function uploadMedia($file, $optimizeImages = true, $saveToMedia = true) {
+        $validation = $this->validateMedia($file);
+        if (!$validation['success']) {
+            return $validation;
+        }
+
+        $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+        if (in_array($ext, $this->allowedTypes, true)) {
+            $result = $this->uploadImage($file, $optimizeImages, $saveToMedia);
+            if ($result['success']) {
+                $result['mime_type'] = $validation['mime_type'] ?? 'image/jpeg';
+                $result['original_name'] = $file['name'];
+                $result['media_kind'] = 'image';
+            }
+            return $result;
+        }
+
+        $filename = $this->generateFilename($ext);
+        $target = $this->targetForExtension($ext);
+        $filepath = $target['dir'] . $filename;
+
+        if (!move_uploaded_file($file['tmp_name'], $filepath)) {
+            return [
+                'success' => false,
+                'message' => 'Nepodařilo se nahrát soubor'
+            ];
+        }
+
+        $filesize = filesize($filepath);
+        $path = $target['path'] . $filename;
+        $mimeType = $validation['mime_type'] ?? ($file['type'] ?? 'application/octet-stream');
+
+        if ($saveToMedia) {
+            $media = new Media();
+            $media->add([
+                'filename' => $filename,
+                'original_name' => $file['name'],
+                'path' => $path,
+                'mime_type' => $mimeType,
+                'size' => $filesize,
+                'width' => null,
+                'height' => null
+            ]);
+        }
+
+        return [
+            'success' => true,
+            'path' => $path,
+            'filename' => $filename,
+            'size' => $filesize,
+            'mime_type' => $mimeType,
+            'original_name' => $file['name'],
+            'media_kind' => $target['kind']
+        ];
     }
     
     /**
@@ -32,7 +95,8 @@ class Upload {
         // Generovat unikátní jméno
         $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
         $filename = $this->generateFilename($ext);
-        $filepath = $this->uploadDir . $filename;
+        $target = $this->targetForExtension($ext);
+        $filepath = $target['dir'] . $filename;
         
         // Upload
         if (!move_uploaded_file($file['tmp_name'], $filepath)) {
@@ -63,7 +127,7 @@ class Upload {
         }
         
         $filesize = filesize($filepath);
-        $path = 'uploads/' . $filename;
+        $path = $target['path'] . $filename;
         
         // Uložit do media tabulky pokud je požadováno
         if ($saveToMedia) {
@@ -157,6 +221,71 @@ class Upload {
         }
         
         return ['success' => true];
+    }
+
+    private function validateMedia($file) {
+        if ($file['error'] !== UPLOAD_ERR_OK) {
+            $errors = [
+                UPLOAD_ERR_INI_SIZE => 'Soubor je příliš velký (server limit)',
+                UPLOAD_ERR_FORM_SIZE => 'Soubor je příliš velký (form limit)',
+                UPLOAD_ERR_PARTIAL => 'Soubor byl nahrán pouze částečně',
+                UPLOAD_ERR_NO_FILE => 'Nebyl vybrán žádný soubor',
+                UPLOAD_ERR_NO_TMP_DIR => 'Chybí dočasná složka',
+                UPLOAD_ERR_CANT_WRITE => 'Nepodařilo se zapsat na disk',
+                UPLOAD_ERR_EXTENSION => 'Upload byl zastaven rozšířením'
+            ];
+            return ['success' => false, 'message' => $errors[$file['error']] ?? 'Neznámá chyba uploadu'];
+        }
+
+        if ($file['size'] > $this->maxSize) {
+            return ['success' => false, 'message' => 'Soubor je příliš velký (max 50 MB)'];
+        }
+
+        $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+        if (!in_array($ext, $this->allowedMediaTypes, true)) {
+            return [
+                'success' => false,
+                'message' => 'Nepovolený typ souboru. Povolené formáty: ' . implode(', ', $this->allowedMediaTypes)
+            ];
+        }
+
+        if (function_exists('finfo_open')) {
+            $finfo = finfo_open(FILEINFO_MIME_TYPE);
+            $mimeType = finfo_file($finfo, $file['tmp_name']);
+            finfo_close($finfo);
+        } else {
+            $mimeType = $file['type'] ?: 'application/octet-stream';
+        }
+
+        $allowedMimes = [
+            'jpg' => ['image/jpeg'],
+            'jpeg' => ['image/jpeg'],
+            'png' => ['image/png'],
+            'gif' => ['image/gif'],
+            'webp' => ['image/webp'],
+            'pdf' => ['application/pdf'],
+            'doc' => ['application/msword', 'application/octet-stream'],
+            'docx' => ['application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/zip', 'application/octet-stream'],
+            'xls' => ['application/vnd.ms-excel', 'application/octet-stream'],
+            'xlsx' => ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/zip', 'application/octet-stream'],
+            'ppt' => ['application/vnd.ms-powerpoint', 'application/octet-stream'],
+            'pptx' => ['application/vnd.openxmlformats-officedocument.presentationml.presentation', 'application/zip', 'application/octet-stream'],
+            'txt' => ['text/plain'],
+            'csv' => ['text/csv', 'text/plain', 'application/csv', 'application/vnd.ms-excel'],
+            'mp4' => ['video/mp4', 'application/octet-stream'],
+            'webm' => ['video/webm'],
+            'mov' => ['video/quicktime', 'application/octet-stream'],
+            'mp3' => ['audio/mpeg', 'audio/mp3', 'application/octet-stream'],
+            'wav' => ['audio/wav', 'audio/x-wav', 'audio/wave'],
+            'ogg' => ['audio/ogg', 'video/ogg', 'application/ogg'],
+            'm4a' => ['audio/mp4', 'audio/x-m4a', 'application/octet-stream']
+        ];
+
+        if (!in_array($mimeType, $allowedMimes[$ext] ?? [], true)) {
+            return ['success' => false, 'message' => 'Neplatný typ souboru pro příponu .' . $ext];
+        }
+
+        return ['success' => true, 'mime_type' => $mimeType];
     }
     
     /**
@@ -345,6 +474,36 @@ class Upload {
      */
     private function generateFilename($ext) {
         return uniqid() . '_' . time() . '.' . $ext;
+    }
+
+    private function targetForExtension($ext) {
+        $kind = $this->kindForExtension($ext);
+        $year = date('Y');
+        $relativeDir = 'uploads/' . $kind . '/' . $year . '/';
+        $absoluteDir = ROOT_PATH . $relativeDir;
+
+        if (!is_dir($absoluteDir)) {
+            mkdir($absoluteDir, 0755, true);
+        }
+
+        return [
+            'kind' => $kind,
+            'dir' => $absoluteDir,
+            'path' => $relativeDir
+        ];
+    }
+
+    private function kindForExtension($ext) {
+        if (in_array($ext, ['jpg', 'jpeg', 'png', 'gif', 'webp'], true)) {
+            return 'images';
+        }
+        if (in_array($ext, ['mp4', 'webm', 'mov'], true)) {
+            return 'videos';
+        }
+        if (in_array($ext, ['mp3', 'wav', 'ogg', 'm4a'], true)) {
+            return 'audio';
+        }
+        return 'documents';
     }
     
     /**

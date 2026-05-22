@@ -28,15 +28,25 @@ if (isset($_POST['ajax_action'])) {
     error_reporting(0); ini_set('display_errors',0); ob_start();
     header('Content-Type: application/json');
     ob_clean();
-    if ($_POST['ajax_action'] === 'upload_image') {
-        if (!isset($_FILES['image']) || $_FILES['image']['error'] !== UPLOAD_ERR_OK) {
+    if ($_POST['ajax_action'] === 'upload_image' || $_POST['ajax_action'] === 'upload_media') {
+        $file = $_FILES['media'] ?? $_FILES['image'] ?? null;
+        if (!$file || $file['error'] !== UPLOAD_ERR_OK) {
             echo json_encode(['success'=>false,'message'=>'Chyba uploadu']); exit;
         }
-        $uploadResult = $upload->uploadImage($_FILES['image'], true, true);
+        $uploadResult = $upload->uploadMedia($file, true, true);
         if (!$uploadResult['success']) {
             echo json_encode(['success'=>false,'message'=>$uploadResult['message']??'Chyba uploadu']); exit;
         }
-        echo json_encode(['success'=>true,'path'=>$uploadResult['path'],'url'=>rtrim(BASE_URL, '/').'/'.ltrim($uploadResult['path'],'/')]);
+        echo json_encode([
+            'success'=>true,
+            'path'=>$uploadResult['path'],
+            'url'=>rtrim(BASE_URL, '/').'/'.ltrim($uploadResult['path'],'/'),
+            'mime_type'=>$uploadResult['mime_type'] ?? '',
+            'original_name'=>$uploadResult['original_name'] ?? $file['name'],
+            'filename'=>$uploadResult['filename'] ?? '',
+            'media_kind'=>$uploadResult['media_kind'] ?? '',
+            'size'=>$uploadResult['size'] ?? 0,
+        ]);
         exit;
     }
     if ($_POST['ajax_action'] === 'add_category') {
@@ -477,6 +487,8 @@ body.dz-dragging .editor.dz-hover,body.dz-dragging .sp.dz-hover{box-shadow:0 0 0
                 <button type="button" class="ed-btn" title="Vložit odkaz" onclick="insertLinkEdit()"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></button>
                 <button type="button" class="ed-btn" title="Vložit obrázek" onclick="openMediaModalEdit('image')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg></button>
                 <button type="button" class="ed-btn" title="Vložit video" onclick="openMediaModalEdit('video')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg></button>
+                <button type="button" class="ed-btn" title="Vložit dokument" onclick="openMediaModalEdit('document')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h6"/></svg></button>
+                <button type="button" class="ed-btn" title="Vložit zvuk" onclick="openMediaModalEdit('audio')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></button>
                 <div style="margin-left:auto;display:flex;gap:4px;">
                   <button type="button" class="ed-btn" title="Zpět" onclick="document.execCommand('undo')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg></button>
                   <button type="button" class="ed-btn" title="Vpřed" onclick="document.execCommand('redo')"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 7v6h-6"/><path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3L21 13"/></svg></button>
@@ -717,7 +729,11 @@ async function deleteCatInlineE(event, btn) {
 }
 // ── Featured image upload ──────────────────────────────────────────────────
 async function uploadFeaturedImage(file) {
-  if (!file || !file.type.startsWith('image/')) return;
+  if (!file) return;
+  if (!file.type.startsWith('image/')) {
+    PostEditorUtils.showUploadAlert('Hlavní náhledový snímek musí být obrázek. Povolené jsou JPG, PNG, GIF a WebP.');
+    return;
+  }
   const fd = new FormData();
   fd.append('ajax_action','upload_image');
   fd.append('image',file);
@@ -834,7 +850,7 @@ document.getElementById('featuredInput')?.addEventListener('change',function(){
     editorBody.addEventListener('drop', e => {
       if (!isFileDrag(e)) return;
       e.preventDefault(); e.stopPropagation(); dragCounter=0; hideBlur();
-      const f=e.dataTransfer.files[0]; if(f&&f.type.startsWith('image/')) uploadArticleImageEdit(f, getDropRangeEdit(e));
+      const f=e.dataTransfer.files[0]; if(f) uploadArticleImageEdit(f, getDropRangeEdit(e));
     });
   }
 
@@ -902,7 +918,7 @@ function restoreColorRangeE() { if(!colorRangeE) return; const sel=window.getSel
 function applyFontE(font) { if(!font) return; restoreColorRangeE(); document.execCommand('styleWithCSS',false,true); document.execCommand('fontName',false,font); }
 function applyFgColorE(c) { document.getElementById('fgBarE').style.background=c; restoreColorRangeE(); document.execCommand('styleWithCSS',false,true); document.execCommand('foreColor',false,c); }
 function applyBgColorE(c) { document.getElementById('bgBarE').style.background=c; restoreColorRangeE(); document.execCommand('styleWithCSS',false,true); document.execCommand('hiliteColor',false,c); }
-let mediaInsertTypeE='image', selectedGalleryUrlE=null, savedRangeE=null, galleryItemsE=[];
+let mediaInsertTypeE='image', selectedGalleryUrlE=null, selectedGalleryDataE=null, savedRangeE=null, galleryItemsE=[];
 function openMediaModalEdit(type){
   mediaInsertTypeE=type; selectedGalleryUrlE=null;
   document.getElementById('mediaInsertBtnE').disabled=true;
@@ -987,7 +1003,10 @@ function applyFontSizeE(size) {
   markChanged();
 }
 async function uploadFeaturedImage(file) {
-  if (!file || !file.type.startsWith('image/')) return;
+  if (!file || !file.type.startsWith('image/')) {
+    PostEditorUtils.showUploadAlert('Hlavní náhledový snímek musí být obrázek. Povolené jsou JPG, PNG, GIF a WebP.');
+    return;
+  }
   try {
     const data = await PostEditorUtils.uploadImageWithProgress({
       url: location.href,
@@ -1002,19 +1021,30 @@ async function uploadFeaturedImage(file) {
   } catch(e) {}
 }
 async function uploadArticleImageEdit(file, range) {
-  if (!file || !file.type.startsWith('image/')) return;
+  if (!file) return;
   try {
-    const data = await PostEditorUtils.uploadImageWithProgress({
+    const data = await PostEditorUtils.uploadMediaWithProgress({
       url: location.href,
       file,
       target: document.querySelector('.editor'),
-      label: 'Vkládám obrázek do článku',
+      label: 'Vkládám soubor do článku',
       prepareOptions: { maxDimension: 2200, quality: 0.82 }
     });
-    insertImageIntoEditorEdit(data.url, range);
+    insertMediaIntoEditorEdit(data, range);
     updateStats();
     markChanged();
   } catch(e) {}
+}
+function insertMediaIntoEditorEdit(data, range) {
+  const ed = document.getElementById('edContent');
+  ed.focus();
+  if (range) {
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+  }
+  document.execCommand('insertHTML', false, PostEditorUtils.buildMediaHtml(data));
+  PostEditorUtils.normalizeEditorMarkup(ed);
 }
 function insertImageIntoEditorEdit(url, range) {
   const ed = document.getElementById('edContent');
@@ -1028,6 +1058,41 @@ function insertImageIntoEditorEdit(url, range) {
   document.execCommand('insertHTML', false, imgHtml);
   PostEditorUtils.normalizeEditorMarkup(ed);
 }
+function openMediaModalEdit(type){
+  mediaInsertTypeE=type;
+  selectedGalleryUrlE=null;
+  selectedGalleryDataE=null;
+  document.getElementById('mediaInsertBtnE').disabled=true;
+  const titles={image:'Vložit obrázek',video:'Vložit video',document:'Vložit dokument',audio:'Vložit zvuk'};
+  const accepts={image:'image/*',video:'video/mp4,video/webm,video/quicktime,.mp4,.webm,.mov',document:'.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv',audio:'audio/mpeg,audio/wav,audio/ogg,audio/mp4,.mp3,.wav,.ogg,.m4a'};
+  const hints={image:'JPG, PNG, WebP, GIF · max. 50 MB',video:'MP4, WebM, MOV · max. 50 MB',document:'PDF, Word, Excel, PowerPoint, TXT, CSV · max. 50 MB',audio:'MP3, WAV, OGG, M4A · max. 50 MB'};
+  document.getElementById('mediaModalTitle').textContent=titles[type]||'Vložit soubor';
+  document.getElementById('modalFileInputE').accept=accepts[type]||accepts.document;
+  document.getElementById('modalAcceptHintE').textContent=hints[type]||hints.document;
+  const sel=window.getSelection(); if(sel.rangeCount) savedRangeE=sel.getRangeAt(0).cloneRange();
+  document.getElementById('mediaModal').classList.add('on');
+  switchMediaTabEdit('upload', document.querySelector('.media-modal-tab'));
+}
+function renderGalleryE(items){
+  const grid=document.getElementById('mediaGalleryGridE');
+  const baseUrl='<?= rtrim(BASE_URL,"/") ?>';
+  const filtered=items.filter(it=>PostEditorUtils.getMediaKind({mime_type:it.mime_type,original_name:it.original_name,filename:it.filename})===mediaInsertTypeE);
+  window.currentMediaGalleryFilteredE=filtered;
+  if(!filtered.length){grid.innerHTML='<div style="color:var(--muted);font-size:13px">Žádné soubory pro tento typ.</div>';return;}
+  grid.innerHTML=filtered.map((it,index)=>{
+    const kind=PostEditorUtils.getMediaKind({mime_type:it.mime_type,original_name:it.original_name,filename:it.filename});
+    const ext=(it.original_name||it.filename||'file').split('.').pop().toUpperCase();
+    const preview=kind==='image'?`<img src="${baseUrl}${it.path}" alt="" onerror="this.style.display='none'">`:`<div style="height:100%;display:flex;align-items:center;justify-content:center;color:var(--accent-2);font-family:var(--mono);font-size:12px">${ext}</div>`;
+    return `<div class="media-grid-item" onclick="selectGalleryItemE(this,'${baseUrl}${it.path}',${index})" data-url="${it.path}">${preview}</div>`;
+  }).join('');
+}
+function selectGalleryItemE(el,url,index=null){
+  document.querySelectorAll('.media-grid-item').forEach(i=>i.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedGalleryUrlE=url;
+  selectedGalleryDataE=index!==null&&window.currentMediaGalleryFilteredE?window.currentMediaGalleryFilteredE[index]:null;
+  document.getElementById('mediaInsertBtnE').disabled=false;
+}
 function confirmMediaInsertEdit(){
   if(!selectedGalleryUrlE) return;
   const ed=document.getElementById('edContent');
@@ -1039,9 +1104,8 @@ function confirmMediaInsertEdit(){
   }
   const baseUrl='<?= rtrim(BASE_URL,"/") ?>';
   const fullUrl=selectedGalleryUrlE.startsWith('http')?selectedGalleryUrlE:baseUrl+selectedGalleryUrlE;
-  const html=mediaInsertTypeE==='image'
-    ? PostEditorUtils.buildResponsiveImageHtml(fullUrl)
-    : `<video src="${fullUrl}" controls style="max-width:100%;border-radius:6px;margin:8px 0;"></video>`;
+  const data=Object.assign({}, selectedGalleryDataE || {}, {url:fullUrl,mime_type:selectedGalleryDataE?.mime_type||'',original_name:selectedGalleryDataE?.original_name||selectedGalleryDataE?.filename||'soubor'});
+  const html=PostEditorUtils.buildMediaHtml(data);
   document.execCommand('insertHTML',false,html);
   PostEditorUtils.normalizeEditorMarkup(ed);
   closeMediaModalEdit();
@@ -1055,16 +1119,20 @@ function confirmMediaInsertEdit(){
   nextInput.addEventListener('change', async function(){
     if(!this.files[0]) return;
     try{
-      const data = await PostEditorUtils.uploadImageWithProgress({
+      const data = await PostEditorUtils.uploadMediaWithProgress({
         url: location.href,
         file: this.files[0],
         target: document.getElementById('modalDzE'),
-        label: 'Nahrávám obrázek z počítače',
+        label: 'Nahrávám soubor z počítače',
         prepareOptions: { maxDimension: 2200, quality: 0.82 }
       });
       selectedGalleryUrlE=data.url;
+      selectedGalleryDataE=data;
       document.getElementById('mediaInsertBtnE').disabled=false;
-      document.getElementById('modalDzE').innerHTML=`<img src="${data.url}" style="max-height:160px;border-radius:8px;max-width:100%;">`;
+      const kind=PostEditorUtils.getMediaKind(data);
+      document.getElementById('modalDzE').innerHTML=kind==='image'
+        ? `<img src="${data.url}" style="max-height:160px;border-radius:8px;max-width:100%;">`
+        : `<div style="padding:24px;font-family:var(--mono);color:var(--accent-2)">${(data.original_name||data.filename||'Soubor').split('.').pop().toUpperCase()} nahrán</div>`;
     }catch(e){}
   });
 })();
