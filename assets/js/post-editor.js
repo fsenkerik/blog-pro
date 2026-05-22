@@ -24,12 +24,13 @@
       .ed-btn.is-active{background:var(--accent-soft)!important;color:var(--accent-2)!important;border-color:var(--accent)!important}
       .ed-content .editor-media{position:relative;max-width:100%;margin:12px auto;clear:both}
       .ed-content .editor-media img{display:block;width:100%;max-width:100%;height:auto;border-radius:10px}
-      .ed-content .editor-file{display:flex;align-items:center;gap:14px;margin:14px 0;padding:14px 16px;border:1px solid var(--border);border-radius:12px;background:var(--card-2);text-decoration:none;color:var(--ink)}
+      .ed-content .editor-file-block{display:block;margin:14px 0;clear:both}
+      .ed-content .editor-file{display:flex;align-items:center;gap:14px;padding:14px 16px;border:1px solid var(--border);border-radius:12px;background:var(--card-2);text-decoration:none;color:var(--ink)}
       .ed-content .editor-file-icon{width:42px;height:42px;border-radius:10px;background:var(--accent-soft);color:var(--accent-2);display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:11px;font-weight:700;text-transform:uppercase;flex-shrink:0}
       .ed-content .editor-file-body{min-width:0;flex:1}
       .ed-content .editor-file-name{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
       .ed-content .editor-file-meta{font-size:11.5px;color:var(--muted);margin-top:2px}
-      .ed-content .editor-media.is-selected{outline:2px solid rgba(102,126,234,.45);outline-offset:4px}
+      .ed-content .editor-media.is-selected,.ed-content .editor-file-block.is-selected{outline:2px solid rgba(102,126,234,.45);outline-offset:4px}
       .ed-stats{clear:both}
       .editor-upload-progress{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:18px;background:rgba(255,255,255,.9);backdrop-filter:blur(6px);border:1px solid rgba(102,126,234,.16);border-radius:14px;z-index:35}
       .editor-upload-progress.is-floating{position:fixed;inset:auto 18px 18px auto;width:min(320px,calc(100vw - 36px));box-shadow:0 20px 60px rgba(15,23,42,.18)}
@@ -42,6 +43,7 @@
       .editor-image-tools{position:fixed;z-index:1200;display:none;flex-wrap:wrap;align-items:center;gap:6px;max-width:min(92vw,520px);padding:8px 10px;border-radius:12px;background:rgba(17,24,39,.94);box-shadow:0 12px 30px rgba(15,23,42,.28);backdrop-filter:blur(8px)}
       .editor-image-tools.is-visible{display:flex}
       .editor-image-tools button{border:none;border-radius:8px;padding:6px 8px;background:rgba(255,255,255,.08);color:#fff;font-size:11px;line-height:1;cursor:pointer;transition:background .15s ease}
+      .editor-image-tools button[hidden]{display:none}
       .editor-image-tools button:hover{background:rgba(255,255,255,.18)}
       .editor-alert{position:fixed;inset:0;z-index:1600;display:flex;align-items:center;justify-content:center;background:rgba(17,24,39,.42);backdrop-filter:blur(4px)}
       .editor-alert-box{width:min(420px,calc(100vw - 32px));padding:24px;border-radius:16px;background:var(--card);border:1px solid var(--border);box-shadow:0 24px 70px rgba(15,23,42,.22)}
@@ -97,8 +99,8 @@
     return block.tagName.toLowerCase();
   }
 
-  function getClosestFigure(node) {
-    return node?.closest('figure.editor-media') || null;
+  function getClosestMediaBlock(node) {
+    return node?.closest('figure.editor-media,.editor-file-block') || null;
   }
 
   function isEmptyParagraph(node) {
@@ -136,29 +138,69 @@
     });
   }
 
+  function wrapStandaloneMedia(editor, selector, createWrapper) {
+    editor.querySelectorAll(selector).forEach((node) => {
+      if (node.closest('figure.editor-media,.editor-file-block')) return;
+      const wrapper = createWrapper(node);
+      node.before(wrapper);
+      wrapper.appendChild(node);
+      const next = wrapper.nextSibling;
+      if (!next || next.nodeName !== 'P') {
+        wrapper.after(document.createElement('p'));
+      }
+    });
+  }
+
   function normalizeEditorMedia(editor) {
-    editor.querySelectorAll('figure.editor-media, img').forEach((node) => {
-      const figure = node.tagName === 'FIGURE' ? node : node.closest('figure.editor-media');
-      const img = node.tagName === 'IMG' ? node : figure?.querySelector('img');
-      if (!figure || !img) return;
+    wrapStandaloneMedia(editor, 'img,video,audio', (node) => {
+      const figure = document.createElement('figure');
+      figure.className = 'editor-media';
+      figure.dataset.editorMedia = node.tagName === 'IMG' ? 'image' : node.tagName.toLowerCase();
+      return figure;
+    });
+
+    wrapStandaloneMedia(editor, 'a.editor-file', () => {
+      const block = document.createElement('div');
+      block.className = 'editor-file-block';
+      block.dataset.editorMedia = 'file';
+      return block;
+    });
+
+    editor.querySelectorAll('figure.editor-media').forEach((figure) => {
+      const media = figure.querySelector('img,video,audio');
+      if (!media) return;
 
       figure.classList.add('editor-media');
-      figure.setAttribute('data-editor-media', 'image');
+      figure.setAttribute('data-editor-media', media.tagName === 'IMG' ? 'image' : media.tagName.toLowerCase());
       figure.setAttribute('contenteditable', 'false');
       figure.draggable = false;
+      figure.setAttribute('draggable', 'false');
 
       if (!figure.style.maxWidth) figure.style.maxWidth = '100%';
-      if (!figure.style.width) figure.style.width = '50%';
+      if (!figure.style.width) figure.style.width = media.tagName === 'IMG' ? '50%' : '100%';
       if (!figure.dataset.size) figure.dataset.size = (figure.style.width || '50%').replace('%', '');
       if (!figure.style.margin) figure.style.margin = '12px auto';
       if (!figure.style.clear) figure.style.clear = 'both';
 
-      img.draggable = false;
-      if (!img.style.maxWidth) img.style.maxWidth = '100%';
-      if (!img.style.width) img.style.width = '100%';
-      if (!img.style.height) img.style.height = 'auto';
-      if (!img.style.display) img.style.display = 'block';
-      if (!img.style.borderRadius) img.style.borderRadius = '10px';
+      media.draggable = false;
+      media.setAttribute('draggable', 'false');
+      if (!media.style.maxWidth) media.style.maxWidth = '100%';
+      if (!media.style.width) media.style.width = '100%';
+      if (!media.style.display) media.style.display = 'block';
+      if (media.tagName === 'IMG' && !media.style.height) media.style.height = 'auto';
+      if (!media.style.borderRadius && media.tagName !== 'AUDIO') media.style.borderRadius = '10px';
+    });
+
+    editor.querySelectorAll('.editor-file-block').forEach((block) => {
+      block.classList.add('editor-file-block');
+      block.setAttribute('data-editor-media', 'file');
+      block.setAttribute('contenteditable', 'false');
+      block.draggable = false;
+      block.setAttribute('draggable', 'false');
+      const link = block.querySelector('a.editor-file');
+      if (link) {
+        link.setAttribute('draggable', 'false');
+      }
     });
   }
 
@@ -247,9 +289,9 @@
     const kind = getMediaKind(data);
 
     if (kind === 'image') return buildResponsiveImageHtml(url);
-    if (kind === 'video') return `<video src="${url}" controls style="max-width:100%;border-radius:10px;margin:12px 0;display:block;"></video><p><br></p>`;
-    if (kind === 'audio') return `<audio src="${url}" controls style="width:100%;margin:12px 0;display:block;"></audio><p><br></p>`;
-    return `<a class="editor-file" href="${url}" target="_blank" rel="noopener" contenteditable="false"><span class="editor-file-icon">${ext}</span><span class="editor-file-body"><span class="editor-file-name">${name}</span><span class="editor-file-meta">Kliknutím otevřít nebo stáhnout soubor</span></span></a><p><br></p>`;
+    if (kind === 'video') return `<figure class="editor-media" data-editor-media="video" contenteditable="false" draggable="false" style="width:100%;max-width:100%;margin:12px auto;clear:both;"><video src="${url}" controls draggable="false" style="width:100%;max-width:100%;border-radius:10px;display:block;"></video></figure><p><br></p>`;
+    if (kind === 'audio') return `<figure class="editor-media" data-editor-media="audio" contenteditable="false" draggable="false" style="width:100%;max-width:100%;margin:12px auto;clear:both;"><audio src="${url}" controls draggable="false" style="width:100%;display:block;"></audio></figure><p><br></p>`;
+    return `<div class="editor-file-block" data-editor-media="file" contenteditable="false" draggable="false"><a class="editor-file" href="${url}" target="_blank" rel="noopener" draggable="false"><span class="editor-file-icon">${ext}</span><span class="editor-file-body"><span class="editor-file-name">${name}</span><span class="editor-file-meta">Kliknutím otevřít nebo stáhnout soubor</span></span></a></div><p><br></p>`;
   }
 
   async function loadImage(file) {
@@ -528,15 +570,19 @@
     return toolbar;
   }
 
-  function positionImageToolbar(toolbar, figure) {
-    const rect = figure.getBoundingClientRect();
+  function positionImageToolbar(toolbar, block) {
+    const rect = block.getBoundingClientRect();
     toolbar.style.top = `${Math.max(12, rect.top - 54)}px`;
     toolbar.style.left = `${Math.max(12, Math.min(window.innerWidth - toolbar.offsetWidth - 12, rect.left))}px`;
   }
 
-  function syncImageToolbarState(toolbar, figure) {
-    if (!toolbar || !figure) return;
-    const activeSize = figure.dataset.size || (figure.style.width || '50%').replace('%', '');
+  function syncImageToolbarState(toolbar, block) {
+    if (!toolbar || !block) return;
+    const isFigure = block.matches('figure.editor-media');
+    const activeSize = block.dataset.size || (block.style.width || '50%').replace('%', '');
+    toolbar.querySelectorAll('button[data-action="size"],button[data-action="align"]').forEach((button) => {
+      button.hidden = !isFigure;
+    });
     toolbar.querySelectorAll('button[data-action="size"]').forEach((button) => {
       const isActive = button.dataset.value === activeSize;
       button.classList.toggle('is-active', isActive);
@@ -562,17 +608,17 @@
     }
   }
 
-  function getFigureBlockNodes(figure) {
-    const nodes = [figure];
-    if (isEmptyParagraph(figure.nextElementSibling)) {
-      nodes.push(figure.nextElementSibling);
+  function getMediaBlockNodes(block) {
+    const nodes = [block];
+    if (isEmptyParagraph(block.nextElementSibling)) {
+      nodes.push(block.nextElementSibling);
     }
     return nodes;
   }
 
-  function moveFigureBlock(figure, direction) {
-    const nodes = getFigureBlockNodes(figure);
-    let target = direction === 'up' ? figure.previousElementSibling : nodes[nodes.length - 1].nextElementSibling;
+  function moveMediaBlock(block, direction) {
+    const nodes = getMediaBlockNodes(block);
+    let target = direction === 'up' ? block.previousElementSibling : nodes[nodes.length - 1].nextElementSibling;
 
     while (target && isEmptyParagraph(target)) {
       target = direction === 'up' ? target.previousElementSibling : target.nextElementSibling;
@@ -599,11 +645,11 @@
     if (!editor) return;
 
     const toolbar = ensureImageToolbar();
-    let selectedFigure = null;
+    let selectedBlock = null;
 
     const clearSelection = () => {
-      if (selectedFigure) selectedFigure.classList.remove('is-selected');
-      selectedFigure = null;
+      if (selectedBlock) selectedBlock.classList.remove('is-selected');
+      selectedBlock = null;
       toolbar.classList.remove('is-visible');
     };
 
@@ -613,67 +659,67 @@
     };
 
     editor.addEventListener('dragstart', (event) => {
-      if (event.target.closest('figure.editor-media')) {
+      if (getClosestMediaBlock(event.target)) {
         event.preventDefault();
       }
     });
 
     editor.addEventListener('click', (event) => {
-      const figure = event.target.closest('figure.editor-media');
-      if (!figure || !editor.contains(figure)) {
+      const block = getClosestMediaBlock(event.target);
+      if (!block || !editor.contains(block)) {
         clearSelection();
         return;
       }
 
       event.preventDefault();
-      if (selectedFigure) selectedFigure.classList.remove('is-selected');
-      selectedFigure = figure;
-      selectedFigure.classList.add('is-selected');
+      if (selectedBlock) selectedBlock.classList.remove('is-selected');
+      selectedBlock = block;
+      selectedBlock.classList.add('is-selected');
       toolbar.classList.add('is-visible');
-      positionImageToolbar(toolbar, selectedFigure);
-      syncImageToolbarState(toolbar, selectedFigure);
+      positionImageToolbar(toolbar, selectedBlock);
+      syncImageToolbarState(toolbar, selectedBlock);
     });
 
     document.addEventListener('click', (event) => {
-      if (!selectedFigure) return;
-      if (toolbar.contains(event.target) || selectedFigure.contains(event.target)) return;
+      if (!selectedBlock) return;
+      if (toolbar.contains(event.target) || selectedBlock.contains(event.target)) return;
       clearSelection();
     });
 
     window.addEventListener('scroll', () => {
-      if (selectedFigure && toolbar.classList.contains('is-visible')) {
-        positionImageToolbar(toolbar, selectedFigure);
+      if (selectedBlock && toolbar.classList.contains('is-visible')) {
+        positionImageToolbar(toolbar, selectedBlock);
       }
     }, { passive: true });
 
     window.addEventListener('resize', () => {
-      if (selectedFigure && toolbar.classList.contains('is-visible')) {
-        positionImageToolbar(toolbar, selectedFigure);
+      if (selectedBlock && toolbar.classList.contains('is-visible')) {
+        positionImageToolbar(toolbar, selectedBlock);
       }
     });
 
     toolbar.addEventListener('click', (event) => {
       const button = event.target.closest('button[data-action]');
-      if (!button || !selectedFigure) return;
+      if (!button || !selectedBlock) return;
 
       const action = button.dataset.action;
       const value = button.dataset.value;
 
       if (action === 'size') {
-        selectedFigure.style.width = `${value}%`;
-        selectedFigure.dataset.size = value;
+        selectedBlock.style.width = `${value}%`;
+        selectedBlock.dataset.size = value;
       } else if (action === 'align') {
-        applyImageAlignment(selectedFigure, value);
+        applyImageAlignment(selectedBlock, value);
       } else if (action === 'move') {
-        moveFigureBlock(selectedFigure, value === 'up' ? 'up' : 'down');
+        moveMediaBlock(selectedBlock, value === 'up' ? 'up' : 'down');
       } else if (action === 'remove') {
-        getFigureBlockNodes(selectedFigure).forEach((node) => node.remove());
+        getMediaBlockNodes(selectedBlock).forEach((node) => node.remove());
         clearSelection();
       }
 
-      if (selectedFigure) {
-        positionImageToolbar(toolbar, selectedFigure);
-        syncImageToolbarState(toolbar, selectedFigure);
+      if (selectedBlock) {
+        positionImageToolbar(toolbar, selectedBlock);
+        syncImageToolbarState(toolbar, selectedBlock);
       }
       markChanged();
     });
@@ -826,7 +872,7 @@
     editor.addEventListener('click', () => setTimeout(refresh, 0));
     document.addEventListener('selectionchange', () => {
       const activeNode = getActiveNode(editor);
-      if (activeNode || getClosestFigure(getNodeElement(getSelection()?.focusNode))) {
+      if (activeNode || getClosestMediaBlock(getNodeElement(getSelection()?.focusNode))) {
         refresh();
       }
     });
