@@ -263,14 +263,14 @@ class Upload {
             'png' => ['image/png'],
             'gif' => ['image/gif'],
             'webp' => ['image/webp'],
-            'pdf' => ['application/pdf'],
+            'pdf' => ['application/pdf', 'application/x-pdf', 'application/acrobat', 'applications/vnd.pdf', 'text/pdf', 'text/x-pdf', 'application/octet-stream'],
             'doc' => ['application/msword', 'application/octet-stream'],
             'docx' => ['application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/zip', 'application/octet-stream'],
             'xls' => ['application/vnd.ms-excel', 'application/octet-stream'],
             'xlsx' => ['application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/zip', 'application/octet-stream'],
             'ppt' => ['application/vnd.ms-powerpoint', 'application/octet-stream'],
             'pptx' => ['application/vnd.openxmlformats-officedocument.presentationml.presentation', 'application/zip', 'application/octet-stream'],
-            'txt' => ['text/plain'],
+            'txt' => ['text/plain', 'application/octet-stream'],
             'csv' => ['text/csv', 'text/plain', 'application/csv', 'application/vnd.ms-excel'],
             'mp4' => ['video/mp4', 'application/octet-stream'],
             'webm' => ['video/webm'],
@@ -482,8 +482,12 @@ class Upload {
         $relativeDir = 'uploads/' . $kind . '/' . $year . '/';
         $absoluteDir = ROOT_PATH . $relativeDir;
 
-        if (!is_dir($absoluteDir)) {
-            mkdir($absoluteDir, 0755, true);
+        if (!is_dir($absoluteDir) && !mkdir($absoluteDir, 0755, true)) {
+            throw new RuntimeException('Nepodařilo se vytvořit složku pro upload.');
+        }
+
+        if (!is_writable($absoluteDir)) {
+            throw new RuntimeException('Složka pro upload není zapisovatelná.');
         }
 
         return [

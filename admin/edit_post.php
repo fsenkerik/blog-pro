@@ -28,6 +28,7 @@ if (isset($_POST['ajax_action'])) {
     error_reporting(0); ini_set('display_errors',0); ob_start();
     header('Content-Type: application/json');
     ob_clean();
+    try {
     if ($_POST['ajax_action'] === 'upload_image' || $_POST['ajax_action'] === 'upload_media') {
         $file = $_FILES['media'] ?? $_FILES['image'] ?? null;
         if (!$file || $file['error'] !== UPLOAD_ERR_OK) {
@@ -84,6 +85,16 @@ if (isset($_POST['ajax_action'])) {
         $db->query('DELETE FROM categories WHERE id = :id');
         $db->bind(':id',$catId);
         echo json_encode(['success'=>$db->execute()]);
+        exit;
+    }
+    echo json_encode(['success'=>false,'message'=>'Neznámá akce']);
+    exit;
+    } catch (Throwable $e) {
+        error_log(date('Y-m-d H:i:s') . " - Edit post AJAX: " . $e->getMessage() . "\n", 3, ROOT_PATH . 'error.log');
+        if (ob_get_length()) {
+            ob_clean();
+        }
+        echo json_encode(['success'=>false,'message'=>'Serverová chyba uploadu: '.$e->getMessage()]);
         exit;
     }
 }

@@ -4,8 +4,11 @@ require_once '../config.php';
 
 if (isset($_POST['ajax_action']) && $_POST['ajax_action'] === 'upload_media') {
     error_reporting(0);
+    ini_set('display_errors', 0);
     ob_start();
     header('Content-Type: application/json');
+    ob_clean();
+    try {
     requireAuth();
     if (!isset($_FILES['file'])) { echo json_encode(['success'=>false,'message'=>'Žádný soubor']); exit; }
     $upload = new Upload();
@@ -15,6 +18,13 @@ if (isset($_POST['ajax_action']) && $_POST['ajax_action'] === 'upload_media') {
         $stats = $media->getStats();
         echo json_encode(['success'=>true,'message'=>'Soubor nahrán','filename'=>$result['filename'],'stats'=>$stats]);
     } else { echo json_encode($result); }
+    } catch (Throwable $e) {
+        error_log(date('Y-m-d H:i:s') . " - Media upload AJAX: " . $e->getMessage() . "\n", 3, ROOT_PATH . 'error.log');
+        if (ob_get_length()) {
+            ob_clean();
+        }
+        echo json_encode(['success'=>false,'message'=>'Serverová chyba uploadu: '.$e->getMessage()]);
+    }
     exit;
 }
 

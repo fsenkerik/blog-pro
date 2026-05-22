@@ -385,10 +385,15 @@
           reject(new Error(`Upload failed with status ${xhr.status}`));
           return;
         }
+        const responseText = (xhr.responseText || '').trim();
+        if (responseText.startsWith('<')) {
+          reject(new Error('Server vrátil HTML chybu místo JSON odpovědi. Zkuste stránku obnovit, případně zkontrolovat log serveru.'));
+          return;
+        }
         try {
-          resolve(JSON.parse(xhr.responseText));
+          resolve(JSON.parse(responseText));
         } catch (error) {
-          reject(error);
+          reject(new Error('Server vrátil neplatnou odpověď. Upload se nepodařil.'));
         }
       };
 

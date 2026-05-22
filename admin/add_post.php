@@ -124,8 +124,12 @@ if (isset($_POST['ajax_action'])) {
         }
         echo json_encode(['success'=>false,'message'=>'Neznámá akce']);
         exit;
-    } catch (Exception $e) {
-        echo json_encode(['success'=>false,'message'=>'Chyba: '.$e->getMessage()]);
+    } catch (Throwable $e) {
+        error_log(date('Y-m-d H:i:s') . " - Add post AJAX: " . $e->getMessage() . "\n", 3, ROOT_PATH . 'error.log');
+        if (ob_get_length()) {
+            ob_clean();
+        }
+        echo json_encode(['success'=>false,'message'=>'Serverová chyba uploadu: '.$e->getMessage()]);
         exit;
     }
 }
