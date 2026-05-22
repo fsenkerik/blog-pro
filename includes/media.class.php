@@ -166,9 +166,11 @@ class Media {
         $this->db->query("SELECT COUNT(*) as count FROM media");
         $count = $this->db->fetch()['count'];
         
-        // Celková velikost
+        // Celková velikost podle souborů na disku, s DB fallbackem.
         $this->db->query("SELECT SUM(size) as total_size FROM media");
-        $totalSize = $this->db->fetch()['total_size'] ?? 0;
+        $dbTotalSize = (int)($this->db->fetch()['total_size'] ?? 0);
+        $diskTotalSize = $this->getUploadsDiskUsage();
+        $totalSize = $diskTotalSize > 0 ? $diskTotalSize : $dbTotalSize;
         
         return [
             'count' => $count,
@@ -181,6 +183,7 @@ class Media {
      * Formátovat velikost souboru
      */
     private function formatBytes($bytes) {
+        $bytes = (int)$bytes;
         if ($bytes >= 1073741824) {
             return number_format($bytes / 1073741824, 2) . ' GB';
         } elseif ($bytes >= 1048576) {
@@ -190,5 +193,28 @@ class Media {
         } else {
             return $bytes . ' B';
         }
+    }
+
+    private function getUploadsDiskUsage() {
+        if (!is_dir(UPLOADS_PATH)) {
+            return 0;
+        }
+
+        $total = 0;
+        try {
+            $iterator = new RecursiveIteratorIterator(
+                new RecursiveDirectoryIterator(UPLOADS_PATH, RecursiveDirectoryIterator::SKIP_DOTS)
+            );
+
+            foreach ($iterator as $file) {
+                if ($file->isFile()) {
+                    $total += $file->getSize();
+                }
+            }
+        } catch (Throwable $e) {
+            return 0;
+        }
+
+        return $total;
     }
 }

@@ -62,6 +62,14 @@ $totalAll = $totalPublished + $totalDrafts + $totalScheduled;
 $totalPages = ceil($totalCount / $perPage);
 $stats = $media->getStats();
 $mediaItems = $allItems;
+$mediaStorageLimitBytes = 1024 * 1024 * 1024; // 1 GB
+$mediaStorageUsedBytes = (int)($stats['total_size'] ?? 0);
+$mediaStoragePercentRaw = $mediaStorageLimitBytes > 0 ? ($mediaStorageUsedBytes / $mediaStorageLimitBytes) * 100 : 0;
+$mediaStoragePercent = min(100, max(0, $mediaStoragePercentRaw));
+$mediaStoragePercentLabel = $mediaStoragePercentRaw < 0.1 && $mediaStorageUsedBytes > 0
+    ? '< 0,1'
+    : number_format($mediaStoragePercentRaw, 1, ',', ' ');
+$mediaStorageFillClass = $mediaStoragePercentRaw >= 90 ? 'danger' : ($mediaStoragePercentRaw >= 75 ? 'warn' : '');
 
 $gradients = [
     'linear-gradient(135deg,#c7d0f5,#dfd1ee)',
@@ -90,8 +98,11 @@ $userInitials = strtoupper(substr($_SESSION['username'] ?? 'U', 0, 2));
 .storage{display:grid;grid-template-columns:1fr auto;gap:18px;align-items:center;padding:14px 18px;background:var(--card);border:1px solid var(--border);border-radius:12px;margin-bottom:22px}
 .storage-bar{height:8px;border-radius:999px;background:var(--paper-2);overflow:hidden}
 .storage-fill{height:100%;background:linear-gradient(90deg,#667eea,#764ba2);border-radius:999px;transition:width .4s}
+.storage-fill.warn{background:linear-gradient(90deg,#f59e0b,#d97706)}
+.storage-fill.danger{background:linear-gradient(90deg,#ef4444,#b91c1c)}
 .storage-meta{font-size:11.5px;color:var(--muted);margin-top:8px}
 .storage-num strong{font-family:var(--mono);font-size:18px;color:var(--ink);font-weight:500}
+.storage-num{font-size:11.5px;color:var(--muted);text-align:right}
 .media-shell{display:grid;grid-template-columns:210px 1fr;gap:22px}
 .filters{display:flex;flex-direction:column;gap:14px;position:sticky;top:78px;align-self:start}
 .filt{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px}
@@ -180,10 +191,10 @@ $userInitials = strtoupper(substr($_SESSION['username'] ?? 'U', 0, 2));
 
       <div class="storage">
         <div>
-          <div class="storage-bar"><div class="storage-fill" style="width:42%"></div></div>
-          <div class="storage-meta"><?= $totalCount ?> souborů celkem</div>
+          <div class="storage-bar"><div class="storage-fill <?= $mediaStorageFillClass ?>" style="width:<?= $mediaStoragePercent ?>%"></div></div>
+          <div class="storage-meta"><?= $totalCount ?> souborů celkem · využito <?= $mediaStoragePercentLabel ?> % z 1 GB</div>
         </div>
-        <div class="storage-num"><strong><?= $stats['total_size_formatted'] ?></strong></div>
+        <div class="storage-num"><strong><?= $stats['total_size_formatted'] ?></strong><br>z 1 GB</div>
       </div>
 
       <div class="media-shell">
