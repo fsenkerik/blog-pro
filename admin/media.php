@@ -15,6 +15,33 @@ if (
     exit;
 }
 
+if (isset($_GET['download'])) {
+    requireAuth();
+
+    $media = new Media();
+    $item = $media->getById((int)$_GET['download']);
+    if (!$item) {
+        http_response_code(404);
+        exit('Soubor nebyl nalezen.');
+    }
+
+    $filePath = ROOT_PATH . ltrim((string)$item['path'], '/');
+    $realFile = realpath($filePath);
+    $realUploads = realpath(UPLOADS_PATH);
+    if (!$realFile || !$realUploads || strpos($realFile, $realUploads) !== 0 || !is_file($realFile)) {
+        http_response_code(404);
+        exit('Soubor na serveru nebyl nalezen.');
+    }
+
+    $downloadName = str_replace(["\\", '"', "\r", "\n"], '', basename((string)$item['original_name']));
+    header('Content-Type: ' . ($item['mime_type'] ?: 'application/octet-stream'));
+    header('Content-Length: ' . filesize($realFile));
+    header('Content-Disposition: attachment; filename="' . addslashes($downloadName) . '"; filename*=UTF-8\'\'' . rawurlencode($downloadName));
+    header('X-Content-Type-Options: nosniff');
+    readfile($realFile);
+    exit;
+}
+
 if (isset($_POST['ajax_action']) && $_POST['ajax_action'] === 'upload_media') {
     error_reporting(0);
     ini_set('display_errors', 0);
@@ -73,6 +100,10 @@ function mediaType(string $name): string {
     if (in_array($ext, ['mp4','mov','avi','webm','mkv'])) return 'video';
     if (in_array($ext, ['mp3','wav','ogg','m4a','flac'])) return 'audio';
     return 'other';
+}
+
+function mediaUrl(string $path): string {
+    return rtrim(BASE_URL, '/') . '/' . ltrim($path, '/');
 }
 
 $allItems = $media->getAll($search, $page, $perPage);
@@ -282,13 +313,13 @@ $userInitials = strtoupper(substr($_SESSION['username'] ?? 'U', 0, 2));
               ?>
               <div class="card-m" data-id="<?= $item['id'] ?>" data-type="<?= $mtype ?>">
                 <div class="thumb <?= $mtype==='video'?'thumb-vid':($mtype==='audio'?'thumb-aud':'') ?>" style="<?= $mtype==='image'?'background:'.$grad.';':'' ?>">
-                  <?php if ($mtype==='image'): ?><img src="<?= BASE_URL.$item['path'] ?>" alt="<?= e($item['original_name']) ?>" loading="lazy" onerror="this.style.display='none'">
+                  <?php if ($mtype==='image'): ?><img src="<?= e(mediaUrl($item['path'])) ?>" alt="<?= e($item['original_name']) ?>" loading="lazy" onerror="this.style.display='none'">
                   <?php elseif ($mtype==='video'): ?><svg width="36" height="36" viewBox="0 0 24 24" fill="currentColor"><polygon points="6 4 20 12 6 20 6 4"/></svg>
                   <?php elseif ($mtype==='audio'): ?><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
                   <?php else: ?><svg width="32" height="42" viewBox="0 0 24 30" fill="none" stroke="currentColor" stroke-width="1.5" style="color:var(--secondary)"><path d="M14 2H6a2 2 0 0 0-2 2v22a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><?php endif; ?>
                   <span class="check-box">✓</span>
                   <span class="badge-type <?= $isLight?'light':'' ?>"><?= $ext ?></span>
-                  <a class="download-btn" href="<?= e(BASE_URL.$item['path']) ?>" download="<?= e($item['original_name']) ?>" title="Stáhnout soubor" aria-label="Stáhnout <?= e($item['original_name']) ?>" onclick="event.stopPropagation()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></a>
+                  <a class="download-btn" href="?download=<?= (int)$item['id'] ?>" title="Stáhnout soubor" aria-label="Stáhnout <?= e($item['original_name']) ?>" onclick="event.stopPropagation()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></a>
                   <?php if ($dims): ?><span style="position:absolute;bottom:7px;left:7px;font-family:var(--mono);font-size:9.5px;color:rgba(255,255,255,.92);padding:2px 6px;border-radius:4px;background:rgba(0,0,0,.4)"><?= $dims ?></span><?php endif; ?>
                 </div>
                 <div class="meta-m"><div class="meta-m-name" title="<?= e($item['original_name']) ?>"><?= e($item['original_name']) ?></div><div class="meta-m-sub"><?= $sizeKb ?></div></div>
