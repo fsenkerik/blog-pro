@@ -174,6 +174,9 @@ $userInitials = strtoupper(substr($_SESSION['username'] ?? 'U', 0, 2));
 .check-box{position:absolute;top:7px;left:7px;width:19px;height:19px;border-radius:5px;background:rgba(255,255,255,.92);border:1.4px solid rgba(255,255,255,.95);display:flex;align-items:center;justify-content:center;font-size:11px;color:transparent;box-shadow:0 1px 3px rgba(0,0,0,.18);opacity:0;transition:opacity .12s,background .12s,color .12s;pointer-events:none}
 .card-m:hover .check-box,.card-m.sel .check-box{opacity:1}
 .card-m.sel .check-box{background:var(--accent);color:#fff;border-color:var(--accent)}
+.download-btn{position:absolute;top:32px;right:7px;width:28px;height:28px;border-radius:8px;background:rgba(236,253,245,.94);border:1px solid rgba(16,185,129,.22);color:#059669;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 8px rgba(5,150,105,.16);opacity:0;transition:opacity .12s,transform .12s,background .12s;text-decoration:none;z-index:2}
+.download-btn:hover{background:#d1fae5;transform:translateY(-1px);color:#047857}
+.card-m:hover .download-btn,.card-m.sel .download-btn{opacity:1}
 .badge-type{position:absolute;top:7px;right:7px;font-family:var(--mono);font-size:9.5px;letter-spacing:.04em;text-transform:uppercase;padding:2px 6px;border-radius:4px;background:rgba(0,0,0,.55);color:#fff}
 .badge-type.light{background:rgba(255,255,255,.85);color:var(--ink-2)}
 .meta-m{padding:9px 11px 11px;border-top:1px solid var(--line)}
@@ -256,7 +259,7 @@ $userInitials = strtoupper(substr($_SESSION['username'] ?? 'U', 0, 2));
             </div>
           </form>
 
-          <div class="selbar" id="selbar"><span class="selbar-count"><strong id="selCount">0</strong> vybráno</span><div class="selbar-actions"><button class="btn btn-ghost btn-sm" style="color:var(--danger)" onclick="openDeleteModal()"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>Smazat</button><button class="btn btn-ghost btn-sm" id="selClear">Zrušit výběr</button></div></div>
+          <div class="selbar" id="selbar"><span class="selbar-count"><strong id="selCount">0</strong> vybráno</span><div class="selbar-actions"><button class="btn btn-ghost btn-sm" id="selAll"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="m8 12 3 3 5-6"/></svg>Označit vše</button><button class="btn btn-ghost btn-sm" style="color:var(--danger)" onclick="openDeleteModal()"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>Smazat</button><button class="btn btn-ghost btn-sm" id="selClear">Zrušit výběr</button></div></div>
 
           <div class="upload-strip" id="uploadStrip">
             <div class="upload-ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>
@@ -285,6 +288,7 @@ $userInitials = strtoupper(substr($_SESSION['username'] ?? 'U', 0, 2));
                   <?php else: ?><svg width="32" height="42" viewBox="0 0 24 30" fill="none" stroke="currentColor" stroke-width="1.5" style="color:var(--secondary)"><path d="M14 2H6a2 2 0 0 0-2 2v22a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><?php endif; ?>
                   <span class="check-box">✓</span>
                   <span class="badge-type <?= $isLight?'light':'' ?>"><?= $ext ?></span>
+                  <a class="download-btn" href="<?= e(BASE_URL.$item['path']) ?>" download="<?= e($item['original_name']) ?>" title="Stáhnout soubor" aria-label="Stáhnout <?= e($item['original_name']) ?>" onclick="event.stopPropagation()"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg></a>
                   <?php if ($dims): ?><span style="position:absolute;bottom:7px;left:7px;font-family:var(--mono);font-size:9.5px;color:rgba(255,255,255,.92);padding:2px 6px;border-radius:4px;background:rgba(0,0,0,.4)"><?= $dims ?></span><?php endif; ?>
                 </div>
                 <div class="meta-m"><div class="meta-m-name" title="<?= e($item['original_name']) ?>"><?= e($item['original_name']) ?></div><div class="meta-m-sub"><?= $sizeKb ?></div></div>
@@ -321,8 +325,10 @@ const grid=document.getElementById('mediaGrid');
 const selbar=document.getElementById('selbar');
 const selCountEl=document.getElementById('selCount');
 function getSelected(){return grid?[...grid.querySelectorAll('.card-m.sel')]:[];}
+function getSelectable(){return grid?[...grid.querySelectorAll('.card-m')].filter(c=>c.style.display!=='none'):[];}
 function refreshSel(){const n=getSelected().length;if(selCountEl)selCountEl.textContent=n;if(selbar)selbar.classList.toggle('show',n>0);}
-if(grid){grid.addEventListener('click',e=>{const card=e.target.closest('.card-m');if(card){card.classList.toggle('sel');refreshSel();}});}
+if(grid){grid.addEventListener('click',e=>{if(e.target.closest('.download-btn'))return;const card=e.target.closest('.card-m');if(card){card.classList.toggle('sel');refreshSel();}});}
+document.getElementById('selAll')?.addEventListener('click',()=>{getSelectable().forEach(c=>c.classList.add('sel'));refreshSel();});
 document.getElementById('selClear')?.addEventListener('click',()=>{getSelected().forEach(c=>c.classList.remove('sel'));refreshSel();});
 const typeFilter='<?= e($typeFilter) ?>';
 if(typeFilter&&typeFilter!=='all'&&grid){grid.querySelectorAll('.card-m').forEach(c=>{if(c.dataset.type!==typeFilter)c.style.display='none';});}
