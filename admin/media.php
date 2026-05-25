@@ -142,6 +142,7 @@ $userInitials = strtoupper(substr($_SESSION['username'] ?? 'U', 0, 2));
 .tb-search input{width:100%;padding:7px 10px 7px 30px;border:1px solid var(--border);border-radius:7px;background:var(--paper);font-family:inherit;font-size:12.5px;color:var(--ink)}
 .tb-search input:focus{outline:none;border-color:var(--accent);background:var(--card)}
 .tb-search-ico{position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--muted)}
+.tb-search-btn{height:34px;white-space:nowrap}
 .tb-divider{width:1px;height:20px;background:var(--border)}
 .tb-meta{font-family:var(--mono);font-size:11px;color:var(--muted)}
 .selbar{display:none;align-items:center;gap:10px;padding:10px 14px;background:linear-gradient(135deg,rgba(102,126,234,.08),rgba(118,75,162,.08));border:1px solid var(--accent-soft);border-radius:12px;margin-bottom:14px}
@@ -239,7 +240,8 @@ $userInitials = strtoupper(substr($_SESSION['username'] ?? 'U', 0, 2));
           <form action="" method="GET" id="searchForm">
             <?php if ($typeFilter && $typeFilter!=='all'): ?><input type="hidden" name="type" value="<?= e($typeFilter) ?>"><?php endif; ?>
             <div class="toolbar">
-              <div class="tb-search"><svg class="tb-search-ico" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input type="text" name="search" placeholder="Hledat v médiích…" value="<?= e($search) ?>" onchange="this.form.submit()"></div>
+              <div class="tb-search"><svg class="tb-search-ico" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input type="text" name="search" placeholder="Hledat v médiích…" value="<?= e($search) ?>"></div>
+              <button type="submit" class="btn btn-primary btn-sm tb-search-btn"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>Hledat</button>
               <div class="tb-divider"></div>
               <span class="tb-meta"><?= $totalCount ?> souborů</span>
             </div>
