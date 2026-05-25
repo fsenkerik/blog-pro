@@ -73,6 +73,17 @@ function pageUrlPosts(string $status, ?int $cat, int $page): string {
     }
     return 'posts.php?' . http_build_query($query);
 }
+
+function postsImageUrl(?string $path): ?string {
+    $path = trim((string)$path);
+    if ($path === '') {
+        return null;
+    }
+    if (preg_match('#^https?://#i', $path)) {
+        return $path;
+    }
+    return rtrim(BASE_URL, '/') . '/' . ltrim($path, '/');
+}
 ?>
 <!DOCTYPE html>
 <html lang="cs">
@@ -108,6 +119,7 @@ table.posts tr:last-child td{border-bottom:none}
 table.posts input[type=checkbox]{accent-color:var(--ink)}
 .post-cell{display:flex;gap:12px;align-items:center;min-width:0}
 .post-cell-thumb{width:44px;height:44px;border-radius:7px;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:#fff;font-family:var(--serif);font-size:20px;font-style:italic}
+.post-cell-thumb img{width:100%;height:100%;object-fit:cover;border-radius:inherit;display:block}
 .post-cell-text{min-width:0}
 .post-cell-title{font-size:13.5px;font-weight:500;color:var(--ink);margin-bottom:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:380px}
 .post-cell-slug{font-family:var(--mono);font-size:11px;color:var(--muted)}
@@ -259,12 +271,21 @@ tr:hover .row-actions{opacity:1}
         </thead>
         <tbody id="postsBody">
           <?php foreach ($posts as $index => $item): ?>
-            <?php $gradient = $gradients[$index % count($gradients)]; ?>
+            <?php
+              $gradient = $gradients[$index % count($gradients)];
+              $thumbUrl = postsImageUrl($item['featured_image'] ?? null);
+            ?>
             <tr data-title="<?= htmlspecialchars(strtolower($item['title'])) ?>">
               <td><input type="checkbox" value="<?= $item['id'] ?>" onchange="updateBulk()"></td>
               <td>
                 <div class="post-cell">
-                  <div class="post-cell-thumb" style="background:<?= $gradient ?>"><?= htmlspecialchars(mb_strtoupper(mb_substr($item['title'], 0, 1))) ?></div>
+                  <div class="post-cell-thumb" style="background:<?= $gradient ?>">
+                    <?php if ($thumbUrl): ?>
+                      <img src="<?= htmlspecialchars($thumbUrl) ?>" alt="<?= htmlspecialchars($item['featured_image_alt'] ?? $item['title']) ?>" loading="lazy">
+                    <?php else: ?>
+                      <?= htmlspecialchars(mb_strtoupper(mb_substr($item['title'], 0, 1))) ?>
+                    <?php endif; ?>
+                  </div>
                   <div class="post-cell-text">
                     <div class="post-cell-title"><?= htmlspecialchars($item['title']) ?></div>
                     <div class="post-cell-slug">/<?= htmlspecialchars($item['slug'] ?? '') ?></div>
