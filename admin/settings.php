@@ -249,7 +249,7 @@ $totalMedia = $media->getCount('');
     <div class="crumb"><span>Workspace</span><span class="sep">/</span><span>Nástroje</span><span class="sep">/</span><span class="here">Nastavení</span></div>
     <div class="search">
       <svg class="search-ico" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-      <input type="text" placeholder="Hledat v nastavení…">
+      <input type="text" id="topSearch" placeholder="Hledat články..." autocomplete="off">
       <span class="kbd">⌘ K</span>
     </div>
     <div class="top-actions">

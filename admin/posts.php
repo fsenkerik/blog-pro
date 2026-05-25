@@ -327,6 +327,7 @@ tr:hover .row-actions{opacity:1}
   </div>
 </div>
 
+<script src="<?= ASSETS_URL ?>js/admin.js"></script>
 <script>
 function applyCategory() {
   const cat = document.getElementById('catSel').value;
