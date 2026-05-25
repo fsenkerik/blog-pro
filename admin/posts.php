@@ -56,9 +56,9 @@ $gradients = [
 
 function postStatusChip(string $status): string {
     return match ($status) {
-        'published' => '<span class="chip chip-ok"><span class="bullet"></span>Publikovano</span>',
+        'published' => '<span class="chip chip-ok"><span class="bullet"></span>Publikováno</span>',
         'draft' => '<span class="chip chip-warn"><span class="bullet"></span>Koncept</span>',
-        'scheduled' => '<span class="chip chip-violet"><span class="bullet"></span>Planovano</span>',
+        'scheduled' => '<span class="chip chip-violet"><span class="bullet"></span>Plánováno</span>',
         default => '<span class="chip chip-outline">' . htmlspecialchars($status) . '</span>',
     };
 }
@@ -79,7 +79,7 @@ function pageUrlPosts(string $status, ?int $cat, int $page): string {
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Prispevky | Blog Pro</title>
+<title>Příspěvky | Blog Pro</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600&family=Geist+Mono&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
@@ -148,28 +148,28 @@ tr:hover .row-actions{opacity:1}
     <nav class="nav">
       <a href="dashboard.php">
         <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>
-        Prehled
+        Přehled
       </a>
       <a href="posts.php" class="active">
         <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 4h12l4 4v12H4z"/><path d="M16 4v4h4"/><path d="M8 13h8M8 17h5"/></svg>
-        Prispevky <span class="count"><?= $totalAll ?></span>
+        Příspěvky <span class="count"><?= $totalAll ?></span>
       </a>
       <a href="media.php">
         <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 16V6a2 2 0 0 1 2-2h8l6 6v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/><circle cx="9" cy="11" r="1.5"/><path d="m4 18 5-5 5 5 3-3 3 3"/></svg>
-        Media <span class="count"><?= $totalMedia ?></span>
+        Média <span class="count"><?= $totalMedia ?></span>
       </a>
     </nav>
   </div>
   <div>
-    <div class="nav-label">Nastroje</div>
+    <div class="nav-label">Nástroje</div>
     <nav class="nav">
       <a href="settings.php">
         <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M12 2v2M12 20v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M2 12h2M20 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/></svg>
-        Nastaveni
+        Nastavení
       </a>
       <a href="logout.php">
         <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-        Odhlasit
+        Odhlásit
       </a>
     </nav>
   </div>
@@ -184,16 +184,16 @@ tr:hover .row-actions{opacity:1}
 
 <main class="main">
   <div class="topbar">
-    <div class="crumb"><span>Workspace</span><span class="sep">/</span><span class="here">Prispevky</span></div>
+    <div class="crumb"><span>Workspace</span><span class="sep">/</span><span class="here">Příspěvky</span></div>
     <div class="search">
       <svg class="search-ico" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-      <input type="text" id="topSearch" placeholder="Hledat v clancich..." autocomplete="off">
+      <input type="text" id="topSearch" placeholder="Hledat v článcích..." autocomplete="off">
       <span class="kbd">⌘ K</span>
     </div>
     <div class="top-actions">
       <a href="add_post.php" class="btn btn-primary">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
-        Novy clanek
+        Nový článek
       </a>
     </div>
   </div>
@@ -208,13 +208,13 @@ tr:hover .row-actions{opacity:1}
     <div class="page-head">
       <div>
         <div class="eyebrow"><span class="pulse"></span>Knihovna obsahu</div>
-        <h1 class="page-title"><em><?= $totalAll ?> prispevku</em> - vas archiv.</h1>
-        <p class="page-sub"><?= $totalPublished ?> publikovano, <?= $totalScheduled ?> planovano, <?= $totalDrafts ?> konceptu. Filtrujte a spravujte vsechen obsah.</p>
+        <h1 class="page-title"><em><?= $totalAll ?> příspěvků</em> - váš archiv.</h1>
+        <p class="page-sub"><?= $totalPublished ?> publikováno, <?= $totalScheduled ?> plánováno, <?= $totalDrafts ?> konceptů. Filtrujte a spravujte všechen obsah.</p>
       </div>
       <div class="seg">
-        <button onclick="location.href='posts.php?status=all'" <?= $status === 'all' ? 'class="active"' : '' ?>>Vse <?= $totalAll ?></button>
-        <button onclick="location.href='posts.php?status=published'" <?= $status === 'published' ? 'class="active"' : '' ?>>Publikovano <?= $totalPublished ?></button>
-        <button onclick="location.href='posts.php?status=scheduled'" <?= $status === 'scheduled' ? 'class="active"' : '' ?>>Planovane <?= $totalScheduled ?></button>
+        <button onclick="location.href='posts.php?status=all'" <?= $status === 'all' ? 'class="active"' : '' ?>>Vše <?= $totalAll ?></button>
+        <button onclick="location.href='posts.php?status=published'" <?= $status === 'published' ? 'class="active"' : '' ?>>Publikováno <?= $totalPublished ?></button>
+        <button onclick="location.href='posts.php?status=scheduled'" <?= $status === 'scheduled' ? 'class="active"' : '' ?>>Plánované <?= $totalScheduled ?></button>
         <button onclick="location.href='posts.php?status=draft'" <?= $status === 'draft' ? 'class="active"' : '' ?>>Koncepty <?= $totalDrafts ?></button>
       </div>
     </div>
@@ -223,10 +223,10 @@ tr:hover .row-actions{opacity:1}
       <div class="filters">
         <div class="search-mini">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-          <input type="text" id="tableFilter" placeholder="Filtr nazvu..." oninput="filterTable()">
+          <input type="text" id="tableFilter" placeholder="Filtr názvu..." oninput="filterTable()">
         </div>
         <select class="cat-sel" id="catSel" onchange="applyCategory()">
-          <option value="">Kategorie: vse</option>
+          <option value="">Kategorie: vše</option>
           <?php foreach ($categories as $cat): ?>
             <option value="<?= $cat['id'] ?>" <?= $catFilter == $cat['id'] ? 'selected' : '' ?>><?= htmlspecialchars($cat['name']) ?></option>
           <?php endforeach; ?>
@@ -236,12 +236,12 @@ tr:hover .row-actions{opacity:1}
       </div>
 
       <div class="bulk-bar" id="bulkBar">
-        <b><span id="bulkCount">0</span> vybrano</b>
-        <span style="color:rgba(243,239,226,.55)">· hromadne akce</span>
+        <b><span id="bulkCount">0</span> vybráno</b>
+        <span style="color:rgba(243,239,226,.55)">· hromadné akce</span>
         <div class="bulk-actions">
           <button class="bulk-btn" onclick="bulkPublish()">Publikovat</button>
           <button class="bulk-btn danger" onclick="bulkDelete()">Smazat</button>
-          <button class="bulk-btn" onclick="clearSel()">Zrusit</button>
+          <button class="bulk-btn" onclick="clearSel()">Zrušit</button>
         </div>
       </div>
 
@@ -249,7 +249,7 @@ tr:hover .row-actions{opacity:1}
         <thead>
           <tr>
             <th><input type="checkbox" id="checkAll" onchange="toggleAll(this)"></th>
-            <th style="width:40%">Nazev clanku</th>
+            <th style="width:40%">Název článku</th>
             <th>Stav</th>
             <th>Kategorie</th>
             <th>Autor</th>
@@ -290,20 +290,20 @@ tr:hover .row-actions{opacity:1}
             </tr>
           <?php endforeach; ?>
           <?php if (empty($posts)): ?>
-            <tr><td colspan="7" style="text-align:center;padding:40px;color:var(--muted)">Zatim zadne prispevky. <a href="add_post.php" style="color:var(--accent-2)">Vytvorte prvni</a></td></tr>
+            <tr><td colspan="7" style="text-align:center;padding:40px;color:var(--muted)">Zatím žádné příspěvky. <a href="add_post.php" style="color:var(--accent-2)">Vytvořte první</a></td></tr>
           <?php endif; ?>
         </tbody>
       </table>
 
       <?php if ($totalPages > 1): ?>
         <div class="pagination">
-          <div>Stranka <b style="color:var(--ink);font-family:var(--mono)"><?= $page ?></b> z <?= $totalPages ?></div>
+          <div>Stránka <b style="color:var(--ink);font-family:var(--mono)"><?= $page ?></b> z <?= $totalPages ?></div>
           <div class="page-btns">
-            <a href="<?= pageUrlPosts($status, $catFilter, 1) ?>" class="pg nav-btn <?= $page <= 1 ? 'disabled' : '' ?>">← Prvni</a>
+            <a href="<?= pageUrlPosts($status, $catFilter, 1) ?>" class="pg nav-btn <?= $page <= 1 ? 'disabled' : '' ?>">← První</a>
             <?php for ($pn = max(1, $page - 2); $pn <= min($totalPages, $page + 2); $pn++): ?>
               <a href="<?= pageUrlPosts($status, $catFilter, $pn) ?>" class="pg <?= $pn === $page ? 'on' : '' ?>"><?= $pn ?></a>
             <?php endfor; ?>
-            <a href="<?= pageUrlPosts($status, $catFilter, $totalPages) ?>" class="pg nav-btn <?= $page >= $totalPages ? 'disabled' : '' ?>">Posledni →</a>
+            <a href="<?= pageUrlPosts($status, $catFilter, $totalPages) ?>" class="pg nav-btn <?= $page >= $totalPages ? 'disabled' : '' ?>">Poslední →</a>
           </div>
         </div>
       <?php endif; ?>
@@ -317,12 +317,12 @@ tr:hover .row-actions{opacity:1}
     <div class="del-modal-icon">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4"/><path d="M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
     </div>
-    <div class="del-modal-title" id="delModalTitle">Smazat prispevek?</div>
+    <div class="del-modal-title" id="delModalTitle">Smazat příspěvek?</div>
     <div class="del-modal-text" id="delModalText"></div>
     <div class="del-modal-note" id="delModalNote"></div>
     <div class="del-modal-actions">
       <button class="btn btn-danger" id="delConfirmBtn" onclick="execDel()">Ano, smazat</button>
-      <button class="btn btn-ghost" onclick="closeDel()">Zrusit</button>
+      <button class="btn btn-ghost" onclick="closeDel()">Zrušit</button>
     </div>
   </div>
 </div>
@@ -371,7 +371,7 @@ function clearSel() {
 }
 
 function bulkPublish() {
-  alert('Hromadne publikovani zatim neni napojene.');
+  alert('Hromadné publikování zatím není napojené.');
 }
 
 function selectedPostIds() {
@@ -394,10 +394,10 @@ function bulkDelete() {
   delId = null;
   bulkDeleteIds = ids;
   const modal = document.getElementById('delModal');
-  document.getElementById('delModalTitle').textContent = 'Smazat vybrane prispevky?';
-  document.getElementById('delModalText').textContent = 'Chystate se trvale smazat ' + ids.length + ' vybranych prispevku. Tato akce je nevratna.';
-  document.getElementById('delModalNote').textContent = 'Vybrano: ' + ids.length + ' prispevku';
-  document.getElementById('delConfirmBtn').textContent = 'Ano, smazat vsechny';
+  document.getElementById('delModalTitle').textContent = 'Smazat vybrané příspěvky?';
+  document.getElementById('delModalText').textContent = 'Chystáte se trvale smazat ' + ids.length + ' vybraných příspěvků. Tato akce je nevratná.';
+  document.getElementById('delModalNote').textContent = 'Vybráno: ' + ids.length + ' příspěvků';
+  document.getElementById('delConfirmBtn').textContent = 'Ano, smazat všechny';
   modal.classList.add('bulk', 'on');
 }
 
@@ -408,8 +408,8 @@ function confirmDel(id, title) {
   bulkDeleteIds = [];
   const modal = document.getElementById('delModal');
   modal.classList.remove('bulk');
-  document.getElementById('delModalTitle').textContent = 'Smazat prispevek?';
-  document.getElementById('delModalText').textContent = 'Opravdu chcete smazat "' + title + '"? Tato akce je nevratna.';
+  document.getElementById('delModalTitle').textContent = 'Smazat příspěvek?';
+  document.getElementById('delModalText').textContent = 'Opravdu chcete smazat "' + title + '"? Tato akce je nevratná.';
   document.getElementById('delModalNote').textContent = '';
   document.getElementById('delConfirmBtn').textContent = 'Ano, smazat';
   modal.classList.add('on');
