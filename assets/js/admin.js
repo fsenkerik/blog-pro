@@ -93,9 +93,9 @@
 
   function statusLabel(status) {
     return {
-      published: 'Publikovano',
+      published: 'Publikováno',
       draft: 'Koncept',
-      scheduled: 'Planovano'
+      scheduled: 'Plánováno'
     }[status] || status || '';
   }
 
@@ -123,7 +123,7 @@
   function render(data, query) {
     results = data.results || [];
     if (!results.length) {
-      box.innerHTML = '<div style="padding:14px 16px;color:var(--muted);font-size:13px">Zadne vysledky pro "' + escapeHtml(query) + '".</div>';
+      box.innerHTML = '<div style="padding:14px 16px;color:var(--muted);font-size:13px">Žádné výsledky pro "' + escapeHtml(query) + '".</div>';
       box.style.display = 'block';
       activeIndex = -1;
       return;
@@ -156,7 +156,7 @@
       return;
     }
 
-    box.innerHTML = '<div style="padding:14px 16px;color:var(--muted);font-size:13px">Hledam...</div>';
+    box.innerHTML = '<div style="padding:14px 16px;color:var(--muted);font-size:13px">Hledám...</div>';
     box.style.display = 'block';
 
     try {
@@ -166,7 +166,7 @@
       const data = await response.json();
       render(data, query);
     } catch (error) {
-      box.innerHTML = '<div style="padding:14px 16px;color:var(--danger);font-size:13px">Vyhledavani se nepodarilo.</div>';
+      box.innerHTML = '<div style="padding:14px 16px;color:var(--danger);font-size:13px">Vyhledávání se nepodařilo.</div>';
       box.style.display = 'block';
     }
   }

@@ -57,27 +57,40 @@ $tClasses = ['t-0', 't-1', 't-2', 't-3', 't-4', 't-5'];
 function relTimeDashboard(string $date): string {
     $diff = time() - strtotime($date);
     if ($diff < 60) {
-        return 'prave ted';
+        return 'právě teď';
     }
     if ($diff < 3600) {
-        return 'pred ' . floor($diff / 60) . ' min';
+        return 'před ' . floor($diff / 60) . ' min';
     }
     if ($diff < 86400) {
-        return 'pred ' . floor($diff / 3600) . ' h';
+        return 'před ' . floor($diff / 3600) . ' h';
     }
     if ($diff < 172800) {
-        return 'vcera';
+        return 'včera';
     }
     return date('j. n. Y', strtotime($date));
 }
 
 function chipDashboard(string $status): string {
     return match ($status) {
-        'published' => '<span class="chip chip-ok"><span class="bullet"></span>Publikovano</span>',
+        'published' => '<span class="chip chip-ok"><span class="bullet"></span>Publikováno</span>',
         'draft' => '<span class="chip chip-warn"><span class="bullet"></span>Koncept</span>',
-        'scheduled' => '<span class="chip chip-violet"><span class="bullet"></span>Planovano</span>',
+        'scheduled' => '<span class="chip chip-violet"><span class="bullet"></span>Plánováno</span>',
         default => '<span class="chip chip-outline">' . htmlspecialchars($status) . '</span>',
     };
+}
+
+function czechDateDashboard(): string {
+    $days = [
+        1 => 'Pondělí',
+        2 => 'Úterý',
+        3 => 'Středa',
+        4 => 'Čtvrtek',
+        5 => 'Pátek',
+        6 => 'Sobota',
+        7 => 'Neděle',
+    ];
+    return $days[(int) date('N')] . ', ' . date('j. n. Y');
 }
 
 function dashboardImageUrl(?string $path): ?string {
@@ -92,8 +105,8 @@ function dashboardImageUrl(?string $path): ?string {
 }
 
 $hour = (int) date('H');
-$greeting = $hour < 12 ? 'Dobre rano' : ($hour < 18 ? 'Dobre odpoledne' : 'Dobry vecer');
-$username = $_SESSION['username'] ?? 'uzivateli';
+$greeting = $hour < 12 ? 'Dobré ráno' : ($hour < 18 ? 'Dobré odpoledne' : 'Dobrý večer');
+$username = $_SESSION['username'] ?? 'uživateli';
 $initials = strtoupper(substr($username, 0, 2));
 $catColors = ['#667eea', '#764ba2', '#10b981', '#f59e0b', '#ef4444', '#3b82f6', '#8b5cf6', '#06b6d4'];
 ?>
@@ -102,7 +115,7 @@ $catColors = ['#667eea', '#764ba2', '#10b981', '#f59e0b', '#ef4444', '#3b82f6', 
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Prehled | Blog Pro</title>
+<title>Přehled | Blog Pro</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
@@ -207,28 +220,28 @@ $catColors = ['#667eea', '#764ba2', '#10b981', '#f59e0b', '#ef4444', '#3b82f6', 
     <nav class="nav">
       <a href="dashboard.php" class="active">
         <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>
-        Prehled
+        Přehled
       </a>
       <a href="posts.php">
         <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 4h12l4 4v12H4z"/><path d="M16 4v4h4"/><path d="M8 13h8M8 17h5"/></svg>
-        Prispevky <span class="count"><?= $totalAll ?></span>
+        Příspěvky <span class="count"><?= $totalAll ?></span>
       </a>
       <a href="media.php">
         <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 16V6a2 2 0 0 1 2-2h8l6 6v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/><circle cx="9" cy="11" r="1.5"/><path d="m4 18 5-5 5 5 3-3 3 3"/></svg>
-        Media <span class="count"><?= $totalMedia ?></span>
+        Média <span class="count"><?= $totalMedia ?></span>
       </a>
     </nav>
   </div>
   <div>
-    <div class="nav-label">Nastroje</div>
+    <div class="nav-label">Nástroje</div>
     <nav class="nav">
       <a href="settings.php">
         <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M12 2v2M12 20v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M2 12h2M20 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/></svg>
-        Nastaveni
+        Nastavení
       </a>
       <a href="logout.php">
         <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-        Odhlasit
+        Odhlásit
       </a>
     </nav>
   </div>
@@ -243,16 +256,16 @@ $catColors = ['#667eea', '#764ba2', '#10b981', '#f59e0b', '#ef4444', '#3b82f6', 
 
 <main class="main">
   <div class="topbar">
-    <div class="crumb"><span>Workspace</span><span class="sep">/</span><span class="here">Prehled</span></div>
+    <div class="crumb"><span>Workspace</span><span class="sep">/</span><span class="here">Přehled</span></div>
     <div class="search">
       <svg class="search-ico" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-      <input type="text" id="topSearch" placeholder="Hledat clanky..." autocomplete="off">
+      <input type="text" id="topSearch" placeholder="Hledat články..." autocomplete="off">
       <span class="kbd">⌘ K</span>
     </div>
     <div class="top-actions">
       <a href="add_post.php" class="btn btn-primary">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>
-        Novy clanek
+        Nový článek
       </a>
     </div>
   </div>
@@ -266,32 +279,32 @@ $catColors = ['#667eea', '#764ba2', '#10b981', '#f59e0b', '#ef4444', '#3b82f6', 
 
     <div class="page-head">
       <div>
-        <div class="eyebrow"><span class="pulse"></span><?= date('l, j. n. Y') ?></div>
+        <div class="eyebrow"><span class="pulse"></span><?= czechDateDashboard() ?></div>
         <h1 class="page-title"><?= $greeting ?>, <em><?= htmlspecialchars($username) ?>.</em></h1>
-        <p class="page-sub">Celkem <b><?= $totalAll ?> prispevku</b> - <?= $totalPublished ?> publikovano, <?= $totalScheduled ?> planovano, <?= $totalDrafts ?> konceptu.</p>
+        <p class="page-sub">Celkem <b><?= $totalAll ?> příspěvků</b> - <?= $totalPublished ?> publikováno, <?= $totalScheduled ?> plánováno, <?= $totalDrafts ?> konceptů.</p>
       </div>
     </div>
 
     <div class="kpi-grid">
       <div class="kpi">
-        <div class="kpi-label"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h12l4 4v12H4z"/><path d="M16 4v4h4"/></svg>Publikovano</div>
+        <div class="kpi-label"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h12l4 4v12H4z"/><path d="M16 4v4h4"/></svg>Publikováno</div>
         <div class="kpi-value mono"><?= $totalPublished ?></div>
         <div class="kpi-note">z <?= $totalAll ?> celkem</div>
       </div>
       <div class="kpi">
-        <div class="kpi-label"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Planovano</div>
+        <div class="kpi-label"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Plánováno</div>
         <div class="kpi-value mono"><?= $totalScheduled ?></div>
-        <div class="kpi-note">ceka na automaticke vydani</div>
+        <div class="kpi-note">čeká na automatické vydání</div>
       </div>
       <div class="kpi">
         <div class="kpi-label"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M7 7h10M7 12h10M7 17h7"/><rect x="3" y="4" width="18" height="16" rx="2"/></svg>Kategorie</div>
         <div class="kpi-value mono"><?= count($categories) ?></div>
-        <div class="kpi-note">aktivnich</div>
+        <div class="kpi-note">aktivních</div>
       </div>
       <div class="kpi">
-        <div class="kpi-label"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 16V6a2 2 0 0 1 2-2h8l6 6v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/><circle cx="9" cy="11" r="1.5"/><path d="m4 18 5-5 5 5 3-3 3 3"/></svg>Media</div>
+        <div class="kpi-label"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 16V6a2 2 0 0 1 2-2h8l6 6v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/><circle cx="9" cy="11" r="1.5"/><path d="m4 18 5-5 5 5 3-3 3 3"/></svg>Média</div>
         <div class="kpi-value mono"><?= $totalMedia ?></div>
-        <div class="kpi-note">souboru</div>
+        <div class="kpi-note">souborů</div>
       </div>
     </div>
 
@@ -300,7 +313,7 @@ $catColors = ['#667eea', '#764ba2', '#10b981', '#f59e0b', '#ef4444', '#3b82f6', 
     <div class="hero">
       <div class="hero-body">
         <div>
-          <div class="hero-tag"><span class="bullet"></span>Nejnovejsi · Publikovano</div>
+          <div class="hero-tag"><span class="bullet"></span>Nejnovější · Publikováno</div>
           <h2 class="hero-title"><?= htmlspecialchars($hero['title']) ?></h2>
           <?php if (!empty($hero['excerpt'])): ?>
             <p class="hero-excerpt"><?= htmlspecialchars(mb_substr($hero['excerpt'], 0, 180)) ?></p>
@@ -333,19 +346,19 @@ $catColors = ['#667eea', '#764ba2', '#10b981', '#f59e0b', '#ef4444', '#3b82f6', 
     <div class="strip">
       <a href="add_post.php" class="strip-item">
         <div class="strip-ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4z"/></svg></div>
-        <div class="strip-body"><div class="strip-title">Novy prispevek</div><div class="strip-sub">Napsat clanek</div></div>
+        <div class="strip-body"><div class="strip-title">Nový příspěvek</div><div class="strip-sub">Napsat článek</div></div>
       </a>
       <a href="posts.php" class="strip-item">
         <div class="strip-ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 4h12l4 4v12H4z"/><path d="M16 4v4h4"/><path d="M8 13h8M8 17h5"/></svg></div>
-        <div class="strip-body"><div class="strip-title">Vsechny prispevky</div><div class="strip-sub"><?= $totalAll ?> celkem</div></div>
+        <div class="strip-body"><div class="strip-title">Všechny příspěvky</div><div class="strip-sub"><?= $totalAll ?> celkem</div></div>
       </a>
       <a href="posts.php?status=scheduled" class="strip-item">
         <div class="strip-ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></div>
-        <div class="strip-body"><div class="strip-title">Planovane</div><div class="strip-sub"><?= $totalScheduled ?> cekajicich</div></div>
+        <div class="strip-body"><div class="strip-title">Plánované</div><div class="strip-sub"><?= $totalScheduled ?> čekajících</div></div>
       </a>
       <a href="media.php" class="strip-item">
         <div class="strip-ico"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 16V6a2 2 0 0 1 2-2h8l6 6v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z"/><circle cx="9" cy="11" r="1.5"/><path d="m4 18 5-5 5 5 3-3 3 3"/></svg></div>
-        <div class="strip-body"><div class="strip-title">Galerie medii</div><div class="strip-sub"><?= $totalMedia ?> souboru</div></div>
+        <div class="strip-body"><div class="strip-title">Galerie médií</div><div class="strip-sub"><?= $totalMedia ?> souborů</div></div>
       </a>
     </div>
 
@@ -353,10 +366,10 @@ $catColors = ['#667eea', '#764ba2', '#10b981', '#f59e0b', '#ef4444', '#3b82f6', 
       <div class="panel">
         <div class="panel-head">
           <div class="panel-title-row">
-            <span class="panel-title">Posledni prispevky</span>
+            <span class="panel-title">Poslední příspěvky</span>
             <span class="tag mono"><?= $totalPublished ?> / <?= $totalAll ?></span>
           </div>
-          <a href="posts.php" class="panel-link">Zobrazit vse →</a>
+          <a href="posts.php" class="panel-link">Zobrazit vše →</a>
         </div>
         <div class="post-cards">
           <?php foreach ($recent as $i => $item): ?>
@@ -397,12 +410,12 @@ $catColors = ['#667eea', '#764ba2', '#10b981', '#f59e0b', '#ef4444', '#3b82f6', 
             </div>
           <?php endforeach; ?>
           <?php if (empty($recent)): ?>
-            <p style="padding:20px;text-align:center;color:var(--muted);font-size:13px">Zatim zadne prispevky. <a href="add_post.php" style="color:var(--accent-2)">Vytvorte prvni</a></p>
+            <p style="padding:20px;text-align:center;color:var(--muted);font-size:13px">Zatím žádné příspěvky. <a href="add_post.php" style="color:var(--accent-2)">Vytvořte první</a></p>
           <?php endif; ?>
         </div>
         <div class="table-foot">
-          <div>Zobrazuji <b style="color:var(--ink)"><?= count($recent) ?> z <?= $totalAll ?></b> prispevku</div>
-          <a href="posts.php" class="btn btn-ghost btn-sm">Vsechny prispevky →</a>
+          <div>Zobrazuji <b style="color:var(--ink)"><?= count($recent) ?> z <?= $totalAll ?></b> příspěvků</div>
+          <a href="posts.php" class="btn btn-ghost btn-sm">Všechny příspěvky →</a>
         </div>
       </div>
 
@@ -426,10 +439,10 @@ $catColors = ['#667eea', '#764ba2', '#10b981', '#f59e0b', '#ef4444', '#3b82f6', 
               </div>
               <div class="act-body">
                 <?php if ($isAutoPublished): ?>
-                  <b>System</b> automaticky publikoval
+                  <b>Systém</b> automaticky publikoval
                 <?php else: ?>
                   <b><?= htmlspecialchars($item['author_name'] ?? $username) ?></b>
-                  <?= $item['status'] === 'published' ? ' publikoval/a ' : ($item['status'] === 'scheduled' ? ' naplanoval/a ' : ' upravil/a ') ?>
+                  <?= $item['status'] === 'published' ? ' publikoval/a ' : ($item['status'] === 'scheduled' ? ' naplánoval/a ' : ' upravil/a ') ?>
                 <?php endif; ?>
                 <span style="color:var(--body);font-size:12px"><?= htmlspecialchars(mb_substr($item['title'], 0, 50)) ?></span>
               </div>
@@ -437,7 +450,7 @@ $catColors = ['#667eea', '#764ba2', '#10b981', '#f59e0b', '#ef4444', '#3b82f6', 
             </div>
           <?php endforeach; ?>
           <?php if (empty($recent)): ?>
-            <p style="padding:20px;text-align:center;color:var(--muted);font-size:13px">Zatim zadna aktivita.</p>
+            <p style="padding:20px;text-align:center;color:var(--muted);font-size:13px">Zatím žádná aktivita.</p>
           <?php endif; ?>
         </div>
       </div>
@@ -447,8 +460,8 @@ $catColors = ['#667eea', '#764ba2', '#10b981', '#f59e0b', '#ef4444', '#3b82f6', 
       <div class="panel">
         <div class="panel-head">
           <div class="panel-title-row">
-            <span class="panel-title">Rozdeleni podle kategorii</span>
-            <span class="tag mono"><?= $totalAll ?> clanku</span>
+            <span class="panel-title">Rozdělení podle kategorií</span>
+            <span class="tag mono"><?= $totalAll ?> článků</span>
           </div>
         </div>
         <div class="cats">
@@ -473,21 +486,21 @@ $catColors = ['#667eea', '#764ba2', '#10b981', '#f59e0b', '#ef4444', '#3b82f6', 
                 <div class="cat-item">
                   <div class="cat-swatch" style="background:<?= $catColors[$index % count($catColors)] ?>"></div>
                   <div class="cat-name"><?= htmlspecialchars($cat['name']) ?></div>
-                  <div class="cat-count"><?= $count ?> clanku</div>
+                  <div class="cat-count"><?= $count ?> článků</div>
                   <div class="cat-pct"><?= $pct ?>%</div>
                 </div>
               <?php endforeach; ?>
             </div>
           <?php else: ?>
-            <p style="padding:16px;color:var(--muted);font-size:13px">Zatim zadne kategorie.</p>
+            <p style="padding:16px;color:var(--muted);font-size:13px">Zatím žádné kategorie.</p>
           <?php endif; ?>
         </div>
       </div>
 
       <div class="panel">
         <div class="panel-head">
-          <span class="panel-title">Planovane prispevky</span>
-          <a href="posts.php?status=scheduled" class="panel-link">Vsechny →</a>
+          <span class="panel-title">Plánované příspěvky</span>
+          <a href="posts.php?status=scheduled" class="panel-link">Všechny →</a>
         </div>
         <div class="mini-list">
           <?php foreach ($scheduledPreview as $item): ?>
@@ -498,7 +511,7 @@ $catColors = ['#667eea', '#764ba2', '#10b981', '#f59e0b', '#ef4444', '#3b82f6', 
             </div>
           <?php endforeach; ?>
           <?php if (empty($scheduledPreview)): ?>
-            <p style="padding:8px;color:var(--muted);font-size:13px">Zadne planovane prispevky.</p>
+            <p style="padding:8px;color:var(--muted);font-size:13px">Žádné plánované příspěvky.</p>
           <?php endif; ?>
         </div>
       </div>
@@ -509,11 +522,11 @@ $catColors = ['#667eea', '#764ba2', '#10b981', '#f59e0b', '#ef4444', '#3b82f6', 
 
 <div class="del-modal" id="delModal">
   <div class="del-modal-box">
-    <div class="del-modal-title">Smazat prispevek?</div>
+    <div class="del-modal-title">Smazat příspěvek?</div>
     <div class="del-modal-text" id="delModalText"></div>
     <div class="del-modal-actions">
       <button class="btn btn-danger" onclick="execDel()">Ano, smazat</button>
-      <button class="btn btn-ghost" onclick="closeDel()">Zrusit</button>
+      <button class="btn btn-ghost" onclick="closeDel()">Zrušit</button>
     </div>
   </div>
 </div>
@@ -523,7 +536,7 @@ $catColors = ['#667eea', '#764ba2', '#10b981', '#f59e0b', '#ef4444', '#3b82f6', 
 let delId = null;
 function confirmDel(id, title) {
   delId = id;
-  document.getElementById('delModalText').textContent = 'Opravdu chcete smazat "' + title + '"? Tato akce je nevratna.';
+  document.getElementById('delModalText').textContent = 'Opravdu chcete smazat "' + title + '"? Tato akce je nevratná.';
   document.getElementById('delModal').classList.add('on');
 }
 function closeDel() {
