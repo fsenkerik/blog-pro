@@ -16,6 +16,18 @@ try {
 
 $success = '';
 $error   = '';
+$appSettings = new AppSettings();
+$autoBackupDefaults = [
+    'auto_db_backup_enabled' => '1',
+    'auto_db_backup_interval_hours' => '24',
+    'auto_db_backup_time' => '01:00',
+    'auto_db_backup_last_run' => '',
+    'auto_full_backup_enabled' => '1',
+    'auto_full_backup_interval_days' => '7',
+    'auto_full_backup_weekday' => '0',
+    'auto_full_backup_time' => '02:00',
+    'auto_full_backup_last_run' => '',
+];
 
 function canManageUsers(): bool {
     return in_array($_SESSION['user_role'] ?? '', ['admin', 'IT'], true);
@@ -45,6 +57,28 @@ function canManageTargetUserRole(string $targetRole): bool {
         return in_array($targetRole, ['editor', 'admin'], true);
     }
     return false;
+}
+
+function clampIntSetting($value, int $min, int $max, int $default): int {
+    $value = filter_var($value, FILTER_VALIDATE_INT);
+    if ($value === false) {
+        return $default;
+    }
+    return max($min, min($max, $value));
+}
+
+function normalizeBackupTime($value, string $default): string {
+    $value = trim((string)$value);
+    if (!preg_match('/^\d{2}:\d{2}$/', $value)) {
+        return $default;
+    }
+
+    [$hours, $minutes] = array_map('intval', explode(':', $value));
+    if ($hours < 0 || $hours > 23 || $minutes < 0 || $minutes > 59) {
+        return $default;
+    }
+
+    return sprintf('%02d:%02d', $hours, $minutes);
 }
 
 if (isPost()) {
@@ -85,6 +119,24 @@ if (isPost()) {
             $result = $backup->createFullBackup();
             if ($result['success']) $success = 'Kompletní záloha (DB + soubory) byla vytvořena!';
             else $error = 'Nepodařilo se vytvořit kompletní zálohu';
+
+        } elseif ($action === 'save_auto_backup_settings') {
+            if (!canViewSystemSettings()) {
+                $error = 'Nemáte oprávnění měnit automatické zálohy.';
+            } else {
+                $saved = $appSettings->setMany([
+                    'auto_db_backup_enabled' => post('auto_db_backup_enabled') === '1' ? '1' : '0',
+                    'auto_db_backup_interval_hours' => (string)clampIntSetting(post('auto_db_backup_interval_hours'), 1, 168, 24),
+                    'auto_db_backup_time' => normalizeBackupTime(post('auto_db_backup_time'), '01:00'),
+                    'auto_full_backup_enabled' => post('auto_full_backup_enabled') === '1' ? '1' : '0',
+                    'auto_full_backup_interval_days' => (string)clampIntSetting(post('auto_full_backup_interval_days'), 1, 30, 7),
+                    'auto_full_backup_weekday' => (string)clampIntSetting(post('auto_full_backup_weekday'), 0, 6, 0),
+                    'auto_full_backup_time' => normalizeBackupTime(post('auto_full_backup_time'), '02:00'),
+                ]);
+
+                if ($saved) $success = 'Automatické zálohy byly uloženy.';
+                else $error = 'Nepodařilo se uložit nastavení automatických záloh.';
+            }
 
         } elseif ($action === 'delete_backup') {
             $result = $backup->deleteBackup(intval(post('backup_id')));
@@ -165,6 +217,16 @@ $totalDrafts = $post->count('draft');
 $totalScheduled = $post->count('scheduled');
 $totalAll = $totalPublished + $totalDrafts + $totalScheduled;
 $totalMedia = $media->getCount('');
+$autoBackupSettings = $appSettings->getMany($autoBackupDefaults);
+$backupWeekdays = [
+    '0' => 'Neděle',
+    '1' => 'Pondělí',
+    '2' => 'Úterý',
+    '3' => 'Středa',
+    '4' => 'Čtvrtek',
+    '5' => 'Pátek',
+    '6' => 'Sobota',
+];
 ?>
 <!DOCTYPE html>
 <html lang="cs">
@@ -217,6 +279,13 @@ $totalMedia = $media->getCount('');
 .switch .slider::before{content:'';position:absolute;left:2px;top:2px;width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(31,41,55,.18);transition:transform .2s}
 .switch input:checked+.slider{background:linear-gradient(135deg,#667eea,#764ba2);border-color:transparent}
 .switch input:checked+.slider::before{transform:translateX(16px)}
+.auto-backup-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.auto-backup-card{border:1px solid var(--border);border-radius:12px;background:var(--card-2);padding:16px;display:flex;flex-direction:column;gap:14px}
+.auto-backup-card-head{display:flex;align-items:flex-start;justify-content:space-between;gap:16px}
+.auto-backup-title{font-size:13.5px;font-weight:600;color:var(--ink);margin-bottom:3px}
+.auto-backup-desc{font-size:12px;color:var(--muted);line-height:1.5}
+.auto-backup-fields{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.auto-backup-last{font-family:var(--mono);font-size:11px;color:var(--muted);padding-top:2px}
 .backups-list{display:flex;flex-direction:column}
 .backup-row{display:grid;grid-template-columns:32px 1fr auto auto;gap:14px;align-items:center;padding:14px 0;border-bottom:1px solid var(--line)}
 .backup-row:last-child{border-bottom:none}
@@ -239,7 +308,7 @@ $totalMedia = $media->getCount('');
 .users-table th{text-align:left;font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:500;padding:8px 0;border-bottom:1px solid var(--line)}
 .users-table td{padding:12px 0;border-bottom:1px solid var(--line);vertical-align:middle}
 .users-table tr:last-child td{border-bottom:none}
-@media(max-width:1100px){.settings-shell{grid-template-columns:1fr}.set-nav{position:static}.form-grid-2,.form-grid-3{grid-template-columns:1fr}.form-row{grid-template-columns:1fr;gap:8px}}
+@media(max-width:1100px){.settings-shell{grid-template-columns:1fr}.set-nav{position:static}.form-grid-2,.form-grid-3,.auto-backup-grid{grid-template-columns:1fr}.form-row{grid-template-columns:1fr;gap:8px}}
 </style>
 </head>
 <body>
@@ -359,6 +428,7 @@ $totalMedia = $media->getCount('');
           </div>
 
           <?php if (canViewSystemSettings()): ?>
+
           <div class="set-row">
             <div class="set-row-head">
               <div><div class="set-row-title">Konfigurace systému</div><div class="set-row-desc">Aktuální nastavení (jen pro čtení).</div></div>
@@ -525,6 +595,87 @@ $totalMedia = $media->getCount('');
             </div>
             <div class="set-section-sub">Automatické zálohy databáze a souborů.</div>
           </div>
+
+          <?php if (canViewSystemSettings()): ?>
+          <div class="set-row">
+            <div class="set-row-head">
+              <div>
+                <div class="set-row-title">Automatické zálohy</div>
+                <div class="set-row-desc">Cron spouští kontrolu a systém podle těchto pravidel vytvoří jen zálohy, které jsou zrovna na řadě.</div>
+              </div>
+            </div>
+            <form method="POST" class="set-row-body">
+              <input type="hidden" name="action" value="save_auto_backup_settings">
+              <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?>">
+              <div class="auto-backup-grid">
+                <div class="auto-backup-card">
+                  <div class="auto-backup-card-head">
+                    <div>
+                      <div class="auto-backup-title">Záloha databáze</div>
+                      <div class="auto-backup-desc">Uloží články, uživatele, kategorie a další data v databázi.</div>
+                    </div>
+                    <label class="switch" aria-label="Zapnout automatickou zálohu databáze">
+                      <input type="checkbox" name="auto_db_backup_enabled" value="1" <?= $autoBackupSettings['auto_db_backup_enabled'] === '1' ? 'checked' : '' ?>>
+                      <span class="slider"></span>
+                    </label>
+                  </div>
+                  <div class="auto-backup-fields">
+                    <div>
+                      <label class="form-label">Interval</label>
+                      <div style="display:flex;align-items:center;gap:8px">
+                        <input type="number" name="auto_db_backup_interval_hours" class="form-input" min="1" max="168" value="<?= e($autoBackupSettings['auto_db_backup_interval_hours']) ?>">
+                        <span class="mono" style="font-size:12px;color:var(--muted)">hod.</span>
+                      </div>
+                    </div>
+                    <div>
+                      <label class="form-label">Čas</label>
+                      <input type="time" name="auto_db_backup_time" class="form-input" value="<?= e($autoBackupSettings['auto_db_backup_time']) ?>">
+                    </div>
+                  </div>
+                  <div class="auto-backup-last">Naposledy: <?= $autoBackupSettings['auto_db_backup_last_run'] !== '' ? e($autoBackupSettings['auto_db_backup_last_run']) : 'zatím nikdy' ?></div>
+                </div>
+
+                <div class="auto-backup-card">
+                  <div class="auto-backup-card-head">
+                    <div>
+                      <div class="auto-backup-title">Kompletní záloha</div>
+                      <div class="auto-backup-desc">Vytvoří ZIP s databází i složkou uploads.</div>
+                    </div>
+                    <label class="switch" aria-label="Zapnout automatickou kompletní zálohu">
+                      <input type="checkbox" name="auto_full_backup_enabled" value="1" <?= $autoBackupSettings['auto_full_backup_enabled'] === '1' ? 'checked' : '' ?>>
+                      <span class="slider"></span>
+                    </label>
+                  </div>
+                  <div class="auto-backup-fields">
+                    <div>
+                      <label class="form-label">Každých</label>
+                      <div style="display:flex;align-items:center;gap:8px">
+                        <input type="number" name="auto_full_backup_interval_days" class="form-input" min="1" max="30" value="<?= e($autoBackupSettings['auto_full_backup_interval_days']) ?>">
+                        <span class="mono" style="font-size:12px;color:var(--muted)">dnů</span>
+                      </div>
+                    </div>
+                    <div>
+                      <label class="form-label">Den</label>
+                      <select name="auto_full_backup_weekday" class="form-select">
+                        <?php foreach ($backupWeekdays as $dayValue => $dayLabel): ?>
+                          <option value="<?= $dayValue ?>" <?= $autoBackupSettings['auto_full_backup_weekday'] === $dayValue ? 'selected' : '' ?>><?= e($dayLabel) ?></option>
+                        <?php endforeach; ?>
+                      </select>
+                    </div>
+                    <div>
+                      <label class="form-label">Čas</label>
+                      <input type="time" name="auto_full_backup_time" class="form-input" value="<?= e($autoBackupSettings['auto_full_backup_time']) ?>">
+                    </div>
+                  </div>
+                  <div class="auto-backup-last">Naposledy: <?= $autoBackupSettings['auto_full_backup_last_run'] !== '' ? e($autoBackupSettings['auto_full_backup_last_run']) : 'zatím nikdy' ?></div>
+                </div>
+              </div>
+              <div style="display:flex;justify-content:flex-end;margin-top:14px">
+                <button type="submit" class="btn btn-primary btn-sm">Uložit automatické zálohy</button>
+              </div>
+            </form>
+          </div>
+          <?php endif; ?>
 
           <div class="set-row">
             <div class="set-row-head">

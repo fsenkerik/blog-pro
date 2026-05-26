@@ -246,6 +246,41 @@ if (!defined('SKIP_DB_MIGRATIONS') && !isset($_SESSION['db_migrated_v7'])) {
         error_log(date('Y-m-d H:i:s') . " - Migration v7: " . $e->getMessage() . "\n", 3, ROOT_PATH . 'error.log');
     }
 }
+
+if (!defined('SKIP_DB_MIGRATIONS') && !isset($_SESSION['db_migrated_v8'])) {
+    try {
+        $db->query("CREATE TABLE IF NOT EXISTS `app_settings` (
+            `setting_key` varchar(100) NOT NULL,
+            `setting_value` varchar(500) DEFAULT NULL,
+            `updated_at` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            PRIMARY KEY (`setting_key`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+        $db->execute();
+
+        $defaultSettings = [
+            'auto_db_backup_enabled' => '1',
+            'auto_db_backup_interval_hours' => '24',
+            'auto_db_backup_time' => '01:00',
+            'auto_db_backup_last_run' => '',
+            'auto_full_backup_enabled' => '1',
+            'auto_full_backup_interval_days' => '7',
+            'auto_full_backup_weekday' => '0',
+            'auto_full_backup_time' => '02:00',
+            'auto_full_backup_last_run' => '',
+        ];
+
+        foreach ($defaultSettings as $key => $value) {
+            $db->query("INSERT IGNORE INTO app_settings (setting_key, setting_value) VALUES (:key, :value)");
+            $db->bind(':key', $key);
+            $db->bind(':value', $value);
+            $db->execute();
+        }
+
+        $_SESSION['db_migrated_v8'] = true;
+    } catch (\Throwable $e) {
+        error_log(date('Y-m-d H:i:s') . " - Migration v8: " . $e->getMessage() . "\n", 3, ROOT_PATH . 'error.log');
+    }
+}
 require_once INCLUDES_PATH . 'helpers.php';
 
 require_once INCLUDES_PATH . 'sessionTracker.class.php';
