@@ -206,6 +206,7 @@ $catColors = ['#667eea', '#764ba2', '#10b981', '#f59e0b', '#ef4444', '#3b82f6', 
 .del-modal-title{font-size:18px;font-weight:600;margin-bottom:8px;color:var(--ink)}
 .del-modal-text{font-size:13.5px;color:var(--body);margin-bottom:24px}
 .del-modal-actions{display:flex;gap:10px;justify-content:center}
+.del-modal.info .btn-danger{background:linear-gradient(135deg,#667eea,#764ba2);border-color:transparent;color:#fff}
 @media(max-width:1100px){.grid-2{grid-template-columns:1fr}.grid-split{grid-template-columns:1fr}.kpi-grid{grid-template-columns:repeat(2,1fr)}.kpi:nth-child(2){border-right:none}.kpi:nth-child(1),.kpi:nth-child(2){border-bottom:1px solid var(--border)}.strip{grid-template-columns:repeat(2,1fr)}.hero{grid-template-columns:1fr}.hero-art{min-height:160px}}
 </style>
 </head>
@@ -539,13 +540,29 @@ $catColors = ['#667eea', '#764ba2', '#10b981', '#f59e0b', '#ef4444', '#3b82f6', 
 <script src="<?= ASSETS_URL ?>js/admin.js"></script>
 <script>
 let delId = null;
+function showDashboardNotice(title, message) {
+  const modal = document.getElementById('delModal');
+  modal.classList.add('info', 'on');
+  modal.querySelector('.del-modal-title').textContent = title;
+  document.getElementById('delModalText').textContent = message;
+  const confirmBtn = modal.querySelector('.btn-danger');
+  confirmBtn.textContent = 'Rozumím';
+  confirmBtn.onclick = closeDel;
+}
 function confirmDel(id, title) {
   delId = id;
+  const modal = document.getElementById('delModal');
+  modal.classList.remove('info');
+  modal.querySelector('.del-modal-title').textContent = 'Smazat příspěvek?';
   document.getElementById('delModalText').textContent = 'Opravdu chcete smazat "' + title + '"? Tato akce je nevratná.';
-  document.getElementById('delModal').classList.add('on');
+  modal.querySelector('.btn-danger').textContent = 'Ano, smazat';
+  modal.querySelector('.btn-danger').onclick = execDel;
+  modal.classList.add('on');
 }
 function closeDel() {
-  document.getElementById('delModal').classList.remove('on');
+  const modal = document.getElementById('delModal');
+  modal.classList.remove('on', 'info');
+  modal.querySelector('.btn-danger').onclick = execDel;
   delId = null;
 }
 function execDel() {
@@ -558,6 +575,12 @@ document.getElementById('delModal').addEventListener('click', e => {
     closeDel();
   }
 });
+
+<?php if ($flash && ($flash['type'] ?? '') === 'error'): ?>
+document.addEventListener('DOMContentLoaded', () => {
+  showDashboardNotice('Akci nelze provést', <?= json_encode($flash['message'], JSON_UNESCAPED_UNICODE) ?>);
+});
+<?php endif; ?>
 
 </script>
 </body>

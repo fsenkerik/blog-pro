@@ -24,7 +24,7 @@ if (!$postData) {
 }
 
 if (!$auth->canDelete($postData['author_id'])) {
-    setFlash('error', 'Nemáte oprávnění smazat tento příspěvek');
+    setFlash('error', 'Role Editor nemůže mazat příspěvky. Mazání je vyhrazené pro role Admin a IT.');
     redirect(ADMIN_URL . 'posts.php');
 }
 

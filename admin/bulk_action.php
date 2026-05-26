@@ -10,6 +10,7 @@ $action = $_GET['action'] ?? '';
 $ids = array_filter(array_map('intval', explode(',', $_GET['ids'] ?? '')));
 $return = $_GET['return'] ?? '';
 $success = 0;
+$denied = 0;
 
 foreach ($ids as $id) {
     if ($id <= 0) {
@@ -23,6 +24,7 @@ foreach ($ids as $id) {
 
     if ($action === 'delete') {
         if (!$auth->canDelete($existing['author_id'])) {
+            $denied++;
             continue;
         }
         $result = $post->delete($id);
@@ -34,6 +36,7 @@ foreach ($ids as $id) {
 
     if ($action === 'publish' || $action === 'draft') {
         if (!$auth->canEdit($existing['author_id'])) {
+            $denied++;
             continue;
         }
         $updateData = [
@@ -60,8 +63,17 @@ foreach ($ids as $id) {
 }
 
 $message = $action === 'delete'
-    ? "$success prispevku smazano"
-    : "$success prispevku aktualizovano";
+    ? "$success příspěvků smazáno"
+    : "$success příspěvků aktualizováno";
 
-setFlash($success > 0 ? 'success' : 'error', $success > 0 ? $message : 'Nebyl vybran zadny platny prispevek');
+if ($success > 0) {
+    setFlash('success', $message);
+} elseif ($denied > 0) {
+    $message = $action === 'delete'
+        ? 'Role Editor nemůže mazat příspěvky. Mazání je vyhrazené pro role Admin a IT.'
+        : 'Nemáte oprávnění upravit vybrané příspěvky.';
+    setFlash('error', $message);
+} else {
+    setFlash('error', 'Nebyl vybrán žádný platný příspěvek.');
+}
 redirect(ADMIN_URL . 'posts.php' . $return);

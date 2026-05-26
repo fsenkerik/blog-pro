@@ -45,6 +45,7 @@ if ($status === 'draft') {
 
 $totalPages = max(1, (int) ceil($totalCount / $perPage));
 $flash = getFlash();
+$canDeletePosts = in_array($_SESSION['user_role'] ?? '', ['admin', 'IT'], true);
 $gradients = [
     'linear-gradient(135deg,#a5b4fc,#667eea)',
     'linear-gradient(135deg,#c4b5fd,#764ba2)',
@@ -146,6 +147,8 @@ tr:hover .row-actions{opacity:1}
 .del-modal-note{display:none;margin:0 0 22px;padding:10px 12px;border-radius:8px;background:var(--paper-2);border:1px solid var(--border);font-family:var(--mono);font-size:11.5px;color:var(--muted)}
 .del-modal.bulk .del-modal-note{display:block}
 .del-modal-actions{display:flex;gap:10px;justify-content:center}
+.del-modal.info .del-modal-icon{background:var(--accent-soft);color:var(--accent-2)}
+.del-modal.info .btn-danger{background:linear-gradient(135deg,#667eea,#764ba2);border-color:transparent;color:#fff}
 </style>
 </head>
 <body>
@@ -252,7 +255,7 @@ tr:hover .row-actions{opacity:1}
         <span style="color:rgba(243,239,226,.55)">· hromadné akce</span>
         <div class="bulk-actions">
           <button class="bulk-btn" onclick="bulkPublish()">Publikovat</button>
-          <button class="bulk-btn danger" onclick="bulkDelete()">Smazat</button>
+          <?php if ($canDeletePosts): ?><button class="bulk-btn danger" onclick="bulkDelete()">Smazat</button><?php endif; ?>
           <button class="bulk-btn" onclick="clearSel()">Zrušit</button>
         </div>
       </div>
@@ -298,9 +301,11 @@ tr:hover .row-actions{opacity:1}
               <td style="font-family:var(--mono);font-size:12px;color:var(--body);white-space:nowrap"><?= date('j.n.Y', strtotime($item['published_at'] ?? $item['scheduled_at'] ?? $item['created_at'])) ?></td>
               <td>
                 <div class="row-actions">
-                  <a href="edit_post.php?id=<?= $item['id'] ?>" class="row-ico" title="Upravit">
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
-                  </a>
+                  <?php if ($auth->canEdit($item['author_id'])): ?>
+                    <a href="edit_post.php?id=<?= $item['id'] ?>" class="row-ico" title="Upravit">
+                      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
+                    </a>
+                  <?php endif; ?>
                   <?php if ($auth->canDelete($item['author_id'])): ?>
                     <button class="row-ico danger" title="Smazat" onclick="confirmDel(<?= $item['id'] ?>, '<?= addslashes(htmlspecialchars($item['title'])) ?>')">
                       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
@@ -350,6 +355,26 @@ tr:hover .row-actions{opacity:1}
 
 <script src="<?= ASSETS_URL ?>js/admin.js"></script>
 <script>
+const canDeletePosts = <?= $canDeletePosts ? 'true' : 'false' ?>;
+
+function showNoticeModal(title, message) {
+  const modal = document.getElementById('delModal');
+  modal.classList.remove('bulk');
+  modal.classList.add('info', 'on');
+  document.getElementById('delModalTitle').textContent = title;
+  document.getElementById('delModalText').textContent = message;
+  document.getElementById('delModalNote').textContent = '';
+  const confirmBtn = document.getElementById('delConfirmBtn');
+  confirmBtn.textContent = 'Rozumím';
+  confirmBtn.onclick = closeDel;
+}
+
+<?php if ($flash && ($flash['type'] ?? '') === 'error'): ?>
+document.addEventListener('DOMContentLoaded', () => {
+  showNoticeModal('Akci nelze provést', <?= json_encode($flash['message'], JSON_UNESCAPED_UNICODE) ?>);
+});
+<?php endif; ?>
+
 function applyCategory() {
   const cat = document.getElementById('catSel').value;
   const params = new URLSearchParams(window.location.search);
@@ -412,6 +437,10 @@ function currentReturnQuery() {
 function bulkDelete() {
   const ids = selectedPostIds();
   if (!ids.length) return;
+  if (!canDeletePosts) {
+    showNoticeModal('Akci nelze provést', 'Role Editor může upravovat jen své příspěvky, ale mazání příspěvků je vyhrazené pro role Admin a IT.');
+    return;
+  }
   delId = null;
   bulkDeleteIds = ids;
   const modal = document.getElementById('delModal');
@@ -419,6 +448,7 @@ function bulkDelete() {
   document.getElementById('delModalText').textContent = 'Chystáte se trvale smazat ' + ids.length + ' vybraných příspěvků. Tato akce je nevratná.';
   document.getElementById('delModalNote').textContent = 'Vybráno: ' + ids.length + ' příspěvků';
   document.getElementById('delConfirmBtn').textContent = 'Ano, smazat všechny';
+  document.getElementById('delConfirmBtn').onclick = execDel;
   modal.classList.add('bulk', 'on');
 }
 
@@ -429,14 +459,17 @@ function confirmDel(id, title) {
   bulkDeleteIds = [];
   const modal = document.getElementById('delModal');
   modal.classList.remove('bulk');
+  modal.classList.remove('info');
   document.getElementById('delModalTitle').textContent = 'Smazat příspěvek?';
   document.getElementById('delModalText').textContent = 'Opravdu chcete smazat "' + title + '"? Tato akce je nevratná.';
   document.getElementById('delModalNote').textContent = '';
   document.getElementById('delConfirmBtn').textContent = 'Ano, smazat';
+  document.getElementById('delConfirmBtn').onclick = execDel;
   modal.classList.add('on');
 }
 function closeDel() {
-  document.getElementById('delModal').classList.remove('on', 'bulk');
+  document.getElementById('delModal').classList.remove('on', 'bulk', 'info');
+  document.getElementById('delConfirmBtn').onclick = execDel;
   delId = null;
   bulkDeleteIds = [];
 }

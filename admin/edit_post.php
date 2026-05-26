@@ -28,7 +28,7 @@ if (!$id) redirect(ADMIN_URL . 'dashboard.php');
 
 $postData = $post->getById($id);
 if (!$postData) { setFlash('error','Příspěvek nenalezen'); redirect(ADMIN_URL.'dashboard.php'); }
-if (!$auth->canEdit($postData['author_id'])) { setFlash('error','Nemáte oprávnění'); redirect(ADMIN_URL.'dashboard.php'); }
+if (!$auth->canEdit($postData['author_id'])) { setFlash('error','Role Editor může upravovat jen své vlastní příspěvky.'); redirect(ADMIN_URL.'dashboard.php'); }
 
 $categories = $category->getAll();
 $totalPublished = $post->count('published');
