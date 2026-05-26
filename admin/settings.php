@@ -17,6 +17,32 @@ try {
 $success = '';
 $error   = '';
 
+function canManageUsers(): bool {
+    return in_array($_SESSION['user_role'] ?? '', ['admin', 'IT'], true);
+}
+
+function canCreateUserRole(string $role): bool {
+    $currentRole = $_SESSION['user_role'] ?? '';
+    if ($currentRole === 'IT') {
+        return in_array($role, ['editor', 'admin', 'IT'], true);
+    }
+    if ($currentRole === 'admin') {
+        return in_array($role, ['editor', 'admin'], true);
+    }
+    return false;
+}
+
+function canManageTargetUserRole(string $targetRole): bool {
+    $currentRole = $_SESSION['user_role'] ?? '';
+    if ($currentRole === 'IT') {
+        return true;
+    }
+    if ($currentRole === 'admin') {
+        return in_array($targetRole, ['editor', 'admin'], true);
+    }
+    return false;
+}
+
 if (isPost()) {
     $action = post('action');
     if (in_array($action, ['delete_user','change_user_password'])) {
@@ -25,8 +51,8 @@ if (isPost()) {
         $db_chk->query('SELECT role FROM users WHERE id = :id');
         $db_chk->bind(':id', $tid);
         $tu = $db_chk->fetch();
-        if ($tu && $tu['role'] === 'IT' && $_SESSION['user_role'] !== 'IT') {
-            setFlash('error', 'Nemáte oprávnění upravovat IT uživatele');
+        if (!$tu || !canManageUsers() || !canManageTargetUserRole($tu['role'])) {
+            setFlash('error', 'Nemáte oprávnění upravovat tohoto uživatele');
             redirect(ADMIN_URL . 'settings.php');
         }
     }
@@ -79,8 +105,8 @@ if (isPost()) {
             $uname = trim(post('username'));
             $upass = post('password');
             $urole = post('role', 'editor');
-            if ($_SESSION['user_role'] === 'IT' && $urole !== 'IT') {
-                $error = 'IT role může přidávat pouze IT uživatele.';
+            if (!canManageUsers() || !canCreateUserRole($urole)) {
+                $error = 'Nemáte oprávnění vytvořit uživatele s touto rolí.';
             } else {
                 $db_u = new Database();
                 $db_u->query('SELECT id FROM users WHERE username = :u'); $db_u->bind(':u', $uname);
@@ -292,10 +318,12 @@ $totalMedia = $media->getCount('');
           <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M12 2v2M12 20v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M2 12h2M20 12h2"/></svg>
           Obecné <span class="meta">01</span>
         </a>
-        <a href="#autori" class="">
-          <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>
-          Autoři &amp; role <span class="meta"><?= count($users) ?></span>
-        </a>
+        <?php if (canManageUsers()): ?>
+          <a href="#autori" class="">
+            <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4.4 3.6-8 8-8s8 3.6 8 8"/></svg>
+            Autoři &amp; role <span class="meta"><?= count($users) ?></span>
+          </a>
+        <?php endif; ?>
         <a href="#seo" class="">
           <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
           SEO &amp; sitemap <span class="meta">05</span>
@@ -378,6 +406,7 @@ $totalMedia = $media->getCount('');
           </div>
         </section>
 
+        <?php if (canManageUsers()): ?>
         <!-- 02 · AUTOŘI & ROLE -->
         <section id="autori" style="display:flex;flex-direction:column;gap:20px;margin-top:36px">
           <div class="set-section-head">
@@ -408,7 +437,7 @@ $totalMedia = $media->getCount('');
                     <td><?= htmlspecialchars($u['role']) ?></td>
                     <td style="font-family:var(--mono);font-size:12px;color:var(--muted)"><?= date('j.n.Y', strtotime($u['created_at'])) ?></td>
                     <td style="text-align:right">
-                      <?php if ($u['id'] != $_SESSION['user_id']): ?>
+                      <?php if ($u['id'] != $_SESSION['user_id'] && canManageTargetUserRole($u['role'])): ?>
                       <form method="POST" style="display:inline" onsubmit="return confirm('Smazat uživatele <?= addslashes(htmlspecialchars($u['username'])) ?>?')">
                         <input type="hidden" name="action" value="delete_user">
                         <input type="hidden" name="user_id" value="<?= $u['id'] ?>">
@@ -437,9 +466,9 @@ $totalMedia = $media->getCount('');
                 <div>
                   <label class="form-label">Role</label>
                   <select name="role" class="form-select">
-                    <option value="editor">Editor</option>
-                    <option value="admin">Admin</option>
-                    <?php if ($_SESSION['user_role'] === 'IT'): ?><option value="IT">IT</option><?php endif; ?>
+                    <?php if (canCreateUserRole('editor')): ?><option value="editor">Editor</option><?php endif; ?>
+                    <?php if (canCreateUserRole('admin')): ?><option value="admin">Admin</option><?php endif; ?>
+                    <?php if (canCreateUserRole('IT')): ?><option value="IT">IT</option><?php endif; ?>
                   </select>
                 </div>
               </div>
@@ -452,6 +481,7 @@ $totalMedia = $media->getCount('');
             </form>
           </div>
         </section>
+        <?php endif; ?>
 
         <!-- 03 · SEO -->
         <section id="seo" style="display:flex;flex-direction:column;gap:20px;margin-top:36px">

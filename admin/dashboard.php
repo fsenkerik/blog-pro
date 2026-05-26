@@ -6,6 +6,7 @@ requireAuth();
 $post     = new Post();
 $category = new Category();
 $media    = new Media();
+$auth     = new Auth();
 
 $totalPublished = $post->count('published');
 $totalDrafts    = $post->count('draft');
@@ -400,12 +401,16 @@ $catColors = ['#667eea', '#764ba2', '#10b981', '#f59e0b', '#ef4444', '#3b82f6', 
                 </div>
               </div>
               <div class="pc-actions-row">
-                <a href="edit_post.php?id=<?= $item['id'] ?>" class="pc-ico" title="Upravit">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
-                </a>
-                <button class="pc-ico danger" title="Smazat" onclick="confirmDel(<?= $item['id'] ?>, '<?= addslashes(htmlspecialchars($item['title'])) ?>')">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/></svg>
-                </button>
+                <?php if ($auth->canEdit($item['author_id'])): ?>
+                  <a href="edit_post.php?id=<?= $item['id'] ?>" class="pc-ico" title="Upravit">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
+                  </a>
+                <?php endif; ?>
+                <?php if ($auth->canDelete($item['author_id'])): ?>
+                  <button class="pc-ico danger" title="Smazat" onclick="confirmDel(<?= $item['id'] ?>, '<?= addslashes(htmlspecialchars($item['title'])) ?>')">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"/></svg>
+                  </button>
+                <?php endif; ?>
               </div>
             </div>
           <?php endforeach; ?>

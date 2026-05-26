@@ -81,14 +81,8 @@ class Auth {
     public function canAccessMonitoring() {
         if (!$this->isLoggedIn()) return false;
         $role = $this->getRole();
+        if ($role === 'IT') return true;
         if ($role === 'admin') return true;
-        if ($role === 'IT') {
-            // Check per-user monitoring_access flag
-            $this->db->query("SELECT monitoring_access FROM users WHERE id = :id");
-            $this->db->bind(':id', $_SESSION['user_id']);
-            $user = $this->db->fetch();
-            return $user && !empty($user['monitoring_access']);
-        }
         return false;
     }
 
@@ -101,7 +95,7 @@ class Auth {
     public function canDelete($authorId) {
         if (!$this->isLoggedIn()) return false;
         $role = $this->getRole();
-        return in_array($role, ['admin', 'IT']) || $_SESSION['user_id'] == $authorId;
+        return in_array($role, ['admin', 'IT'], true);
     }
 
     private function createSession($user) {

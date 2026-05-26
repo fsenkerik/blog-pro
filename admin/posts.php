@@ -301,7 +301,7 @@ tr:hover .row-actions{opacity:1}
                   <a href="edit_post.php?id=<?= $item['id'] ?>" class="row-ico" title="Upravit">
                     <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
                   </a>
-                  <?php if ($auth->canEdit($item['author_id'])): ?>
+                  <?php if ($auth->canDelete($item['author_id'])): ?>
                     <button class="row-ico danger" title="Smazat" onclick="confirmDel(<?= $item['id'] ?>, '<?= addslashes(htmlspecialchars($item['title'])) ?>')">
                       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
                     </button>

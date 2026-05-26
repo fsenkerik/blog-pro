@@ -23,7 +23,7 @@ if (!$postData) {
     redirect(ADMIN_URL . 'posts.php');
 }
 
-if (!$auth->canEdit($postData['author_id'])) {
+if (!$auth->canDelete($postData['author_id'])) {
     setFlash('error', 'Nemáte oprávnění smazat tento příspěvek');
     redirect(ADMIN_URL . 'posts.php');
 }

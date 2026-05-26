@@ -17,11 +17,14 @@ foreach ($ids as $id) {
     }
 
     $existing = $post->getById($id);
-    if (!$existing || !$auth->canEdit($existing['author_id'])) {
+    if (!$existing) {
         continue;
     }
 
     if ($action === 'delete') {
+        if (!$auth->canDelete($existing['author_id'])) {
+            continue;
+        }
         $result = $post->delete($id);
         if ($result['success']) {
             $success++;
@@ -30,6 +33,9 @@ foreach ($ids as $id) {
     }
 
     if ($action === 'publish' || $action === 'draft') {
+        if (!$auth->canEdit($existing['author_id'])) {
+            continue;
+        }
         $updateData = [
             'title' => $existing['title'],
             'slug' => $existing['slug'],
