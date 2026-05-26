@@ -243,7 +243,7 @@ $userInitials = strtoupper(substr($_SESSION['username'] ?? 'U', 0, 2));
 
   <main class="main">
     <div class="topbar">
-      <div class="crumb"><a href="<?= ADMIN_URL ?>dashboard.php" style="color:var(--muted)">Blog Pro</a><span class="sep">/</span><span class="here">Média</span></div>
+      <div class="crumb"><a href="<?= ADMIN_URL ?>dashboard.php" style="color:var(--muted)">Dashboard</a><span class="sep">/</span><span class="here">Média</span></div>
       <div class="top-actions"><a href="<?= ADMIN_URL ?>add_post.php" class="btn btn-primary btn-sm"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Nový příspěvek</a></div>
     </div>
 

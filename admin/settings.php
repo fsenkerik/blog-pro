@@ -246,7 +246,7 @@ $totalMedia = $media->getCount('');
 
 <main class="main">
   <div class="topbar">
-    <div class="crumb"><span>Workspace</span><span class="sep">/</span><span>Nástroje</span><span class="sep">/</span><span class="here">Nastavení</span></div>
+    <div class="crumb"><a href="<?= ADMIN_URL ?>dashboard.php" style="color:var(--muted)">Dashboard</a><span class="sep">/</span><span class="here">Nastavení</span></div>
     <div class="search">
       <svg class="search-ico" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
       <input type="text" id="topSearch" placeholder="Hledat články..." autocomplete="off">
