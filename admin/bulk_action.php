@@ -70,7 +70,7 @@ if ($success > 0) {
     setFlash('success', $message);
 } elseif ($denied > 0) {
     $message = $action === 'delete'
-        ? 'Role Editor nemůže mazat příspěvky. Mazání je vyhrazené pro role Admin a IT.'
+        ? 'Nemáte oprávnění smazat některé vybrané příspěvky. Editor může mazat pouze své vlastní příspěvky.'
         : 'Nemáte oprávnění upravit vybrané příspěvky.';
     setFlash('error', $message);
 } else {

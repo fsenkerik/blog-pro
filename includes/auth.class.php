@@ -95,7 +95,7 @@ class Auth {
     public function canDelete($authorId) {
         if (!$this->isLoggedIn()) return false;
         $role = $this->getRole();
-        return in_array($role, ['admin', 'IT'], true);
+        return in_array($role, ['admin', 'IT'], true) || $_SESSION['user_id'] == $authorId;
     }
 
     private function createSession($user) {

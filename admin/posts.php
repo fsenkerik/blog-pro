@@ -45,7 +45,7 @@ if ($status === 'draft') {
 
 $totalPages = max(1, (int) ceil($totalCount / $perPage));
 $flash = getFlash();
-$canDeletePosts = in_array($_SESSION['user_role'] ?? '', ['admin', 'IT'], true);
+$canBulkDeletePosts = in_array($_SESSION['user_role'] ?? '', ['admin', 'IT'], true);
 $gradients = [
     'linear-gradient(135deg,#a5b4fc,#667eea)',
     'linear-gradient(135deg,#c4b5fd,#764ba2)',
@@ -255,7 +255,7 @@ tr:hover .row-actions{opacity:1}
         <span style="color:rgba(243,239,226,.55)">· hromadné akce</span>
         <div class="bulk-actions">
           <button class="bulk-btn" onclick="bulkPublish()">Publikovat</button>
-          <?php if ($canDeletePosts): ?><button class="bulk-btn danger" onclick="bulkDelete()">Smazat</button><?php endif; ?>
+          <?php if ($canBulkDeletePosts): ?><button class="bulk-btn danger" onclick="bulkDelete()">Smazat</button><?php endif; ?>
           <button class="bulk-btn" onclick="clearSel()">Zrušit</button>
         </div>
       </div>
@@ -355,7 +355,7 @@ tr:hover .row-actions{opacity:1}
 
 <script src="<?= ASSETS_URL ?>js/admin.js"></script>
 <script>
-const canDeletePosts = <?= $canDeletePosts ? 'true' : 'false' ?>;
+const canBulkDeletePosts = <?= $canBulkDeletePosts ? 'true' : 'false' ?>;
 
 function showNoticeModal(title, message) {
   const modal = document.getElementById('delModal');
@@ -437,8 +437,8 @@ function currentReturnQuery() {
 function bulkDelete() {
   const ids = selectedPostIds();
   if (!ids.length) return;
-  if (!canDeletePosts) {
-    showNoticeModal('Akci nelze provést', 'Role Editor může upravovat jen své příspěvky, ale mazání příspěvků je vyhrazené pro role Admin a IT.');
+  if (!canBulkDeletePosts) {
+    showNoticeModal('Akci nelze provést', 'Hromadné mazání je dostupné jen pro role Admin a IT. Jako Editor můžete mazat své příspěvky jednotlivě.');
     return;
   }
   delId = null;
