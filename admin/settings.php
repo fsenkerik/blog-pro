@@ -21,6 +21,10 @@ function canManageUsers(): bool {
     return in_array($_SESSION['user_role'] ?? '', ['admin', 'IT'], true);
 }
 
+function canViewSystemSettings(): bool {
+    return ($_SESSION['user_role'] ?? '') === 'IT';
+}
+
 function canCreateUserRole(string $role): bool {
     $currentRole = $_SESSION['user_role'] ?? '';
     if ($currentRole === 'IT') {
@@ -333,10 +337,12 @@ $totalMedia = $media->getCount('');
           <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 22 4 17V7l8-5 8 5v10z"/><path d="M12 22V12M4 7l8 5 8-5"/></svg>
           Zálohy &amp; obnova <span class="meta"><?= count($backups) ?></span>
         </a>
-        <a href="#danger" class="">
-          <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/></svg>
-          Pokročilé
-        </a>
+        <?php if (canViewSystemSettings()): ?>
+          <a href="#danger" class="">
+            <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/></svg>
+            Pokročilé
+          </a>
+        <?php endif; ?>
       </aside>
 
       <!-- Pravý sloupec -->
@@ -347,11 +353,12 @@ $totalMedia = $media->getCount('');
           <div class="set-section-head">
             <div>
               <div class="set-section-num">01 &middot; Obecné</div>
-              <h2 class="set-section-title">Identita <em>webu.</em></h2>
+              <h2 class="set-section-title"><?= canViewSystemSettings() ? 'Identita <em>webu.</em>' : 'Můj <em>účet.</em>' ?></h2>
             </div>
-            <div class="set-section-sub">Základní informace nastavené v <span class="mono" style="font-size:11px;">config.php</span> a proměnných prostředí.</div>
+            <div class="set-section-sub"><?= canViewSystemSettings() ? 'Základní informace nastavené v <span class="mono" style="font-size:11px;">config.php</span> a proměnných prostředí.' : 'Osobní nastavení a zabezpečení účtu.' ?></div>
           </div>
 
+          <?php if (canViewSystemSettings()): ?>
           <div class="set-row">
             <div class="set-row-head">
               <div><div class="set-row-title">Konfigurace systému</div><div class="set-row-desc">Aktuální nastavení (jen pro čtení).</div></div>
@@ -379,6 +386,7 @@ $totalMedia = $media->getCount('');
               <span class="mono">PHP <?= phpversion() ?> &middot; <?= php_uname('s') ?></span>
             </div>
           </div>
+          <?php endif; ?>
 
           <!-- Změna hesla -->
           <div class="set-row">
@@ -578,6 +586,7 @@ $totalMedia = $media->getCount('');
           <?php endif; ?>
         </section>
 
+        <?php if (canViewSystemSettings()): ?>
         <!-- 05 · DANGER ZONE -->
         <section id="danger" style="display:flex;flex-direction:column;gap:20px;margin-top:36px">
           <div class="set-section-head">
@@ -615,6 +624,7 @@ $totalMedia = $media->getCount('');
             </div>
           </div>
         </section>
+        <?php endif; ?>
 
       </div><!-- /set-main -->
     </div><!-- /settings-shell -->
