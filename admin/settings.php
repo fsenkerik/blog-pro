@@ -293,13 +293,13 @@ $backupWeekdays = [
 .backup-name{font-size:13px;font-weight:500;color:var(--ink);font-family:var(--mono)}
 .backup-meta{font-size:11.5px;color:var(--muted);margin-top:2px}
 .backup-size{font-family:var(--mono);font-size:12px;color:var(--body)}
-.danger-zone{border:1px solid var(--danger-soft);border-radius:14px;background:linear-gradient(180deg,#fff,#fff8f8);overflow:hidden}
-.danger-head{padding:16px 22px;border-bottom:1px solid var(--danger-soft)}
-.danger-title{font-size:14px;font-weight:600;color:var(--danger);display:flex;align-items:center;gap:8px}
-.danger-row{display:grid;grid-template-columns:1fr auto;gap:18px;align-items:center;padding:16px 22px;border-bottom:1px solid var(--danger-soft)}
+.danger-zone{border:1px solid var(--border);border-radius:14px;background:linear-gradient(180deg,#fff,#f8f9ff);overflow:hidden}
+.danger-head{padding:16px 22px;border-bottom:1px solid var(--line)}
+.danger-title{font-size:14px;font-weight:600;color:var(--accent-2);display:flex;align-items:center;gap:8px}
+.danger-row{display:grid;grid-template-columns:1fr auto;gap:18px;align-items:center;padding:16px 22px;border-bottom:1px solid var(--line)}
 .danger-row:last-child{border-bottom:none}
 .danger-name{font-size:13.5px;font-weight:500;color:var(--ink)}
-.danger-desc{font-size:12px;color:var(--body);margin-top:2px;max-width:520px}
+.danger-desc{font-size:12px;color:var(--body);margin-top:2px;max-width:660px;line-height:1.5}
 .save-bar{position:sticky;bottom:16px;display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 16px;background:rgba(255,255,255,.95);backdrop-filter:blur(8px);border:1px solid var(--border);border-radius:12px;box-shadow:0 8px 24px -8px rgba(31,41,55,.18);z-index:30}
 .save-bar-status{display:flex;align-items:center;gap:10px;font-size:12.5px;color:var(--muted)}
 .save-bar-status .dot-ok{width:8px;height:8px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 4px rgba(16,185,129,.18)}
@@ -738,27 +738,27 @@ $backupWeekdays = [
         </section>
 
         <?php if (canViewSystemSettings()): ?>
-        <!-- 05 · DANGER ZONE -->
+        <!-- 05 · POKROCILE NASTROJE -->
         <section id="danger" style="display:flex;flex-direction:column;gap:20px;margin-top:36px">
           <div class="set-section-head">
             <div>
-              <div class="set-section-num">05 &middot; Nevratné akce</div>
-              <h2 class="set-section-title">Danger <em>zone.</em></h2>
+              <div class="set-section-num">05 &middot; Technická správa</div>
+              <h2 class="set-section-title">Pokročilé <em>nástroje.</em></h2>
             </div>
-            <div class="set-section-sub">Akce v této sekci nelze vzít zpět bez ručního obnovení ze zálohy.</div>
+            <div class="set-section-sub">Nástroje pro IT správu webu. Běžný obsah tím nemažeš, ale je dobré vědět, co přesně spouštíš.</div>
           </div>
 
           <div class="danger-zone">
             <div class="danger-head">
               <div class="danger-title">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
-                Nevratné akce
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v2M12 20v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M2 12h2M20 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4"/></svg>
+                Technické nástroje
               </div>
             </div>
             <div class="danger-row">
               <div>
                 <div class="danger-name">Vygenerovat sitemap &amp; robots.txt</div>
-                <div class="danger-desc">Přepocte sitemap.xml a robots.txt podle aktuálních příspěvků.</div>
+                <div class="danger-desc">Znovu vytvoří soubory pro vyhledávače podle aktuálně publikovaných článků. Hodí se po větších změnách obsahu, kategorií nebo URL adres. Data ani články se tím nemažou.</div>
               </div>
               <form method="POST">
                 <input type="hidden" name="action" value="generate_sitemap">
@@ -769,7 +769,7 @@ $backupWeekdays = [
             <div class="danger-row">
               <div>
                 <div class="danger-name">PHP informace</div>
-                <div class="danger-desc">PHP <?= phpversion() ?>, Server: <?= htmlspecialchars($_SERVER['SERVER_SOFTWARE'] ?? 'Apache') ?></div>
+                <div class="danger-desc">Zobrazí technické informace o serveru, PHP verzi, modulech a konfiguraci hostingu. Je to užitečné při řešení chyb nebo migraci na Forpsi, ale stránka může obsahovat citlivé detaily, proto je dostupná jen pro roli IT. Aktuálně: PHP <?= phpversion() ?>, Server: <?= htmlspecialchars($_SERVER['SERVER_SOFTWARE'] ?? 'Apache') ?>.</div>
               </div>
               <a href="?phpinfo=1" class="btn btn-ghost btn-sm" onclick="return confirm('Zobrazit phpinfo()?')">phpinfo</a>
             </div>
