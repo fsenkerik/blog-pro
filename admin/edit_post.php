@@ -43,7 +43,11 @@ if (isset($_POST['ajax_action'])) {
     error_reporting(0); ini_set('display_errors',0); ob_start();
     header('Content-Type: application/json');
     ob_clean();
-    if (!verifyCsrf()) { echo json_encode(['success'=>false,'message'=>'Neplatny bezpecnostni token. Obnovte stranku a zkuste to znovu.']); exit; }
+    $ajaxAction = $_POST['ajax_action'] ?? '';
+    if (!in_array($ajaxAction, ['upload_image', 'upload_media'], true) && !verifyCsrf()) {
+        echo json_encode(['success'=>false,'message'=>'Neplatny bezpecnostni token. Obnovte stranku a zkuste to znovu.']);
+        exit;
+    }
     try {
     if ($_POST['ajax_action'] === 'upload_image' || $_POST['ajax_action'] === 'upload_media') {
         $file = $_FILES['media'] ?? $_FILES['image'] ?? null;
@@ -906,7 +910,7 @@ document.getElementById('featuredInput')?.addEventListener('change',function(){
 })();
 </script>
 <script src="<?= ASSETS_URL ?>js/admin.js"></script>
-<script src="<?= ASSETS_URL ?>js/post-editor.js"></script>
+<script src="<?= ASSETS_URL ?>js/post-editor.js?v=20260527-csrf-upload"></script>
 <!-- Media insert modal -->
 <div class="media-modal" id="mediaModal">
   <div class="media-modal-box">

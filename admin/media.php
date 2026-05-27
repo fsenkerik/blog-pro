@@ -50,7 +50,6 @@ if (isset($_POST['ajax_action']) && $_POST['ajax_action'] === 'upload_media') {
     ob_clean();
     try {
     requireAuth();
-    if (!verifyCsrf()) { echo json_encode(['success'=>false,'message'=>'Neplatny bezpecnostni token. Obnovte stranku a zkuste to znovu.']); exit; }
     if (!isset($_FILES['file'])) { echo json_encode(['success'=>false,'message'=>'Žádný soubor']); exit; }
     $upload = new Upload();
     $result = $upload->uploadMedia($_FILES['file'], true, true);

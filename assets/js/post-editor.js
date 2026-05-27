@@ -110,6 +110,17 @@
     return node?.closest('figure.editor-media,.editor-file-block') || null;
   }
 
+  function getCsrfToken() {
+    return document.querySelector('input[name="csrf_token"]')?.value || window.csrfToken || '';
+  }
+
+  function appendCsrfToken(formData) {
+    const token = getCsrfToken();
+    if (token && !formData.has('csrf_token')) {
+      formData.append('csrf_token', token);
+    }
+  }
+
   function isEmptyParagraph(node) {
     return !!node && node.tagName === 'P' && !node.textContent.trim() && node.querySelectorAll('img,video').length === 0;
   }
@@ -495,6 +506,7 @@
       const formData = new FormData();
       formData.append('ajax_action', 'upload_image');
       formData.append('image', preparedFile);
+      appendCsrfToken(formData);
 
       const data = await uploadFormDataWithProgress({
         url,
@@ -543,6 +555,7 @@
       const formData = new FormData();
       formData.append('ajax_action', 'upload_media');
       formData.append('media', file);
+      appendCsrfToken(formData);
 
       const data = await uploadFormDataWithProgress({
         url,
