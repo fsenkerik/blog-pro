@@ -6,6 +6,12 @@ define('BLOG_PRO', true);
 require_once '../config.php';
 requireAuth();
 
+$appEnv = getenv('APP_ENV');
+if ($appEnv !== 'local') {
+    http_response_code(404);
+    exit;
+}
+
 $backup = new Backup();
 $backups = $backup->listBackups();
 

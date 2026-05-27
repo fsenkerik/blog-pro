@@ -17,6 +17,7 @@ if (
 
 requireAuth();
 
+$csrfToken = Security::generateToken();
 $post = new Post();
 $category = new Category();
 $upload = new Upload();
@@ -42,6 +43,7 @@ if (isset($_POST['ajax_action'])) {
     error_reporting(0); ini_set('display_errors',0); ob_start();
     header('Content-Type: application/json');
     ob_clean();
+    if (!verifyCsrf()) { echo json_encode(['success'=>false,'message'=>'Neplatny bezpecnostni token. Obnovte stranku a zkuste to znovu.']); exit; }
     try {
     if ($_POST['ajax_action'] === 'upload_image' || $_POST['ajax_action'] === 'upload_media') {
         $file = $_FILES['media'] ?? $_FILES['image'] ?? null;
@@ -426,7 +428,7 @@ body.dz-dragging .editor.dz-hover,body.dz-dragging .sp.dz-hover{box-shadow:0 0 0
   <main class="main">
     <?php if ($error): ?><div style="background:var(--danger-soft);color:var(--danger);padding:12px 32px;font-size:13px;border-bottom:1px solid rgba(153,27,27,.15)"><?= e($error) ?></div><?php endif; ?>
     <form id="postForm" method="POST" action="">
-      <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?? '' ?>">
+      <input type="hidden" name="csrf_token" value="<?= e($csrfToken) ?>">
       <input type="hidden" name="status" id="statusInput" value="<?= e($currentStatusUi) ?>">
       <input type="hidden" name="scheduled_at" id="scheduledAtHidden" value="<?= e($currentScheduledAt) ?>">
       <input type="hidden" name="category_id" id="catInput" value="<?= e($currentCatId) ?>">
@@ -600,6 +602,9 @@ body.dz-dragging .editor.dz-hover,body.dz-dragging .sp.dz-hover{box-shadow:0 0 0
   </main>
 </div>
 <script>
+const csrfToken='<?= e($csrfToken) ?>';
+const nativeFetch=window.fetch.bind(window);
+window.fetch=(input,init={})=>{if(init&&String(init.method||'GET').toUpperCase()==='POST'&&init.body instanceof FormData&&!init.body.has('csrf_token'))init.body.append('csrf_token',csrfToken);return nativeFetch(input,init);};
 const slugify=s=>s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9 -]/g,'').trim().replace(/\s+/g,'-').slice(0,80)||'clanek';
 const titleEl=document.getElementById('titleInput'),slugDisp=document.getElementById('slugDisplay'),serpSlug=document.getElementById('serpSlug'),serpTitle=document.getElementById('serpTitle'),edContent=document.getElementById('edContent');
 titleEl?.addEventListener('input',()=>{serpTitle.textContent=(titleEl.value||'Upravit příspěvek')+' — <?= e(SITE_NAME) ?>';markChanged();});

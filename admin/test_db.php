@@ -1,4 +1,10 @@
 <?php
+$appEnv = getenv('APP_ENV');
+if ($appEnv !== 'local') {
+    http_response_code(404);
+    exit;
+}
+
 echo "<h2>Test přihlášení:</h2>";
 
 try {

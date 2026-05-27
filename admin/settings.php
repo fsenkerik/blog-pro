@@ -3,6 +3,7 @@ define('BLOG_PRO', true);
 require_once '../config.php';
 requireAuth();
 
+$csrfToken = Security::generateToken();
 $auth   = new Auth();
 $backup = new Backup();
 $post   = new Post();
@@ -102,7 +103,10 @@ if (isPost()) {
     } else {
         $action = post('action');
 
-        if ($action === 'change_password') {
+        if (in_array($action, ['generate_sitemap','create_backup','create_full_backup','save_auto_backup_settings','delete_backup','restore_backup'], true) && !canViewSystemSettings()) {
+            $error = 'Tato technicka akce je dostupna jen pro roli IT.';
+
+        } elseif ($action === 'change_password') {
             $result = $auth->changePassword($_SESSION['user_id'], post('current_password'), post('new_password'));
             if ($result['success']) $success = $result['message']; else $error = $result['message'];
 
@@ -402,11 +406,11 @@ $backupWeekdays = [
           SEO &amp; sitemap <span class="meta">05</span>
         </a>
         <div class="sep"></div>
+        <?php if (canViewSystemSettings()): ?>
         <a href="#zalohy" class="">
           <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 22 4 17V7l8-5 8 5v10z"/><path d="M12 22V12M4 7l8 5 8-5"/></svg>
           Zálohy &amp; obnova <span class="meta"><?= count($backups) ?></span>
         </a>
-        <?php if (canViewSystemSettings()): ?>
           <a href="#danger" class="">
             <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/></svg>
             Pokročilé
@@ -587,6 +591,7 @@ $backupWeekdays = [
         </section>
 
         <!-- 04 · ZÁLOHY -->
+        <?php if (canViewSystemSettings()): ?>
         <section id="zalohy" style="display:flex;flex-direction:column;gap:20px;margin-top:36px">
           <div class="set-section-head">
             <div>
@@ -736,6 +741,7 @@ $backupWeekdays = [
           </div>
           <?php endif; ?>
         </section>
+        <?php endif; ?>
 
         <?php if (canViewSystemSettings()): ?>
         <!-- 05 · POKROCILE NASTROJE -->

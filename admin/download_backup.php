@@ -1,17 +1,23 @@
 <?php
 /**
  * admin/download_backup.php
- * Stahování záloh
+ * Stahovani zaloh
  */
 
 define('BLOG_PRO', true);
 require_once '../config.php';
 requireAuth();
 
+if (($_SESSION['user_role'] ?? '') !== 'IT') {
+    http_response_code(403);
+    exit('Stahovani zaloh je dostupne jen pro roli IT.');
+}
+
 $backupId = isset($_GET['id']) ? intval($_GET['id']) : 0;
 
 if (!$backupId) {
-    die('Neplatné ID zálohy');
+    http_response_code(400);
+    exit('Neplatne ID zalohy.');
 }
 
 $db = new Database();
@@ -20,33 +26,45 @@ $db->bind(':id', $backupId);
 $backup = $db->fetch();
 
 if (!$backup) {
-    die('Záloha nenalezena');
+    http_response_code(404);
+    exit('Zaloha nebyla nalezena.');
 }
 
-// Sestavit cestu k souboru
-$backupsDir = ROOT_PATH . 'backups/';
-$filePath = $backupsDir . $backup['filename'];
+$backupsDir = realpath(BACKUPS_PATH);
+$candidatePath = !empty($backup['filepath'])
+    ? $backup['filepath']
+    : BACKUPS_PATH . basename((string)$backup['filename']);
+$filePath = realpath($candidatePath);
 
-// Kontrola že soubor existuje
-if (!file_exists($filePath)) {
-    die('Soubor zálohy neexistuje: ' . $backup['filename'] . '<br>Hledáno v: ' . $filePath);
+if (!$backupsDir || !$filePath) {
+    http_response_code(404);
+    exit('Soubor zalohy nebyl nalezen.');
 }
 
-// Nastavení headers pro stažení
+$backupsDir = rtrim($backupsDir, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
+if (strpos($filePath, $backupsDir) !== 0 || !is_file($filePath)) {
+    http_response_code(404);
+    exit('Soubor zalohy nebyl nalezen.');
+}
+
+$downloadName = str_replace(["\\", '"', "\r", "\n"], '', basename((string)$backup['filename']));
+if ($downloadName === '') {
+    $downloadName = basename($filePath);
+}
+
 header('Content-Description: File Transfer');
 header('Content-Type: application/octet-stream');
-header('Content-Disposition: attachment; filename="' . basename($backup['filename']) . '"');
+header('Content-Disposition: attachment; filename="' . addslashes($downloadName) . '"; filename*=UTF-8\'\'' . rawurlencode($downloadName));
 header('Content-Transfer-Encoding: binary');
 header('Expires: 0');
 header('Cache-Control: must-revalidate');
 header('Pragma: public');
 header('Content-Length: ' . filesize($filePath));
+header('X-Content-Type-Options: nosniff');
 
-// Vyčistit output buffer
-ob_clean();
+if (ob_get_level()) {
+    ob_clean();
+}
 flush();
-
-// Poslat soubor
 readfile($filePath);
 exit;
-?>

@@ -23,6 +23,7 @@ if (isset($_POST['ajax_action'])) {
 
 requireAuth();
 
+$csrfToken = Security::generateToken();
 $post = new Post();
 $category = new Category();
 $media = new Media();
@@ -38,6 +39,7 @@ $error = '';
 if (isset($_POST['ajax_action'])) {
     ob_clean();
     header('Content-Type: application/json');
+    if (!verifyCsrf()) { echo json_encode(['success'=>false,'message'=>'Neplatny bezpecnostni token. Obnovte stranku a zkuste to znovu.']); exit; }
     try {
         if ($_POST['ajax_action'] === 'autosave_draft') {
             $title = trim($_POST['title'] ?? '');
@@ -435,7 +437,7 @@ body.dz-dragging .editor.dz-hover,body.dz-dragging .sp.dz-hover{box-shadow:0 0 0
   <main class="main">
     <?php if ($error): ?><div style="background:var(--danger-soft);color:var(--danger);padding:12px 32px;font-size:13px;border-bottom:1px solid rgba(153,27,27,.15)"><?= e($error) ?></div><?php endif; ?>
     <form id="postForm" method="POST" enctype="multipart/form-data" action="">
-      <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token'] ?? '' ?>">
+      <input type="hidden" name="csrf_token" value="<?= e($csrfToken) ?>">
       <input type="hidden" name="status" id="statusInput" value="published">
       <input type="hidden" name="category_id" id="catInput" value="">
       <input type="hidden" name="draft_id" id="draftId" value="">
@@ -606,6 +608,9 @@ body.dz-dragging .editor.dz-hover,body.dz-dragging .sp.dz-hover{box-shadow:0 0 0
   </main>
 </div>
 <script>
+const csrfToken='<?= e($csrfToken) ?>';
+const nativeFetch=window.fetch.bind(window);
+window.fetch=(input,init={})=>{if(init&&String(init.method||'GET').toUpperCase()==='POST'&&init.body instanceof FormData&&!init.body.has('csrf_token'))init.body.append('csrf_token',csrfToken);return nativeFetch(input,init);};
 const slugify=s=>s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^a-z0-9 -]/g,'').trim().replace(/\s+/g,'-').slice(0,80)||'novy-prispevek';
 const titleEl=document.getElementById('titleInput'),slugDisp=document.getElementById('slugDisplay'),serpSlug=document.getElementById('serpSlug'),serpTitle=document.getElementById('serpTitle'),edContent=document.getElementById('edContent');
 let slugDirty=false;

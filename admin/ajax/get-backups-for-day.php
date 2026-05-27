@@ -8,7 +8,17 @@ define('BLOG_PRO', true);
 require_once '../../config.php';
 requireAuth();
 
+if (($_SESSION['user_role'] ?? '') !== 'IT') {
+    http_response_code(403);
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode(['error' => 'Forbidden']);
+    exit;
+}
+
 $date = $_GET['date'] ?? date('Y-m-d');
+if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
+    $date = date('Y-m-d');
+}
 
 $db = new Database();
 $db->query("

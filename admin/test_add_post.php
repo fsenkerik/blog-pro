@@ -2,6 +2,12 @@
 define('BLOG_PRO', true);
 require_once '../config.php';
 
+$appEnv = getenv('APP_ENV');
+if ($appEnv !== 'local') {
+    http_response_code(404);
+    exit;
+}
+
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 

@@ -2,5 +2,7 @@ error.log
 .env
 uploads/*
 !uploads/.gitkeep
+!uploads/.htaccess
 backups/*
 !backups/.gitkeep
+!backups/.htaccess

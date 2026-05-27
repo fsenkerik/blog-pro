@@ -16,6 +16,30 @@ class Backup {
             mkdir($this->backupDir, 0755, true);
         }
     }
+
+    private function resolveBackupPath($filepath) {
+        $base = realpath($this->backupDir);
+        $file = realpath((string)$filepath);
+
+        if (!$base || !$file || !is_file($file)) {
+            return false;
+        }
+
+        $base = rtrim($base, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
+        return strpos($file, $base) === 0 ? $file : false;
+    }
+
+    private function isPathInsideDirectory($path, $directory) {
+        $base = realpath($directory);
+        $target = realpath($path);
+
+        if (!$base || !$target) {
+            return false;
+        }
+
+        $base = rtrim($base, DIRECTORY_SEPARATOR) . DIRECTORY_SEPARATOR;
+        return strpos($target, $base) === 0 || $target === rtrim($base, DIRECTORY_SEPARATOR);
+    }
     
     public function createDatabaseBackup() {
         $filename = 'db_backup_' . date('Y-m-d_H-i-s') . '.sql';
@@ -116,8 +140,9 @@ class Backup {
         $oldBackups = $this->db->fetchAll();
         
         foreach ($oldBackups as $backup) {
-            if (file_exists($backup['filepath'])) {
-                unlink($backup['filepath']);
+            $backupPath = $this->resolveBackupPath($backup['filepath']);
+            if ($backupPath) {
+                unlink($backupPath);
             }
         }
         
@@ -141,11 +166,13 @@ class Backup {
         $this->db->bind(':id', $id);
         $backup = $this->db->fetch();
         
-        if ($backup && file_exists($backup['filepath'])) {
+        $backupPath = $backup ? $this->resolveBackupPath($backup['filepath']) : false;
+        if ($backupPath) {
             header('Content-Type: application/sql');
             header('Content-Disposition: attachment; filename="' . $backup['filename'] . '"');
-            header('Content-Length: ' . filesize($backup['filepath']));
-            readfile($backup['filepath']);
+            header('Content-Length: ' . filesize($backupPath));
+            header('X-Content-Type-Options: nosniff');
+            readfile($backupPath);
             exit;
         }
         
@@ -166,8 +193,9 @@ class Backup {
             }
             
             // Smazat soubor
-            if (file_exists($backup['filepath'])) {
-                if (!unlink($backup['filepath'])) {
+            $backupPath = $this->resolveBackupPath($backup['filepath']);
+            if ($backupPath) {
+                if (!unlink($backupPath)) {
                     return ['success' => false, 'message' => 'Nepodařilo se smazat soubor'];
                 }
             }
@@ -196,12 +224,13 @@ class Backup {
                 return ['success' => false, 'message' => 'Záloha nenalezena'];
             }
             
-            if (!file_exists($backup['filepath'])) {
+            $backupPath = $this->resolveBackupPath($backup['filepath']);
+            if (!$backupPath) {
                 return ['success' => false, 'message' => 'Soubor zálohy neexistuje'];
             }
             
             // Načíst SQL ze zálohy
-            $sql = file_get_contents($backup['filepath']);
+            $sql = file_get_contents($backupPath);
             
             if (!$sql) {
                 return ['success' => false, 'message' => 'Nepodařilo se načíst zálohu'];
@@ -371,10 +400,11 @@ public function restoreFullBackup($backupId) {
         }
         
         // Je to ZIP záloha?
-        if ($backup['type'] === 'full' && pathinfo($backup['filepath'], PATHINFO_EXTENSION) === 'zip') {
+        $backupPath = $this->resolveBackupPath($backup['filepath']);
+        if ($backup['type'] === 'full' && $backupPath && pathinfo($backupPath, PATHINFO_EXTENSION) === 'zip') {
             $zip = new ZipArchive();
             
-            if ($zip->open($backup['filepath']) !== TRUE) {
+            if ($zip->open($backupPath) !== TRUE) {
                 return ['success' => false, 'message' => 'Nelze otevřít ZIP'];
             }
             
@@ -453,6 +483,17 @@ public function restoreFullBackup($backupId) {
                 
                 if (strpos($filename, 'uploads/') === 0 && $filename !== 'uploads/') {
                     $localName = substr($filename, 8); // Odřízni "uploads/"
+                    if (
+                        $localName === '' ||
+                        strpos($localName, "\0") !== false ||
+                        strpos($localName, '../') !== false ||
+                        strpos($localName, '/..') !== false ||
+                        strpos($localName, '..\\') !== false ||
+                        preg_match('/^[a-zA-Z]:/', $localName) ||
+                        substr($localName, 0, 1) === '/'
+                    ) {
+                        continue;
+                    }
                     $localPath = $uploadsDir . '/' . $localName;
                     
                     if (substr($filename, -1) === '/') {
@@ -465,6 +506,9 @@ public function restoreFullBackup($backupId) {
                         $dir = dirname($localPath);
                         if (!is_dir($dir)) {
                             mkdir($dir, 0755, true);
+                        }
+                        if (!$this->isPathInsideDirectory($dir, $uploadsDir)) {
+                            continue;
                         }
                         
                         $content = $zip->getFromIndex($i);

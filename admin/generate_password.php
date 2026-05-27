@@ -1,4 +1,10 @@
 <?php
+$appEnv = getenv('APP_ENV');
+if ($appEnv !== 'local') {
+    http_response_code(404);
+    exit;
+}
+
 $password = 'heslo123';
 $hash = password_hash($password, PASSWORD_DEFAULT);
 

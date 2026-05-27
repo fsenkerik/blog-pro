@@ -6,6 +6,11 @@ requireAuth();
 $auth = new Auth();
 $post = new Post();
 
+if (!Security::verifyToken($_GET['csrf_token'] ?? '')) {
+    setFlash('error', 'Platnost akce vyprsela. Zkuste smazani spustit znovu.');
+    redirect(ADMIN_URL . 'posts.php');
+}
+
 $postId        = isset($_GET['id']) ? intval($_GET['id']) : 0;
 $returnFilter  = $_GET['return_filter'] ?? 'all';
 $returnCategory = isset($_GET['return_category']) ? intval($_GET['return_category']) : null;

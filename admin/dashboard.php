@@ -3,6 +3,7 @@ define('BLOG_PRO', true);
 require_once '../config.php';
 requireAuth();
 
+$csrfToken = Security::generateToken();
 $post     = new Post();
 $category = new Category();
 $media    = new Media();
@@ -567,7 +568,7 @@ function closeDel() {
 }
 function execDel() {
   if (delId) {
-    window.location.href = 'delete_post.php?id=' + delId;
+    window.location.href = 'delete_post.php?id=' + delId + '&csrf_token=<?= e($csrfToken) ?>';
   }
 }
 document.getElementById('delModal').addEventListener('click', e => {

@@ -50,6 +50,7 @@ if (isset($_POST['ajax_action']) && $_POST['ajax_action'] === 'upload_media') {
     ob_clean();
     try {
     requireAuth();
+    if (!verifyCsrf()) { echo json_encode(['success'=>false,'message'=>'Neplatny bezpecnostni token. Obnovte stranku a zkuste to znovu.']); exit; }
     if (!isset($_FILES['file'])) { echo json_encode(['success'=>false,'message'=>'Žádný soubor']); exit; }
     $upload = new Upload();
     $result = $upload->uploadMedia($_FILES['file'], true, true);
@@ -73,6 +74,7 @@ if (isset($_POST['ajax_action']) && $_POST['ajax_action'] === 'delete_media') {
     ob_start();
     header('Content-Type: application/json');
     requireAuth();
+    if (!verifyCsrf()) { echo json_encode(['success'=>false,'message'=>'Neplatny bezpecnostni token. Obnovte stranku a zkuste to znovu.']); exit; }
     $ids = $_POST['ids'] ?? [];
     if (empty($ids)) { echo json_encode(['success'=>false,'message'=>'Žádné ID']); exit; }
     $media = new Media();
@@ -86,6 +88,7 @@ if (isset($_POST['ajax_action']) && $_POST['ajax_action'] === 'delete_media') {
 
 requireAuth();
 
+$csrfToken = Security::generateToken();
 $media = new Media();
 $post = new Post();
 $search = $_GET['search'] ?? '';
@@ -355,6 +358,7 @@ $userInitials = strtoupper(substr($_SESSION['username'] ?? 'U', 0, 2));
 const grid=document.getElementById('mediaGrid');
 const selbar=document.getElementById('selbar');
 const selCountEl=document.getElementById('selCount');
+const csrfToken='<?= e($csrfToken) ?>';
 function getSelected(){return grid?[...grid.querySelectorAll('.card-m.sel')]:[];}
 function getSelectable(){return grid?[...grid.querySelectorAll('.card-m')].filter(c=>c.style.display!=='none'):[];}
 function refreshSel(){const n=getSelected().length;if(selCountEl)selCountEl.textContent=n;if(selbar)selbar.classList.toggle('show',n>0);}
@@ -365,7 +369,7 @@ const typeFilter='<?= e($typeFilter) ?>';
 if(typeFilter&&typeFilter!=='all'&&grid){grid.querySelectorAll('.card-m').forEach(c=>{if(c.dataset.type!==typeFilter)c.style.display='none';});}
 function openDeleteModal(){document.getElementById('deleteCount').textContent=getSelected().length;document.getElementById('deleteModal').classList.add('show');}
 function closeModal(){document.getElementById('deleteModal').classList.remove('show');}
-async function confirmDelete(){const ids=getSelected().map(c=>c.dataset.id);const fd=new FormData();fd.append('ajax_action','delete_media');ids.forEach(id=>fd.append('ids[]',id));try{const r=await fetch(location.href,{method:'POST',body:fd});const data=await r.json();if(data.success)location.reload();else{alert('Chyba: '+data.message);closeModal();}}catch{closeModal();}}
+async function confirmDelete(){const ids=getSelected().map(c=>c.dataset.id);const fd=new FormData();fd.append('ajax_action','delete_media');fd.append('csrf_token',csrfToken);ids.forEach(id=>fd.append('ids[]',id));try{const r=await fetch(location.href,{method:'POST',body:fd});const data=await r.json();if(data.success)location.reload();else{alert('Chyba: '+data.message);closeModal();}}catch{closeModal();}}
 document.getElementById('deleteModal')?.addEventListener('click',e=>{if(e.target===document.getElementById('deleteModal'))closeModal();});
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal();});
 const uploadStrip=document.getElementById('uploadStrip');
@@ -395,6 +399,7 @@ async function handleFiles(files){
     }
     const fd=new FormData();
     fd.append('ajax_action','upload_media');
+    fd.append('csrf_token',csrfToken);
     fd.append('file',file);
     try{
       const r=await fetch(location.href,{method:'POST',body:fd});

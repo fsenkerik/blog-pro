@@ -1,4 +1,10 @@
 <?php
+$appEnv = getenv('APP_ENV');
+if ($appEnv !== 'local') {
+    http_response_code(404);
+    exit;
+}
+
 session_start();
 
 $_SESSION['logged_in'] = true;

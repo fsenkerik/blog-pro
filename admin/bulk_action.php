@@ -6,6 +6,11 @@ requireAuth();
 $auth = new Auth();
 $post = new Post();
 
+if (!Security::verifyToken($_GET['csrf_token'] ?? '')) {
+    setFlash('error', 'Platnost hromadne akce vyprsela. Zkuste ji spustit znovu.');
+    redirect(ADMIN_URL . 'posts.php');
+}
+
 $action = $_GET['action'] ?? '';
 $ids = array_filter(array_map('intval', explode(',', $_GET['ids'] ?? '')));
 $return = $_GET['return'] ?? '';
