@@ -154,6 +154,10 @@ class Post {
             if (isset($auditLog)) {
                 $auditLog->log('create', 'post', $postId, $data['title']);
             }
+
+            if (($data['status'] ?? 'draft') === 'published') {
+                $this->refreshSeoFiles();
+            }
             
             return [
                 'success' => true,
@@ -169,6 +173,8 @@ class Post {
      * Aktualizovat příspěvek
      */
     public function update($id, $data) {
+        $previousPost = $this->getById($id);
+
         // Generovat slug pokud se změnil titulek
         if (!empty($data['title']) && empty($data['slug'])) {
             $data['slug'] = $this->generateSlug($data['title'], $id);
@@ -251,6 +257,12 @@ class Post {
                 if (isset($auditLog)) {
                     $auditLog->log('update', 'post', $id, $data['title']);
                 }
+
+                $previousStatus = $previousPost['status'] ?? null;
+                $newStatus = $data['status'] ?? 'draft';
+                if ($previousStatus === 'published' || $newStatus === 'published') {
+                    $this->refreshSeoFiles();
+                }
                 
                 return ['success' => true, 'slug' => $data['slug']];
             }
@@ -283,6 +295,10 @@ class Post {
                 global $auditLog;
                 if (isset($auditLog) && $post) {
                     $auditLog->log('delete', 'post', $id, $post['title']);
+                }
+
+                if (($post['status'] ?? null) === 'published') {
+                    $this->refreshSeoFiles();
                 }
                 
                 return ['success' => true];
@@ -380,9 +396,25 @@ class Post {
             }
         }
 
+        $this->refreshSeoFiles();
+
         return count($duePosts);
     }
     
+    /**
+     * Aktualizovat sitemap.xml a robots.txt po zmene publikovaneho obsahu.
+     */
+    private function refreshSeoFiles() {
+        try {
+            if (class_exists('SEO')) {
+                SEO::generateSitemap();
+                SEO::generateRobots();
+            }
+        } catch (\Throwable $e) {
+            error_log(date('Y-m-d H:i:s') . " - SEO refresh: " . $e->getMessage() . "\n", 3, ROOT_PATH . 'error.log');
+        }
+    }
+
     /**
      * Generovat unikátní slug
      */
