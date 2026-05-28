@@ -8,9 +8,9 @@ define('BLOG_PRO', true);
 require_once '../config.php';
 requireAuth();
 
-if (($_SESSION['user_role'] ?? '') !== 'IT') {
+if (!in_array($_SESSION['user_role'] ?? '', ['admin', 'IT'], true)) {
     http_response_code(403);
-    exit('Stahovani zaloh je dostupne jen pro roli IT.');
+    exit('Stahovani zaloh je dostupne jen pro role Admin a IT.');
 }
 
 $backupId = isset($_GET['id']) ? intval($_GET['id']) : 0;
