@@ -215,7 +215,7 @@ $catColors = ['#667eea', '#764ba2', '#10b981', '#f59e0b', '#ef4444', '#3b82f6', 
 <div class="app">
 <aside class="side">
   <a class="brand" href="dashboard.php" aria-label="Přejít na dashboard">
-    <div class="brand-mark"><img src="../assets/img/blog-pro-logo.png" alt=""></div>
+    <div class="brand-mark" style="width:36px;height:36px;overflow:hidden;flex:0 0 36px;"><img src="../assets/img/blog-pro-logo.png" alt="" style="width:100%;height:100%;object-fit:cover;display:block;"></div>
     <div><div class="brand-name">Blog Pro</div><div class="brand-sub">CMS / v3.0</div></div>
   </a>
   <div>

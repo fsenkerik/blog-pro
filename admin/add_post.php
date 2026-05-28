@@ -426,7 +426,7 @@ body.dz-dragging .editor.dz-hover,body.dz-dragging .sp.dz-hover{box-shadow:0 0 0
 <body>
 <div class="app">
   <aside class="side">
-    <a class="brand" href="<?= ADMIN_URL ?>dashboard.php" aria-label="Přejít na dashboard"><div class="brand-mark"><img src="../assets/img/blog-pro-logo.png" alt=""></div><div><div class="brand-name"><?= e(SITE_NAME) ?></div><div class="brand-sub">CMS / v3.0</div></div></a>
+    <a class="brand" href="<?= ADMIN_URL ?>dashboard.php" aria-label="Přejít na dashboard"><div class="brand-mark" style="width:36px;height:36px;overflow:hidden;flex:0 0 36px;"><img src="../assets/img/blog-pro-logo.png" alt="" style="width:100%;height:100%;object-fit:cover;display:block;"></div><div><div class="brand-name"><?= e(SITE_NAME) ?></div><div class="brand-sub">CMS / v3.0</div></div></a>
     <div><div class="nav-label">Workspace</div><nav class="nav">
       <a href="<?= ADMIN_URL ?>dashboard.php"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg>Přehled</a>
       <a href="<?= ADMIN_URL ?>posts.php" class="active"><svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 4h12l4 4v12H4z"/><path d="M16 4v4h4"/><path d="M8 13h8M8 17h5"/></svg>Příspěvky<span class="count"><?= $totalAll ?></span></a>

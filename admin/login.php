@@ -92,7 +92,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
   <div class="login-art">
     <div class="login-art-brand">
-      <div class="m"><img src="../assets/img/blog-pro-logo.png" alt=""></div>
+      <div class="m"><img src="../assets/img/blog-pro-logo.png" alt="" style="width:100%;height:100%;object-fit:cover;display:block;"></div>
       <div><b>Blog Pro</b><s>CMS / v3.0</s></div>
     </div>
     <div class="login-quote">
