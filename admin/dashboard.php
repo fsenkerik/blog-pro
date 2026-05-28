@@ -214,10 +214,10 @@ $catColors = ['#667eea', '#764ba2', '#10b981', '#f59e0b', '#ef4444', '#3b82f6', 
 <body>
 <div class="app">
 <aside class="side">
-  <div class="brand">
-    <div class="brand-mark">BP</div>
-    <div><div class="brand-name">Blog Pro</div><div class="brand-sub">CMS / v1.0</div></div>
-  </div>
+  <a class="brand" href="dashboard.php" aria-label="Přejít na dashboard">
+    <div class="brand-mark"><img src="../assets/img/blog-pro-logo.png" alt=""></div>
+    <div><div class="brand-name">Blog Pro</div><div class="brand-sub">CMS / v3.0</div></div>
+  </a>
   <div>
     <div class="nav-label">Workspace</div>
     <nav class="nav">

@@ -326,10 +326,10 @@ $backupWeekdays = [
 <div class="app">
 
 <aside class="side">
-  <div class="brand">
-    <div class="brand-mark">BP</div>
-    <div><div class="brand-name">Blog Pro</div><div class="brand-sub">CMS / v1.0</div></div>
-  </div>
+  <a class="brand" href="dashboard.php" aria-label="Přejít na dashboard">
+    <div class="brand-mark"><img src="../assets/img/blog-pro-logo.png" alt=""></div>
+    <div><div class="brand-name">Blog Pro</div><div class="brand-sub">CMS / v3.0</div></div>
+  </a>
   <div>
     <div class="nav-label">Workspace</div>
     <nav class="nav">
@@ -390,7 +390,7 @@ $backupWeekdays = [
         <h1 class="page-title">Nastavení <em>Blog Pro.</em></h1>
         <p class="page-sub">Konfigurace CMS &mdash; zálohy, uživatelé, hesla, SEO a správa systému.</p>
       </div>
-      <span class="chip chip-outline mono" style="font-size:11px;">v1.0 &middot; PHP <?= PHP_MAJOR_VERSION . '.' . PHP_MINOR_VERSION ?></span>
+      <span class="chip chip-outline mono" style="font-size:11px;">v3.0 &middot; PHP <?= PHP_MAJOR_VERSION . '.' . PHP_MINOR_VERSION ?></span>
     </div>
 
     <div class="settings-shell">

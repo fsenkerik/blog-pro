@@ -62,7 +62,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 .login-art::before{content:'';position:absolute;inset:0;pointer-events:none;background-image:radial-gradient(circle at 75% 25%,rgba(252,211,77,.22) 0%,transparent 55%),radial-gradient(circle at 15% 85%,rgba(255,255,255,.16) 0%,transparent 50%)}
 .login-art::after{content:'';position:absolute;inset:0;pointer-events:none;background-image:linear-gradient(rgba(255,255,255,.08) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.08) 1px,transparent 1px);background-size:32px 32px}
 .login-art-brand{position:relative;z-index:2;display:flex;align-items:center;gap:12px}
-.login-art-brand .m{width:34px;height:34px;border-radius:8px;background:rgba(255,255,255,.18);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:13px;box-shadow:inset 0 1px 0 rgba(255,255,255,.3);border:1px solid rgba(255,255,255,.25)}
+.login-art-brand .m{width:38px;height:38px;border-radius:9px;background:#15162b;display:flex;align-items:center;justify-content:center;overflow:hidden;box-shadow:0 5px 16px -4px rgba(18,18,42,.45),inset 0 1px 0 rgba(255,255,255,.22);border:1px solid rgba(255,255,255,.25)}
+.login-art-brand .m img{width:100%;height:100%;object-fit:cover;display:block}
 .login-art-brand b{font-weight:600;font-size:16px;color:#fff}
 .login-art-brand s{display:block;font-family:var(--mono);font-size:10.5px;color:rgba(255,255,255,.7);text-decoration:none;letter-spacing:.05em;margin-top:1px}
 .login-quote{position:relative;z-index:2;max-width:480px}
@@ -91,8 +92,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
   <div class="login-art">
     <div class="login-art-brand">
-      <div class="m">BP</div>
-      <div><b>Blog Pro</b><s>CMS · Redakce</s></div>
+      <div class="m"><img src="../assets/img/blog-pro-logo.png" alt=""></div>
+      <div><b>Blog Pro</b><s>CMS / v3.0</s></div>
     </div>
     <div class="login-quote">
       <div class="login-quote-mark">&ldquo;</div>
@@ -101,7 +102,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </div>
     <div class="login-foot">
       <span class="pulse-wrap"><span class="d"></span>Všechny systémy běží</span>
-      <span>v1.0 &middot; PHP CMS</span>
+      <span>v3.0 &middot; PHP CMS</span>
     </div>
   </div>
 
